@@ -6,8 +6,8 @@
 
     <ImageView
         android:id="@+id/imgIcon"
-        android:layout_width="?android:attr/listPreferredItemHeightSmall"
-        android:layout_height="?android:attr/listPreferredItemHeightSmall"
+        android:layout_width="?attr/listPreferredItemHeightSmall"
+        android:layout_height="?attr/listPreferredItemHeightSmall"
         android:contentDescription="@string/help_application"
         android:paddingLeft="6dip" />
 
@@ -57,7 +57,7 @@
     <RelativeLayout
         android:id="@+id/rlName"
         android:layout_width="match_parent"
-        android:layout_height="?android:attr/listPreferredItemHeightSmall"
+        android:layout_height="?attr/listPreferredItemHeightSmall"
         android:clickable="true"
         android:focusable="true"
         android:paddingLeft="6dip" >

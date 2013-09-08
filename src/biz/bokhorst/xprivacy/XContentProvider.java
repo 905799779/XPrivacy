@@ -7,12 +7,13 @@ import java.util.List;
 import android.annotation.SuppressLint;
 import android.content.ContentProvider;
 import android.content.Context;
+import android.database.AbstractWindowedCursor;
 import android.database.Cursor;
 import android.database.MatrixCursor;
 import android.net.Uri;
 import android.os.Binder;
+import android.os.Build;
 import android.util.Log;
-
 import de.robv.android.xposed.XC_MethodHook.MethodHookParam;
 
 public class XContentProvider extends XHook {
@@ -79,7 +80,8 @@ public class XContentProvider extends XHook {
 					"com.android.providers.calendar.CalendarProvider2"));
 
 		// Contacts provider
-		else if (packageName.equals("com.android.providers.contacts")) {
+		else if (packageName.equals("com.android.providers.contacts")
+				|| packageName.equals("com.motorola.blur.providers.contacts")) {
 			String[] uris = new String[] { "contacts/contacts", "contacts/data", "contacts/raw_contacts",
 					"contacts/phone_lookup", "contacts/profile" };
 			for (String uri : uris)
@@ -88,6 +90,10 @@ public class XContentProvider extends XHook {
 
 			listHook.add(new XContentProvider(PrivacyManager.cPhone, "CallLogProvider",
 					"com.android.providers.contacts.CallLogProvider"));
+
+			listHook.add(new XContentProvider(PrivacyManager.cPhone, "BlurCallLogProvider",
+					"com.motorola.blur.providers.contacts.BlurCallLogProvider"));
+
 			listHook.add(new XContentProvider(PrivacyManager.cMessages, "VoicemailContentProvider",
 					"com.android.providers.contacts.VoicemailContentProvider"));
 		}
@@ -196,8 +202,25 @@ public class XContentProvider extends XHook {
 							if (copy)
 								try {
 									Object[] columns = new Object[cursor.getColumnCount()];
-									for (int i = 0; i < cursor.getColumnCount(); i++)
-										switch (cursor.getType(i)) {
+									for (int i = 0; i < cursor.getColumnCount(); i++) {
+										int type = -1;
+										if (Build.VERSION.SDK_INT > Build.VERSION_CODES.GINGERBREAD_MR1) {
+											type = cursor.getType(i);
+										} else if (cursor.isNull(i)) {
+											type = Cursor.FIELD_TYPE_NULL;
+										// SQLiteCursor is subclass of AbstractWindowedCursor
+										} else if (cursor instanceof AbstractWindowedCursor) {
+											if (((AbstractWindowedCursor) cursor).isLong(i)) {
+												type = Cursor.FIELD_TYPE_INTEGER;
+											} else if (((AbstractWindowedCursor) cursor).isFloat(i)) {
+												type = Cursor.FIELD_TYPE_FLOAT;
+											} else if (((AbstractWindowedCursor) cursor).isString(i)) {
+												type = Cursor.FIELD_TYPE_STRING;
+											} else if (((AbstractWindowedCursor) cursor).isBlob(i)) {
+												type = Cursor.FIELD_TYPE_BLOB;
+											}
+										}
+										switch (type) {
 										case Cursor.FIELD_TYPE_NULL:
 											columns[i] = null;
 											break;
@@ -214,8 +237,9 @@ public class XContentProvider extends XHook {
 											columns[i] = cursor.getBlob(i);
 											break;
 										default:
-											Util.log(this, Log.WARN, "Unknown cursor data type=" + cursor.getType(i));
+											Util.log(this, Log.WARN, "Unknown cursor data type=" + type);
 										}
+									}
 									result.addRow(columns);
 								} catch (Throwable ex) {
 									Util.bug(this, ex);

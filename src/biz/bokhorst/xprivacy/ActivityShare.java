@@ -83,14 +83,22 @@ public class ActivityShare extends Activity {
 			if (getIntent().getAction().equals("biz.bokhorst.xprivacy.action.IMPORT")) {
 				String fileName = (extras.containsKey(cFileName) ? extras.getString(cFileName) : getFileName(false));
 				ImportTask importTask = new ImportTask();
-				importTask.executeOnExecutor(mExecutor, new File(fileName));
+				if (Build.VERSION.SDK_INT > Build.VERSION_CODES.GINGERBREAD_MR1) {
+					importTask.executeOnExecutor(mExecutor, new File(fileName));
+				} else {
+					importTask.execute(new File(fileName));
+				}
 			}
 
 			// Export
 			if (getIntent().getAction().equals("biz.bokhorst.xprivacy.action.EXPORT")) {
 				String fileName = (extras.containsKey(cFileName) ? extras.getString(cFileName) : getFileName(false));
 				ExportTask exportTask = new ExportTask();
-				exportTask.executeOnExecutor(mExecutor, new File(fileName));
+				if (Build.VERSION.SDK_INT > Build.VERSION_CODES.GINGERBREAD_MR1) {
+					exportTask.executeOnExecutor(mExecutor, new File(fileName));
+				} else {
+					exportTask.execute(new File(fileName));
+				}
 			}
 
 			// Fetch
