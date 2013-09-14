@@ -20,9 +20,10 @@
     <string name="menu_about">Over</string>
     <string name="menu_help">Help</string>
     <string name="menu_all">Alles</string>
+    <string name="menu_apply">Pas sjabloon toe</string>
     <string name="menu_clear">Wissen</string>
     <string name="menu_app_launch">Uitvoeren</string>
-    <string name="menu_app_settings">Instellingen</string>
+    <string name="menu_app_settings">Applicatie details</string>
     <string name="menu_app_store">Play Store</string>
     <string name="menu_accounts">Geef accounts toestemming</string>
     <string name="menu_contacts">Geef contacten toestemming</string>
@@ -69,6 +70,12 @@ maar het is onmogelijk om te garanderen dat het op elk apparaat en voor elke app
         <item quantity="other">%d filters actief</item>
     </plurals>
 
+    <string name="title_fused">Filter op gegevensgebruik</string>
+    <string name="title_finternet">Filter op internet toegang</string>
+    <string name="title_fpermission">Filter op rechten</string>
+    <string name="title_frestricted">Filter op beperkingen</string>
+    <string name="title_fuser">Filter op gebruikers applicaties</string>
+    <string name="title_fsystem">Filter op systeem applicaties</string>
     <string name="settings_serial">Serienummer</string>
     <string name="settings_lat">Breedtegraad</string>
     <string name="settings_lon">Lengtegraad</string>
@@ -80,15 +87,7 @@ maar het is onmogelijk om te garanderen dat het op elk apparaat en voor elke app
     <string name="settings_operator">Operator</string>
     <string name="settings_subscriber">Abonnee ID</string>
     <string name="settings_ua">User agent</string>
-    <string name="settings_fpermission">Filter op rechten</string>
-    <string name="settings_fapplication">Filter by application type</string>
     <string name="settings_log">Debug log (herstart vereist)</string>
-    <string name="filter_used">Filter op gegevensgebruik</string>
-    <string name="filter_internet">Filter op internet toegang</string>
-    <string name="filter_restricted">Filter op beperkingen</string>
-    <string name="filter_app_sys">Systeem applictie</string>
-    <string name="filter_app_user">Gebruiker applicatie</string>
-    <string name="filter_app_both">Alle applicaties</string>
     <string name="help_application">Applicatie</string>
     <string name="help_internet">heeft internet rechten</string>
     <string name="help_granted">heeft Android rechten</string>

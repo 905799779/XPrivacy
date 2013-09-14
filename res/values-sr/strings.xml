@@ -20,6 +20,7 @@
     <string name="menu_about">О</string>
     <string name="menu_help">Help</string>
     <string name="menu_all">Све</string>
+    <string name="menu_apply">Apply template</string>
     <string name="menu_clear">Clear</string>
     <string name="menu_app_launch">Покрени</string>
     <string name="menu_app_settings">Подешавања</string>
@@ -69,6 +70,12 @@ however it is impossible to guarantee it will work flawless on each and every de
         <item quantity="other">%d active filters</item>
     </plurals>
 
+    <string name="title_fused">Filter on data usage</string>
+    <string name="title_finternet">Filter on internet access</string>
+    <string name="title_fpermission">Filter on permission</string>
+    <string name="title_frestricted">Filter on restricted</string>
+    <string name="title_fuser">Filter on user applications</string>
+    <string name="title_fsystem">Filter on system applications</string>
     <string name="settings_serial">Serial#</string>
     <string name="settings_lat">Ширина</string>
     <string name="settings_lon">Дужина</string>
@@ -80,15 +87,7 @@ however it is impossible to guarantee it will work flawless on each and every de
     <string name="settings_operator">Operator</string>
     <string name="settings_subscriber">Претплатнички ИД</string>
     <string name="settings_ua">User agent</string>
-    <string name="settings_fpermission">Филтрирај по дозволи</string>
-    <string name="settings_fapplication">Filter by application type</string>
     <string name="settings_log">Debug log (requires restart)</string>
-    <string name="filter_used">Filter on data usage</string>
-    <string name="filter_internet">Filter on internet access</string>
-    <string name="filter_restricted">Filter on restricted</string>
-    <string name="filter_app_sys">System application</string>
-    <string name="filter_app_user">User application</string>
-    <string name="filter_app_both">All applications</string>
     <string name="help_application">Апликација</string>
     <string name="help_internet">има дозволу за Интернет</string>
     <string name="help_granted">има дозволу за Андроид</string>

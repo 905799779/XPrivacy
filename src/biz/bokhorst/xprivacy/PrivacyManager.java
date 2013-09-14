@@ -87,7 +87,11 @@ public class PrivacyManager {
 	public final static String cSettingIccId = "ICC_ID";
 	public final static String cSettingSubscriber = "Subscriber";
 	public final static String cSettingUa = "UA";
+	public final static String cSettingFUsed = "FUsed";
+	public final static String cSettingFInternet = "FInternet";
+	public final static String cSettingFRestriction = "FRestriction";
 	public final static String cSettingFPermission = "FPermission";
+	public final static String cSettingFUser = "FUser";
 	public final static String cSettingFSystem = "FSystem";
 	public final static String cSettingTheme = "Theme";
 	public final static String cSettingSalt = "Salt";
@@ -96,7 +100,8 @@ public class PrivacyManager {
 	public final static String cSettingRandom = "Random@boot";
 	public final static String cSettingLog = "Log";
 
-	public final static String cValueRandom = "\nRandom\n";
+	public final static String cValueRandom = "#Random#";
+	public final static String cValueRandomLegacy = "\nRandom\n";
 
 	private final static String cDeface = "DEFACE";
 	public final static int cRestrictionCacheTimeoutMs = 15 * 1000;
@@ -348,6 +353,8 @@ public class PrivacyManager {
 							});
 						}
 					}
+				} catch (SecurityException ex) {
+					Util.bug(hook, ex);
 				} catch (Throwable ex) {
 					Util.bug(hook, ex);
 				}

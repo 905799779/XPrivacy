@@ -20,14 +20,15 @@
     <string name="menu_about">关于</string>
     <string name="menu_help">帮助</string>
     <string name="menu_all">全部</string>
+    <string name="menu_apply">应用模板</string>
     <string name="menu_clear">清除</string>
     <string name="menu_app_launch">启动</string>
     <string name="menu_app_settings">设置</string>
     <string name="menu_app_store">Play 商店</string>
     <string name="menu_accounts">选择允许的帐号</string>
     <string name="menu_contacts">选择允许的联系人</string>
-    <string name="msg_new">New</string>
-    <string name="msg_update">Update</string>
+    <string name="msg_new">新装</string>
+    <string name="msg_update">升级</string>
     <string name="msg_restricted" formatted="false">%s 被 XPrivacy 限制</string>
     <string name="msg_licensed" formatted="false">已授权给: %s</string>
     <string name="msg_loading">加载中</string>
@@ -69,6 +70,12 @@
         <item quantity="other">%d 过滤器</item>
     </plurals>
 
+    <string name="title_fused">未用数据过滤</string>
+    <string name="title_finternet">无联网权过滤</string>
+    <string name="title_fpermission">无关权限过滤</string>
+    <string name="title_frestricted">未勾限制过滤</string>
+    <string name="title_fuser">用户应用过滤</string>
+    <string name="title_fsystem">系统应用过滤</string>
     <string name="settings_serial">序列号</string>
     <string name="settings_lat">纬度</string>
     <string name="settings_lon">经度</string>
@@ -79,16 +86,8 @@
     <string name="settings_country">国家</string>
     <string name="settings_operator">运营商</string>
     <string name="settings_subscriber">IMSI</string>
-    <string name="settings_ua">User agent</string>
-    <string name="settings_fpermission">无关权限过滤</string>
-    <string name="settings_fapplication">按应用级别过滤</string>
+    <string name="settings_ua">UA</string>
     <string name="settings_log">调试日志 (需要重启)</string>
-    <string name="filter_used">未用数据过滤</string>
-    <string name="filter_internet">无联网权过滤</string>
-    <string name="filter_restricted">未勾限制过滤</string>
-    <string name="filter_app_sys">系统应用</string>
-    <string name="filter_app_user">用户应用</string>
-    <string name="filter_app_both">全部应用</string>
     <string name="help_application">应用</string>
     <string name="help_internet">表示联网的权限</string>
     <string name="help_granted">表示授予的权限</string>
@@ -97,3 +96,4 @@
     <string name="help_dangerous">表示勿轻易限制</string>
 
 </resources>
+

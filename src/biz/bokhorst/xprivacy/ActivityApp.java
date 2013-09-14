@@ -260,8 +260,8 @@ public class ActivityApp extends ActionBarActivity {
 		case R.id.menu_help:
 			optionHelp();
 			return true;
-		case R.id.menu_all:
-			optionAll();
+		case R.id.menu_apply:
+			optionApply();
 			return true;
 		case R.id.menu_clear:
 			optionClear();
@@ -290,6 +290,9 @@ public class ActivityApp extends ActionBarActivity {
 		case R.id.menu_contacts:
 			optionContacts();
 			return true;
+		case R.id.menu_settings:
+			SettingsDialog.edit(ActivityApp.this, mAppInfo);
+			return true;
 		default:
 			return super.onOptionsItemSelected(item);
 		}
@@ -316,7 +319,7 @@ public class ActivityApp extends ActionBarActivity {
 		dialog.show();
 	}
 
-	private void optionAll() {
+	private void optionApply() {
 		List<String> listRestriction = PrivacyManager.getRestrictions(false);
 
 		// Get toggle

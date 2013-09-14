@@ -20,6 +20,7 @@
     <string name="menu_about">O aplikaci</string>
     <string name="menu_help">Nápověda</string>
     <string name="menu_all">Vše</string>
+    <string name="menu_apply">Apply template</string>
     <string name="menu_clear">Vyčistit</string>
     <string name="menu_app_launch">Spustit</string>
     <string name="menu_app_settings">Informace o aplikaci</string>
@@ -70,6 +71,12 @@ nicméně je nemožné zaručit bezchybnou funkčnost na všech zařízeních a 
         <item quantity="other">%d aktivních filtrů</item>
     </plurals>
 
+    <string name="title_fused">Filter on data usage</string>
+    <string name="title_finternet">Filter on internet access</string>
+    <string name="title_fpermission">Filter on permission</string>
+    <string name="title_frestricted">Filter on restricted</string>
+    <string name="title_fsystem">Filter on system applications</string>
+    <string name="title_fuser">Filter on user applications</string>
     <string name="settings_serial">Sériové číslo</string>
     <string name="settings_lat">Zeměpisná šířka</string>
     <string name="settings_lon">Zeměpisná délka</string>
@@ -81,15 +88,7 @@ nicméně je nemožné zaručit bezchybnou funkčnost na všech zařízeních a 
     <string name="settings_operator">Operátor</string>
     <string name="settings_subscriber">IMSI</string>
     <string name="settings_ua">Agent prohlížeče</string>
-    <string name="settings_fpermission">Filtrovat dle oprávnění</string>
-    <string name="settings_fapplication">Filtrovat dle typu aplikace</string>
     <string name="settings_log">Ukládat ladící záznam (vyžaduje restart)</string>
-    <string name="filter_used">Filtrovat dle využití</string>
-    <string name="filter_internet">Filtrovat dle přístupu k internetu</string>
-    <string name="filter_restricted">Filtrovat dle omezení</string>
-    <string name="filter_app_sys">Systémové aplikace</string>
-    <string name="filter_app_user">Uživatelské aplikace</string>
-    <string name="filter_app_both">Všechny aplikace</string>
     <string name="help_application">Aplikace</string>
     <string name="help_internet">má oprávnění k Internetu</string>
     <string name="help_granted">má Android oprávnění</string>

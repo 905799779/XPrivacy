@@ -20,6 +20,7 @@
     <string name="menu_about">عن التطبيق</string>
     <string name="menu_help">مساعدة</string>
     <string name="menu_all">تحديد الكل</string>
+    <string name="menu_apply">تطبيق القالب</string>
     <string name="menu_clear">إلغاء التحديد</string>
     <string name="menu_app_launch">تشغيل التطبيق</string>
     <string name="menu_app_settings">إعدادات التطبيق</string>
@@ -69,6 +70,12 @@
         <item quantity="other">%d فلاتر نشِطة</item>
     </plurals>
 
+    <string name="title_fused">التصفية حسب استخدام البيانات</string>
+    <string name="title_finternet">التصفية حسب الوصول للإنترنت</string>
+    <string name="title_fpermission">التصفية حسب الأُذونات</string>
+    <string name="title_frestricted">التصفية حسب التقييد</string>
+    <string name="title_fuser">Filter on user applications</string>
+    <string name="title_fsystem">تصفية برامج النظام</string>
     <string name="settings_serial">السيريال#</string>
     <string name="settings_lat">خط العرض</string>
     <string name="settings_lon">خط الطول</string>
@@ -80,15 +87,7 @@
     <string name="settings_operator">المُشغل</string>
     <string name="settings_subscriber">IMSI</string>
     <string name="settings_ua">وكيل المستخدم</string>
-    <string name="settings_fpermission">تصفية بواسطة الأُذونات</string>
-    <string name="settings_fapplication">تصفية بواسطة نوع التطبيق</string>
     <string name="settings_log"> سِجِل تصحيح الأخطاء (يتطلب إعادة التشغيل) </string>
-    <string name="filter_used">التصفية حسب استخدام البيانات</string>
-    <string name="filter_internet">التصفية حسب الاتصال بالإنترنت</string>
-    <string name="filter_restricted">التصفية حسب التقييد</string>
-    <string name="filter_app_sys">تطبيقات النظام</string>
-    <string name="filter_app_user">تطبيقات المستخدم</string>
-    <string name="filter_app_both">كل التطبيقات</string>
     <string name="help_application">التطبيق</string>
     <string name="help_internet">لديه صلاحية الوصول للإنترنت</string>
     <string name="help_granted">لديه صلاحية أندرويد</string>

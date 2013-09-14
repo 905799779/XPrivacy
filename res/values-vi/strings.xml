@@ -9,7 +9,7 @@
     <string name="menu_usage">Sử dụng</string>
     <string name="menu_refresh">Làm mới</string>
     <string name="menu_settings">Tùy chỉnh</string>
-    <string name="menu_template">Mẫu</string>
+    <string name="menu_template">Thiết lập hạn chế định sẵn (dành cho ứng dụng cài mới)</string>
     <string name="menu_report">Báo cáo lỗi</string>
     <string name="menu_export">Xuất</string>
     <string name="menu_import">Nhập</string>
@@ -20,14 +20,15 @@
     <string name="menu_about">Về XPrivacy</string>
     <string name="menu_help">Trợ giúp</string>
     <string name="menu_all">Tất cả</string>
+    <string name="menu_apply">Áp dụng mẫu hạn chế định sẵn</string>
     <string name="menu_clear">Xóa</string>
     <string name="menu_app_launch">Chạy</string>
     <string name="menu_app_settings">Tùy chỉnh</string>
     <string name="menu_app_store">Play Store</string>
     <string name="menu_accounts">Chọn một tài khoản</string>
     <string name="menu_contacts">Chọn một danh bạ</string>
-    <string name="msg_new">New</string>
-    <string name="msg_update">Update</string>
+    <string name="msg_new">Mới</string>
+    <string name="msg_update">Cập nhật</string>
     <string name="msg_restricted" formatted="false">%s hạn chế bởi XPrivacy</string>
     <string name="msg_licensed" formatted="false">Bản quyền: %s</string>
     <string name="msg_loading">Đang tải</string>
@@ -68,6 +69,12 @@
         <item quantity="other">%d bộ lọc có hiệu lực</item>
     </plurals>
 
+    <string name="title_fused">Lọc các ứng dụng truy cập dữ liệu</string>
+    <string name="title_finternet">Lọc các ứng dụng truy cập internet</string>
+    <string name="title_fpermission">Lọc theo quyền</string>
+    <string name="title_frestricted">Lọc các ứng dụng đã thiết lập hạn chế</string>
+    <string name="title_fuser">Lọc các ứng dụng người dùng</string>
+    <string name="title_fsystem">Lọc các ứng dụng hệ thống</string>
     <string name="settings_serial">Serial#</string>
     <string name="settings_lat">Vĩ độ</string>
     <string name="settings_lon">Kinh độ</string>
@@ -79,15 +86,7 @@
     <string name="settings_operator">Nhà mạng</string>
     <string name="settings_subscriber">ID người đăng kí</string>
     <string name="settings_ua">Nhận dạng trình duyệt (User agent)</string>
-    <string name="settings_fpermission">Lọc theo quyền</string>
-    <string name="settings_fapplication">Lọc theo kiểu ứng dụng</string>
     <string name="settings_log">Lưu thông tin gỡ rối (yêu cầu khởi động lại)</string>
-    <string name="filter_used">Lọc ứng dụng truy cập dữ liệu</string>
-    <string name="filter_internet">Lọc ứng dụng truy cập internet</string>
-    <string name="filter_restricted">Lọc ứng dụng đã hạn chế các quyền</string>
-    <string name="filter_app_sys">Ứng dụng hệ thống</string>
-    <string name="filter_app_user">Ứng dụng người dùng</string>
-    <string name="filter_app_both">Tất cả ứng dụng</string>
     <string name="help_application">Ứng dụng</string>
     <string name="help_internet">có quyền truy cập mạng</string>
     <string name="help_granted">có các quyền của hệ điều hành</string>

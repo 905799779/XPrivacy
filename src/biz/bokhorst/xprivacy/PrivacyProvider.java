@@ -1,7 +1,9 @@
 package biz.bokhorst.xprivacy;
 
 import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
+import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.util.ArrayList;
@@ -54,7 +56,8 @@ public class PrivacyProvider extends ContentProvider {
 	private static final int TYPE_USAGE = 2;
 	private static final int TYPE_SETTING = 3;
 
-	private static Object mFallbackLock = new Object();
+	private static Object mFallbackRestrictionLock = new Object();
+	private static Object mFallbackSettingsLock = new Object();
 	private static int mFallbackRestrictionsUid = 0;
 	private static long mFallbackRestrictionsTime = 0;
 	private static long mFallbackSettingsTime = 0;
@@ -73,54 +76,10 @@ public class PrivacyProvider extends ContentProvider {
 	@Override
 	public boolean onCreate() {
 		try {
-			// Write meta data
-			String packageName = PrivacyManager.class.getPackage().getName();
-			File out = new File(Environment.getDataDirectory() + File.separator + "data" + File.separator + packageName
-					+ File.separator + "meta.xml");
-			Util.log(null, Log.INFO, "Writing meta=" + out.getAbsolutePath());
-			InputStream is = getContext().getAssets().open("meta.xml");
-			OutputStream os = new FileOutputStream(out.getAbsolutePath());
-			byte[] buffer = new byte[1024];
-			int read;
-			while ((read = is.read(buffer)) != -1)
-				os.write(buffer, 0, read);
-			is.close();
-			os.flush();
-			os.close();
-			out.setReadable(true, false);
-
-			// Convert restrictions
-			File source = new File(Environment.getDataDirectory() + File.separator + "data" + File.separator
-					+ packageName + File.separator + "shared_prefs" + File.separator
-					+ "biz.bokhorst.xprivacy.provider.xml");
-			File backup = new File(source.getAbsoluteFile() + ".orig");
-			if (source.exists() && !backup.exists()) {
-				Util.log(null, Log.INFO, "Converting restrictions");
-				SharedPreferences prefs = getContext().getSharedPreferences(PREF_RESTRICTION,
-						Context.MODE_WORLD_READABLE);
-				for (String key : prefs.getAll().keySet()) {
-					String[] component = key.split("\\.");
-					if (key.startsWith(COL_RESTRICTED)) {
-						String restrictionName = component[1];
-						String value = prefs.getString(key, null);
-						List<String> listRestriction = new ArrayList<String>(Arrays.asList(value.split(",")));
-						listRestriction.remove(0);
-						for (String uid : listRestriction)
-							updateRestriction(Integer.parseInt(uid), restrictionName, null, false);
-					} else if (key.startsWith(COL_METHOD)) {
-						int uid = Integer.parseInt(component[1]);
-						String restrictionName = component[2];
-						String methodName = component[3];
-						boolean value = prefs.getBoolean(key, false);
-						updateRestriction(uid, restrictionName, methodName, value);
-					} else
-						Util.log(null, Log.WARN, "Unknown key=" + key);
-				}
-
-				// Backup old file
-				Util.log(null, Log.INFO, "Backup name=" + backup.getAbsolutePath());
-				Util.copy(source, backup);
-			}
+			writeMetaData();
+			convertRestrictions();
+			convertSettings();
+			fixFilePermissions();
 		} catch (Throwable ex) {
 			Util.bug(null, ex);
 		}
@@ -462,10 +421,12 @@ public class PrivacyProvider extends ContentProvider {
 	public static boolean getRestrictedFallback(XHook hook, int uid, String restrictionName, String methodName) {
 		try {
 			long now = new Date().getTime();
-			synchronized (mFallbackLock) {
+			File file = new File(getPrefFileName(PREF_RESTRICTION, uid));
+
+			synchronized (mFallbackRestrictionLock) {
 				if (mFallbackRestrictions == null || mFallbackRestrictionsUid != uid) {
 					// Initial load
-					mFallbackRestrictions = new SharedPreferencesEx(new File(getPrefFileName(PREF_RESTRICTION, uid)));
+					mFallbackRestrictions = new SharedPreferencesEx(file);
 					mFallbackRestrictionsUid = uid;
 					mFallbackRestrictionsTime = now;
 					long ms = System.currentTimeMillis() - now;
@@ -480,6 +441,7 @@ public class PrivacyProvider extends ContentProvider {
 					Util.log(null, Log.INFO, "Reload fallback restrictions uid=" + uid + " " + ms + " ms");
 				}
 			}
+
 			return getRestricted(restrictionName, methodName, mFallbackRestrictions);
 		} catch (Throwable ex) {
 			Util.bug(hook, ex);
@@ -490,17 +452,18 @@ public class PrivacyProvider extends ContentProvider {
 	public static String getSettingFallback(String settingName, String defaultValue) {
 		try {
 			long now = new Date().getTime();
+			File file = new File(getPrefFileName(PREF_SETTINGS));
 
-			// Initial load
-			if (mFallbackSettings == null) {
-				mFallbackSettings = new SharedPreferencesEx(new File(getPrefFileName(PREF_SETTINGS)));
-				mFallbackSettingsTime = now;
-				long ms = System.currentTimeMillis() - now;
-				Util.log(null, Log.INFO, "Load fallback settings uid=" + Binder.getCallingUid() + " " + ms + " ms");
-			}
+			synchronized (mFallbackSettingsLock) {
+				// Initial load
+				if (mFallbackSettings == null) {
+					mFallbackSettings = new SharedPreferencesEx(file);
+					mFallbackSettingsTime = now;
+					long ms = System.currentTimeMillis() - now;
+					Util.log(null, Log.INFO, "Load fallback settings uid=" + Binder.getCallingUid() + " " + ms + " ms");
+				}
 
-			// Get update
-			synchronized (mFallbackSettings) {
+				// Get update
 				if (mFallbackSettingsTime + PrivacyManager.cSettingCacheTimeoutMs < now) {
 					mFallbackSettings.reload();
 					mFallbackSettingsTime = now;
@@ -546,8 +509,10 @@ public class PrivacyProvider extends ContentProvider {
 
 	public static void fixFilePermissions() {
 		String packageName = PrivacyManager.class.getPackage().getName();
-		File list[] = new File(Environment.getDataDirectory() + File.separator + "data" + File.separator + packageName
-				+ File.separator + "shared_prefs").listFiles();
+		File folder = new File(Environment.getDataDirectory() + File.separator + "data" + File.separator + packageName
+				+ File.separator + "shared_prefs");
+		folder.setReadable(true, false);
+		File list[] = folder.listFiles();
 		if (list != null)
 			for (File file : list)
 				if (file.getName().startsWith("biz.bokhorst.xprivacy.provider.") && file.getName().endsWith(".xml")
@@ -573,5 +538,70 @@ public class PrivacyProvider extends ContentProvider {
 
 	private static String getSettingName(String settingKey) {
 		return settingKey.substring(COL_SETTING.length() + 1);
+	}
+
+	private void writeMetaData() throws IOException, FileNotFoundException {
+		String packageName = PrivacyManager.class.getPackage().getName();
+		File out = new File(Environment.getDataDirectory() + File.separator + "data" + File.separator + packageName
+				+ File.separator + "meta.xml");
+		Util.log(null, Log.INFO, "Writing meta=" + out.getAbsolutePath());
+		InputStream is = getContext().getAssets().open("meta.xml");
+		OutputStream os = new FileOutputStream(out.getAbsolutePath());
+		byte[] buffer = new byte[1024];
+		int read;
+		while ((read = is.read(buffer)) != -1)
+			os.write(buffer, 0, read);
+		is.close();
+		os.flush();
+		os.close();
+		out.setReadable(true, false);
+	}
+
+	private void convertRestrictions() throws IOException {
+		String packageName = PrivacyManager.class.getPackage().getName();
+		File source = new File(Environment.getDataDirectory() + File.separator + "data" + File.separator + packageName
+				+ File.separator + "shared_prefs" + File.separator + "biz.bokhorst.xprivacy.provider.xml");
+		File backup = new File(source.getAbsoluteFile() + ".orig");
+		if (source.exists() && !backup.exists()) {
+			Util.log(null, Log.INFO, "Converting restrictions");
+			SharedPreferences prefs = getContext().getSharedPreferences(PREF_RESTRICTION, Context.MODE_WORLD_READABLE);
+			for (String key : prefs.getAll().keySet()) {
+				String[] component = key.split("\\.");
+				if (key.startsWith(COL_RESTRICTED)) {
+					String restrictionName = component[1];
+					String value = prefs.getString(key, null);
+					List<String> listRestriction = new ArrayList<String>(Arrays.asList(value.split(",")));
+					listRestriction.remove(0);
+					for (String uid : listRestriction)
+						updateRestriction(Integer.parseInt(uid), restrictionName, null, false);
+				} else if (key.startsWith(COL_METHOD)) {
+					int uid = Integer.parseInt(component[1]);
+					String restrictionName = component[2];
+					String methodName = component[3];
+					boolean value = prefs.getBoolean(key, false);
+					updateRestriction(uid, restrictionName, methodName, value);
+				} else
+					Util.log(null, Log.WARN, "Unknown key=" + key);
+			}
+
+			// Backup old file
+			Util.log(null, Log.INFO, "Backup name=" + backup.getAbsolutePath());
+			Util.copy(source, backup);
+		}
+	}
+
+	private void convertSettings() throws IOException {
+		SharedPreferences prefs = getContext().getSharedPreferences(PREF_SETTINGS, Context.MODE_WORLD_READABLE);
+		SharedPreferences.Editor editor = prefs.edit();
+		for (String key : prefs.getAll().keySet())
+			try {
+				String value = prefs.getString(key, null);
+				if (PrivacyManager.cValueRandomLegacy.equals(value))
+					editor.putString(key, PrivacyManager.cValueRandom);
+			} catch (Throwable ex) {
+
+			}
+		editor.apply();
+		setPrefFileReadable(PREF_SETTINGS);
 	}
 }

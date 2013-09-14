@@ -61,52 +61,50 @@ public final class SharedPreferencesEx implements SharedPreferences {
 
 	@SuppressWarnings({ "rawtypes", "unchecked" })
 	private void loadFromDiskLocked() {
-		if (mLoaded) {
-			return;
-		}
-		if (mBackupFile.exists()) {
-			mFile.delete();
-			mBackupFile.renameTo(mFile);
-		}
-
-		// Debugging
-		if (mFile.exists() && !mFile.canRead()) {
-			Util.log(null, Log.WARN, "Attempt to read preferences file " + mFile + " without permission");
-		}
-
-		Map map = null;
-		long lastModified = 0;
-		long fileSize = 0;
-		if (mFile.canRead()) {
-			lastModified = mFile.lastModified();
-			fileSize = mFile.length();
-			BufferedInputStream str = null;
-			try {
-				str = new BufferedInputStream(new FileInputStream(mFile), 16 * 1024);
-				map = XmlUtils.readMapXml(str);
-			} catch (Throwable ex) {
-				Util.bug(null, ex);
-			} finally {
-				if (str != null) {
-					try {
-						str.close();
-					} catch (RuntimeException rethrown) {
-						throw rethrown;
-					} catch (Throwable ignored) {
-						Util.bug(null, ignored);
+		int tries = 0;
+		while (!mLoaded && (mFile.exists() || mBackupFile.exists()) && ++tries < 10) {
+			if (mFile.exists() && mFile.canRead() && !mBackupFile.exists()) {
+				Map map = null;
+				long lastModified = mFile.lastModified();
+				long fileSize = mFile.length();
+				BufferedInputStream str = null;
+				try {
+					str = new BufferedInputStream(new FileInputStream(mFile), 16 * 1024);
+					map = XmlUtils.readMapXml(str);
+				} catch (Throwable ex) {
+					Util.bug(null, ex);
+				} finally {
+					if (str != null) {
+						try {
+							str.close();
+						} catch (RuntimeException rethrown) {
+							throw rethrown;
+						} catch (Throwable ignored) {
+							Util.bug(null, ignored);
+						}
 					}
 				}
+				if (map != null) {
+					mLoaded = true;
+					mMap = map;
+					mLastModified = lastModified;
+					mFileSize = fileSize;
+					notifyAll();
+				}
 			}
+			if (!mLoaded)
+				try {
+					Thread.sleep(200);
+					Util.log(null, Log.WARN, "Load " + mFile + " try " + tries);
+				} catch (Throwable ex) {
+					Util.bug(null, ex);
+				}
 		}
-		mLoaded = true;
-		if (map != null) {
-			mMap = map;
-			mLastModified = lastModified;
-			mFileSize = fileSize;
-		} else {
+		if (!mLoaded) {
+			mLoaded = true;
 			mMap = new HashMap<String, Object>();
+			notifyAll();
 		}
-		notifyAll();
 	}
 
 	private static File makeBackupFile(File prefsFile) {
@@ -124,7 +122,7 @@ public final class SharedPreferencesEx implements SharedPreferences {
 	}
 
 	private boolean hasFileChanged() {
-		if (!mFile.canRead()) {
+		if (!mFile.canRead() || mBackupFile.exists()) {
 			return true;
 		}
 		long lastModified = mFile.lastModified();

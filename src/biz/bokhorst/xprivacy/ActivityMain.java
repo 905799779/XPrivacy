@@ -1,6 +1,5 @@
 package biz.bokhorst.xprivacy;
 
-import java.security.InvalidParameterException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
@@ -20,8 +19,6 @@ import android.content.IntentFilter;
 import android.content.pm.PackageInfo;
 import android.graphics.Color;
 import android.graphics.Typeface;
-import android.location.Address;
-import android.location.Geocoder;
 import android.net.Uri;
 import android.os.AsyncTask;
 import android.os.Build;
@@ -44,7 +41,6 @@ import android.view.WindowManager;
 import android.widget.AdapterView;
 import android.widget.AdapterView.OnItemSelectedListener;
 import android.widget.ArrayAdapter;
-import android.widget.Button;
 import android.widget.CheckBox;
 import android.widget.CompoundButton;
 import android.widget.EditText;
@@ -62,12 +58,7 @@ public class ActivityMain extends Activity implements OnItemSelectedListener, Co
 	private int mThemeId;
 	private Spinner spRestriction = null;
 	private AppListAdapter mAppAdapter = null;
-	private String mUserSystemOrBoth = APP_FILTER_BOTH;
 	private boolean mFiltersHidden = false;
-
-	private static final String APP_FILTER_BOTH = "B";
-	private static final String APP_FILTER_USER = "U";
-	private static final String APP_FILTER_SYS = "S";
 
 	private static final int ACTIVITY_LICENSE = 0;
 	private static final int ACTIVITY_EXPORT = 1;
@@ -161,14 +152,6 @@ public class ActivityMain extends Activity implements OnItemSelectedListener, Co
 		spRestriction.setAdapter(spAdapter);
 		spRestriction.setOnItemSelectedListener(this);
 
-		// Setup used filter
-		CheckBox cbUsed = (CheckBox) findViewById(R.id.cbFUsed);
-		cbUsed.setOnCheckedChangeListener(this);
-
-		// Setup internet filter
-		CheckBox cbInternet = (CheckBox) findViewById(R.id.cbFInternet);
-		cbInternet.setOnCheckedChangeListener(this);
-
 		// Setup name filter
 		final EditText etFilter = (EditText) findViewById(R.id.etFilter);
 		etFilter.addTextChangedListener(new TextWatcher() {
@@ -198,9 +181,26 @@ public class ActivityMain extends Activity implements OnItemSelectedListener, Co
 			}
 		});
 
+		// Setup used filter
+		boolean fUsed = PrivacyManager.getSettingBool(null, ActivityMain.this, 0, PrivacyManager.cSettingFUsed, false,
+				false);
+		CheckBox cbUsed = (CheckBox) findViewById(R.id.cbFUsed);
+		cbUsed.setChecked(fUsed);
+		cbUsed.setOnCheckedChangeListener(this);
+
+		// Setup internet filter
+		boolean fInternet = PrivacyManager.getSettingBool(null, ActivityMain.this, 0, PrivacyManager.cSettingFInternet,
+				false, false);
+		CheckBox cbInternet = (CheckBox) findViewById(R.id.cbFInternet);
+		cbInternet.setChecked(fInternet);
+		cbInternet.setOnCheckedChangeListener(this);
+
 		// Setup restriction filter
-		CheckBox cbFilter = (CheckBox) findViewById(R.id.cbFilter);
-		cbFilter.setOnCheckedChangeListener(this);
+		boolean fRestriction = PrivacyManager.getSettingBool(null, ActivityMain.this, 0,
+				PrivacyManager.cSettingFRestriction, false, false);
+		CheckBox cbRestriction = (CheckBox) findViewById(R.id.cbFilter);
+		cbRestriction.setChecked(fRestriction);
+		cbRestriction.setOnCheckedChangeListener(this);
 
 		// Setup permission filter
 		boolean fPermission = PrivacyManager.getSettingBool(null, ActivityMain.this, 0,
@@ -209,72 +209,19 @@ public class ActivityMain extends Activity implements OnItemSelectedListener, Co
 		cbFPermission.setChecked(fPermission);
 		cbFPermission.setOnCheckedChangeListener(this);
 
-		// Setup user/system/both filter
-		mUserSystemOrBoth = PrivacyManager.getSetting(null, ActivityMain.this, 0, PrivacyManager.cSettingFSystem,
-				APP_FILTER_BOTH, false);
-		final ImageView imgUserSystemBoth = (ImageView) findViewById(R.id.imgAppFilter);
-		imgUserSystemBoth.setImageDrawable(getResources().getDrawable(
-				getThemed(mUserSystemOrBoth.equals(APP_FILTER_SYS) ? R.attr.icon_system : (mUserSystemOrBoth
-						.equals(APP_FILTER_USER) ? R.attr.icon_user : R.attr.icon_user_system))));
-		final LinearLayout llAppFilter = (LinearLayout) findViewById(R.id.llAppFilter);
-		final LinearLayout llAppFilter2 = (LinearLayout) findViewById(R.id.llAppFilter2);
+		// Setup user filter
+		boolean fUser = PrivacyManager.getSettingBool(null, ActivityMain.this, 0, PrivacyManager.cSettingFUser, true,
+				false);
+		final CheckBox cbFUser = (CheckBox) findViewById(R.id.cbFUser);
+		cbFUser.setChecked(fUser);
+		cbFUser.setOnCheckedChangeListener(this);
+
+		// Setup system filter
+		boolean fSystem = PrivacyManager.getSettingBool(null, ActivityMain.this, 0, PrivacyManager.cSettingFSystem,
+				false, false);
 		final CheckBox cbFSystem = (CheckBox) findViewById(R.id.cbFSystem);
-		cbFSystem.setChecked(!mUserSystemOrBoth.equals(APP_FILTER_BOTH));
-		cbFSystem.setOnClickListener(new View.OnClickListener() {
-			@Override
-			public void onClick(View v) {
-				llAppFilter.setVisibility(LinearLayout.GONE);
-				llAppFilter2.setVisibility(LinearLayout.VISIBLE);
-			}
-		});
-
-		// All
-		final ImageView imgAppAll = (ImageView) findViewById(R.id.imgAppAll);
-		imgAppAll.setOnClickListener(new View.OnClickListener() {
-			@Override
-			public void onClick(View view) {
-				mUserSystemOrBoth = APP_FILTER_BOTH;
-				PrivacyManager
-						.setSetting(null, ActivityMain.this, 0, PrivacyManager.cSettingFSystem, mUserSystemOrBoth);
-				imgUserSystemBoth.setImageDrawable(getResources().getDrawable(getThemed(R.attr.icon_user_system)));
-				llAppFilter.setVisibility(LinearLayout.VISIBLE);
-				llAppFilter2.setVisibility(LinearLayout.GONE);
-				cbFSystem.setChecked(false);
-				applyFilter();
-			}
-		});
-
-		// System
-		final ImageView imgAppSystem = (ImageView) findViewById(R.id.imgAppSys);
-		imgAppSystem.setOnClickListener(new View.OnClickListener() {
-			@Override
-			public void onClick(View view) {
-				mUserSystemOrBoth = APP_FILTER_SYS;
-				PrivacyManager
-						.setSetting(null, ActivityMain.this, 0, PrivacyManager.cSettingFSystem, mUserSystemOrBoth);
-				imgUserSystemBoth.setImageDrawable(getResources().getDrawable(getThemed(R.attr.icon_system)));
-				llAppFilter.setVisibility(LinearLayout.VISIBLE);
-				llAppFilter2.setVisibility(LinearLayout.GONE);
-				cbFSystem.setChecked(true);
-				applyFilter();
-			}
-		});
-
-		// User
-		final ImageView imgAppUser = (ImageView) findViewById(R.id.imgAppUser);
-		imgAppUser.setOnClickListener(new View.OnClickListener() {
-			@Override
-			public void onClick(View view) {
-				mUserSystemOrBoth = APP_FILTER_USER;
-				PrivacyManager
-						.setSetting(null, ActivityMain.this, 0, PrivacyManager.cSettingFSystem, mUserSystemOrBoth);
-				imgUserSystemBoth.setImageDrawable(getResources().getDrawable(getThemed(R.attr.icon_user)));
-				llAppFilter.setVisibility(LinearLayout.VISIBLE);
-				llAppFilter2.setVisibility(LinearLayout.GONE);
-				cbFSystem.setChecked(true);
-				applyFilter();
-			}
-		});
+		cbFSystem.setChecked(fSystem);
+		cbFSystem.setOnCheckedChangeListener(this);
 
 		// Hide filters
 		if (savedInstanceState != null && savedInstanceState.containsKey("Filters"))
@@ -466,7 +413,7 @@ public class ActivityMain extends Activity implements OnItemSelectedListener, Co
 				optionUsage();
 				return true;
 			case R.id.menu_settings:
-				optionSettings();
+				SettingsDialog.edit(ActivityMain.this, null);
 				return true;
 			case R.id.menu_template:
 				optionTemplate();
@@ -523,29 +470,52 @@ public class ActivityMain extends Activity implements OnItemSelectedListener, Co
 
 	@Override
 	public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
-		CheckBox cbFilter = (CheckBox) findViewById(R.id.cbFilter);
 		CheckBox cbUsed = (CheckBox) findViewById(R.id.cbFUsed);
 		CheckBox cbInternet = (CheckBox) findViewById(R.id.cbFInternet);
-		CheckBox cbPermission = (CheckBox) findViewById(R.id.cbFPermission);
-		if (buttonView == cbFilter || buttonView == cbUsed || buttonView == cbInternet)
-			applyFilter();
-		else if (buttonView == cbPermission) {
+		CheckBox cbRestriction = (CheckBox) findViewById(R.id.cbFilter);
+		CheckBox cbFPermission = (CheckBox) findViewById(R.id.cbFPermission);
+		CheckBox cbFUser = (CheckBox) findViewById(R.id.cbFUser);
+		CheckBox cbFSystem = (CheckBox) findViewById(R.id.cbFSystem);
+		if (buttonView == cbUsed)
+			PrivacyManager.setSetting(null, ActivityMain.this, 0, PrivacyManager.cSettingFUsed,
+					Boolean.toString(isChecked));
+		else if (buttonView == cbInternet)
+			PrivacyManager.setSetting(null, ActivityMain.this, 0, PrivacyManager.cSettingFInternet,
+					Boolean.toString(isChecked));
+		else if (buttonView == cbRestriction)
+			PrivacyManager.setSetting(null, ActivityMain.this, 0, PrivacyManager.cSettingFRestriction,
+					Boolean.toString(isChecked));
+		else if (buttonView == cbFPermission)
 			PrivacyManager.setSetting(null, ActivityMain.this, 0, PrivacyManager.cSettingFPermission,
 					Boolean.toString(isChecked));
-			selectRestriction(spRestriction.getSelectedItemPosition());
+		else if (buttonView == cbFUser) {
+			if (isChecked)
+				cbFSystem.setChecked(false);
+			PrivacyManager.setSetting(null, ActivityMain.this, 0, PrivacyManager.cSettingFUser,
+					Boolean.toString(isChecked));
+		} else if (buttonView == cbFSystem) {
+			if (isChecked)
+				cbFUser.setChecked(false);
+			PrivacyManager.setSetting(null, ActivityMain.this, 0, PrivacyManager.cSettingFSystem,
+					Boolean.toString(isChecked));
 		}
+		applyFilter();
 	}
 
 	private void applyFilter() {
 		if (mAppAdapter != null) {
 			EditText etFilter = (EditText) findViewById(R.id.etFilter);
-			CheckBox cbFilter = (CheckBox) findViewById(R.id.cbFilter);
 			CheckBox cbUsed = (CheckBox) findViewById(R.id.cbFUsed);
 			CheckBox cbInternet = (CheckBox) findViewById(R.id.cbFInternet);
+			CheckBox cbRestriction = (CheckBox) findViewById(R.id.cbFilter);
+			CheckBox cbFPermission = (CheckBox) findViewById(R.id.cbFPermission);
+			CheckBox cbFUser = (CheckBox) findViewById(R.id.cbFUser);
+			CheckBox cbFSystem = (CheckBox) findViewById(R.id.cbFSystem);
 			ProgressBar pbFilter = (ProgressBar) findViewById(R.id.pbFilter);
 			TextView tvStats = (TextView) findViewById(R.id.tvStats);
-			String filter = String.format("%b\n%b\n%s\n%b\n%s", cbUsed.isChecked(), cbInternet.isChecked(), etFilter
-					.getText().toString(), cbFilter.isChecked(), mUserSystemOrBoth);
+			String filter = String.format("%s\n%b\n%b\n%b\n%b\n%b\n%b", etFilter.getText().toString(),
+					cbUsed.isChecked(), cbInternet.isChecked(), cbRestriction.isChecked(), cbFPermission.isChecked(),
+					cbFUser.isChecked(), cbFSystem.isChecked());
 			pbFilter.setVisibility(ProgressBar.VISIBLE);
 			tvStats.setVisibility(TextView.GONE);
 			mAppAdapter.getFilter().filter(filter);
@@ -610,186 +580,6 @@ public class ActivityMain extends Activity implements OnItemSelectedListener, Co
 	private void optionUsage() {
 		Intent intent = new Intent(this, ActivityUsage.class);
 		startActivity(intent);
-	}
-
-	private void optionSettings() {
-		// Build dialog
-		final Dialog dlgSettings = new Dialog(this);
-		dlgSettings.requestWindowFeature(Window.FEATURE_LEFT_ICON);
-		dlgSettings.setTitle(getString(R.string.app_name));
-		dlgSettings.setContentView(R.layout.settings);
-		dlgSettings.setFeatureDrawableResource(Window.FEATURE_LEFT_ICON, getThemed(R.attr.icon_launcher));
-
-		// Reference controls
-		final EditText etSerial = (EditText) dlgSettings.findViewById(R.id.etSerial);
-		final EditText etLat = (EditText) dlgSettings.findViewById(R.id.etLat);
-		final EditText etLon = (EditText) dlgSettings.findViewById(R.id.etLon);
-		final EditText etSearch = (EditText) dlgSettings.findViewById(R.id.etSearch);
-		Button btnSearch = (Button) dlgSettings.findViewById(R.id.btnSearch);
-		final EditText etMac = (EditText) dlgSettings.findViewById(R.id.etMac);
-		final EditText etIP = (EditText) dlgSettings.findViewById(R.id.etIP);
-		final EditText etImei = (EditText) dlgSettings.findViewById(R.id.etImei);
-		final EditText etPhone = (EditText) dlgSettings.findViewById(R.id.etPhone);
-		final EditText etId = (EditText) dlgSettings.findViewById(R.id.etId);
-		final EditText etGsfId = (EditText) dlgSettings.findViewById(R.id.etGsfId);
-		final EditText etMcc = (EditText) dlgSettings.findViewById(R.id.etMcc);
-		final EditText etMnc = (EditText) dlgSettings.findViewById(R.id.etMnc);
-		final EditText etCountry = (EditText) dlgSettings.findViewById(R.id.etCountry);
-		final EditText etOperator = (EditText) dlgSettings.findViewById(R.id.etOperator);
-		final EditText etIccId = (EditText) dlgSettings.findViewById(R.id.etIccId);
-		final EditText etSubscriber = (EditText) dlgSettings.findViewById(R.id.etSubscriber);
-		final EditText etUa = (EditText) dlgSettings.findViewById(R.id.etUa);
-		final CheckBox cbLog = (CheckBox) dlgSettings.findViewById(R.id.cbLog);
-		final Button btnRandom = (Button) dlgSettings.findViewById(R.id.btnRandom);
-		final CheckBox cbRandom = (CheckBox) dlgSettings.findViewById(R.id.cbRandom);
-		Button btnOk = (Button) dlgSettings.findViewById(R.id.btnOk);
-
-		// Set current values
-		boolean log = PrivacyManager.getSettingBool(null, ActivityMain.this, 0, PrivacyManager.cSettingLog, false,
-				false);
-		boolean random = PrivacyManager.getSettingBool(null, ActivityMain.this, 0, PrivacyManager.cSettingRandom,
-				false, false);
-
-		etSerial.setText(PrivacyManager
-				.getSetting(null, ActivityMain.this, 0, PrivacyManager.cSettingSerial, "", false));
-		etLat.setText(PrivacyManager.getSetting(null, ActivityMain.this, 0, PrivacyManager.cSettingLatitude, "", false));
-		etLon.setText(PrivacyManager
-				.getSetting(null, ActivityMain.this, 0, PrivacyManager.cSettingLongitude, "", false));
-		etMac.setText(PrivacyManager.getSetting(null, ActivityMain.this, 0, PrivacyManager.cSettingMac, "", false));
-		etIP.setText(PrivacyManager.getSetting(null, ActivityMain.this, 0, PrivacyManager.cSettingIP, "", false));
-		etImei.setText(PrivacyManager.getSetting(null, ActivityMain.this, 0, PrivacyManager.cSettingImei, "", false));
-		etPhone.setText(PrivacyManager.getSetting(null, ActivityMain.this, 0, PrivacyManager.cSettingPhone, "", false));
-		etId.setText(PrivacyManager.getSetting(null, ActivityMain.this, 0, PrivacyManager.cSettingId, "", false));
-		etGsfId.setText(PrivacyManager.getSetting(null, ActivityMain.this, 0, PrivacyManager.cSettingGsfId, "", false));
-		etMcc.setText(PrivacyManager.getSetting(null, ActivityMain.this, 0, PrivacyManager.cSettingMcc, "", false));
-		etMnc.setText(PrivacyManager.getSetting(null, ActivityMain.this, 0, PrivacyManager.cSettingMnc, "", false));
-		etCountry.setText(PrivacyManager.getSetting(null, ActivityMain.this, 0, PrivacyManager.cSettingCountry, "",
-				false));
-		etOperator.setText(PrivacyManager.getSetting(null, ActivityMain.this, 0, PrivacyManager.cSettingOperator, "",
-				false));
-		etIccId.setText(PrivacyManager.getSetting(null, ActivityMain.this, 0, PrivacyManager.cSettingIccId, "", false));
-		etSubscriber.setText(PrivacyManager.getSetting(null, ActivityMain.this, 0, PrivacyManager.cSettingSubscriber,
-				"", false));
-		etUa.setText(PrivacyManager.getSetting(null, ActivityMain.this, 0, PrivacyManager.cSettingUa, "", false));
-		cbLog.setChecked(log);
-		cbRandom.setChecked(random);
-
-		// Handle search
-		etSearch.setEnabled(Geocoder.isPresent());
-		btnSearch.setEnabled(Geocoder.isPresent());
-		btnSearch.setOnClickListener(new View.OnClickListener() {
-			@Override
-			public void onClick(View view) {
-				try {
-					etLat.setText("");
-					etLon.setText("");
-					String search = etSearch.getText().toString();
-					final List<Address> listAddress = new Geocoder(ActivityMain.this).getFromLocationName(search, 1);
-					if (listAddress.size() > 0) {
-						Address address = listAddress.get(0);
-
-						// Get coordinates
-						if (address.hasLatitude())
-							etLat.setText(Double.toString(address.getLatitude()));
-						if (address.hasLongitude())
-							etLon.setText(Double.toString(address.getLongitude()));
-
-						// Get address
-						StringBuilder sb = new StringBuilder();
-						for (int i = 0; i <= address.getMaxAddressLineIndex(); i++) {
-							if (i != 0)
-								sb.append(", ");
-							sb.append(address.getAddressLine(i));
-						}
-						etSearch.setText(sb.toString());
-					}
-				} catch (Throwable ex) {
-					Util.bug(null, ex);
-				}
-			}
-		});
-
-		// Handle randomize
-		btnRandom.setOnClickListener(new View.OnClickListener() {
-			@Override
-			public void onClick(View view) {
-				etLat.setText(PrivacyManager.getRandomProp("LAT"));
-				etLon.setText(PrivacyManager.getRandomProp("LON"));
-				etSerial.setText(PrivacyManager.getRandomProp("SERIAL"));
-				etMac.setText(PrivacyManager.getRandomProp("MAC"));
-				etPhone.setText(PrivacyManager.getRandomProp("PHONE"));
-				etImei.setText(PrivacyManager.getRandomProp("IMEI"));
-				etId.setText(PrivacyManager.getRandomProp("ANDROID_ID"));
-				etGsfId.setText(PrivacyManager.getRandomProp("GSF_ID"));
-				etCountry.setText(PrivacyManager.getRandomProp("ISO3166"));
-			}
-		});
-
-		// Handle OK
-		btnOk.setOnClickListener(new View.OnClickListener() {
-			@Override
-			public void onClick(View view) {
-				// Serial#
-				PrivacyManager.setSetting(null, ActivityMain.this, 0, PrivacyManager.cSettingSerial, etSerial.getText()
-						.toString());
-
-				// Set location
-				try {
-					float lat = Float.parseFloat(etLat.getText().toString().replace(',', '.'));
-					float lon = Float.parseFloat(etLon.getText().toString().replace(',', '.'));
-					if (lat < -90 || lat > 90 || lon < -180 || lon > 180)
-						throw new InvalidParameterException();
-
-					PrivacyManager.setSetting(null, ActivityMain.this, 0, PrivacyManager.cSettingLatitude,
-							Float.toString(lat));
-					PrivacyManager.setSetting(null, ActivityMain.this, 0, PrivacyManager.cSettingLongitude,
-							Float.toString(lon));
-
-				} catch (Throwable ex) {
-					PrivacyManager.setSetting(null, ActivityMain.this, 0, PrivacyManager.cSettingLatitude, "");
-					PrivacyManager.setSetting(null, ActivityMain.this, 0, PrivacyManager.cSettingLongitude, "");
-				}
-
-				// Other settings
-				PrivacyManager.setSetting(null, ActivityMain.this, 0, PrivacyManager.cSettingMac, etMac.getText()
-						.toString());
-				PrivacyManager.setSetting(null, ActivityMain.this, 0, PrivacyManager.cSettingIP, etIP.getText()
-						.toString());
-				PrivacyManager.setSetting(null, ActivityMain.this, 0, PrivacyManager.cSettingImei, etImei.getText()
-						.toString());
-				PrivacyManager.setSetting(null, ActivityMain.this, 0, PrivacyManager.cSettingPhone, etPhone.getText()
-						.toString());
-				PrivacyManager.setSetting(null, ActivityMain.this, 0, PrivacyManager.cSettingId, etId.getText()
-						.toString());
-				PrivacyManager.setSetting(null, ActivityMain.this, 0, PrivacyManager.cSettingGsfId, etGsfId.getText()
-						.toString());
-				PrivacyManager.setSetting(null, ActivityMain.this, 0, PrivacyManager.cSettingMcc, etMcc.getText()
-						.toString());
-				PrivacyManager.setSetting(null, ActivityMain.this, 0, PrivacyManager.cSettingMnc, etMnc.getText()
-						.toString());
-				PrivacyManager.setSetting(null, ActivityMain.this, 0, PrivacyManager.cSettingCountry, etCountry
-						.getText().toString());
-				PrivacyManager.setSetting(null, ActivityMain.this, 0, PrivacyManager.cSettingOperator, etOperator
-						.getText().toString());
-				PrivacyManager.setSetting(null, ActivityMain.this, 0, PrivacyManager.cSettingIccId, etIccId.getText()
-						.toString());
-				PrivacyManager.setSetting(null, ActivityMain.this, 0, PrivacyManager.cSettingSubscriber, etSubscriber
-						.getText().toString());
-				PrivacyManager.setSetting(null, ActivityMain.this, 0, PrivacyManager.cSettingUa, etUa.getText()
-						.toString());
-
-				PrivacyManager.setSetting(null, ActivityMain.this, 0, PrivacyManager.cSettingLog,
-						Boolean.toString(cbLog.isChecked()));
-				PrivacyManager.setSetting(null, ActivityMain.this, 0, PrivacyManager.cSettingRandom,
-						Boolean.toString(cbRandom.isChecked()));
-
-				// Done
-				dlgSettings.dismiss();
-			}
-		});
-
-		dlgSettings.setCancelable(true);
-		dlgSettings.show();
 	}
 
 	private void optionTemplate() {
@@ -936,7 +726,7 @@ public class ActivityMain extends Activity implements OnItemSelectedListener, Co
 		Dialog dialog = new Dialog(ActivityMain.this);
 		dialog.requestWindowFeature(Window.FEATURE_LEFT_ICON);
 		dialog.setTitle(getString(R.string.help_application));
-		dialog.setContentView(R.layout.helpmain);
+		dialog.setContentView(R.layout.help);
 		dialog.setFeatureDrawableResource(Window.FEATURE_LEFT_ICON, getThemed(R.attr.icon_launcher));
 		dialog.setCancelable(true);
 		dialog.show();
@@ -948,10 +738,12 @@ public class ActivityMain extends Activity implements OnItemSelectedListener, Co
 		TextView tvFilters = (TextView) findViewById(R.id.tvFilterDetail);
 		EditText etFilter = (EditText) findViewById(R.id.etFilter);
 		LinearLayout llFilters = (LinearLayout) findViewById(R.id.llFilters);
-		CheckBox cbFilter = (CheckBox) findViewById(R.id.cbFilter);
 		CheckBox cbFUsed = (CheckBox) findViewById(R.id.cbFUsed);
 		CheckBox cbFInternet = (CheckBox) findViewById(R.id.cbFInternet);
+		CheckBox cbRestriction = (CheckBox) findViewById(R.id.cbFilter);
 		CheckBox cbFPermission = (CheckBox) findViewById(R.id.cbFPermission);
+		CheckBox cbFUser = (CheckBox) findViewById(R.id.cbFUser);
+		CheckBox cbFSystem = (CheckBox) findViewById(R.id.cbFSystem);
 
 		if (mFiltersHidden) {
 			// Change visibility
@@ -962,18 +754,20 @@ public class ActivityMain extends Activity implements OnItemSelectedListener, Co
 		} else {
 			int numberOfFilters = 0;
 
-			// Count number of activated filters
+			// Count number of activate filters
+			if (etFilter.getText().length() > 0)
+				numberOfFilters++;
 			if (cbFUsed.isChecked())
 				numberOfFilters++;
 			if (cbFInternet.isChecked())
 				numberOfFilters++;
-			if (etFilter.getText().length() > 0)
-				numberOfFilters++;
-			if (cbFilter.isChecked())
+			if (cbRestriction.isChecked())
 				numberOfFilters++;
 			if (cbFPermission.isChecked())
 				numberOfFilters++;
-			if (!mUserSystemOrBoth.equals(APP_FILTER_BOTH))
+			if (cbFUser.isChecked())
+				numberOfFilters++;
+			if (cbFSystem.isChecked())
 				numberOfFilters++;
 
 			// Change text
@@ -990,9 +784,9 @@ public class ActivityMain extends Activity implements OnItemSelectedListener, Co
 			llFilters.setVisibility(LinearLayout.GONE);
 		}
 
-		imgFilterToggle.setImageDrawable(getResources().getDrawable(
-				getThemed(mFiltersHidden ? R.attr.icon_expander_maximized : R.attr.icon_expander_minimized)));
 		mFiltersHidden = !mFiltersHidden;
+		imgFilterToggle.setImageDrawable(getResources().getDrawable(
+				getThemed(mFiltersHidden ? R.attr.icon_expander_minimized : R.attr.icon_expander_maximized)));
 	}
 
 	// Tasks
@@ -1012,16 +806,6 @@ public class ActivityMain extends Activity implements OnItemSelectedListener, Co
 		@Override
 		protected void onPreExecute() {
 			super.onPreExecute();
-
-			// Reset spinner
-			spRestriction.setEnabled(false);
-
-			// Reset filters
-			EditText etFilter = (EditText) findViewById(R.id.etFilter);
-			etFilter.setEnabled(false);
-
-			CheckBox cbFilter = (CheckBox) findViewById(R.id.cbFilter);
-			cbFilter.setEnabled(false);
 
 			// Show progress dialog
 			ListView lvApp = (ListView) findViewById(R.id.lvApp);
@@ -1047,17 +831,6 @@ public class ActivityMain extends Activity implements OnItemSelectedListener, Co
 			} catch (Throwable ex) {
 				Util.bug(null, ex);
 			}
-
-			// Enable filters
-			EditText etFilter = (EditText) findViewById(R.id.etFilter);
-			etFilter.setEnabled(true);
-
-			CheckBox cbFilter = (CheckBox) findViewById(R.id.cbFilter);
-			cbFilter.setEnabled(true);
-
-			// Enable spinner
-			Spinner spRestriction = (Spinner) findViewById(R.id.spRestriction);
-			spRestriction.setEnabled(true);
 
 			// Restore state
 			ActivityMain.this.selectRestriction(spRestriction.getSelectedItemPosition());
@@ -1097,8 +870,7 @@ public class ActivityMain extends Activity implements OnItemSelectedListener, Co
 	@SuppressLint("DefaultLocale")
 	private class AppListAdapter extends ArrayAdapter<ApplicationInfoEx> {
 		private Context mContext;
-		private List<ApplicationInfoEx> mListAppAll;
-		private List<ApplicationInfoEx> mListAppSelected;
+		private List<ApplicationInfoEx> mListApp;
 		private String mRestrictionName;
 		private LayoutInflater mInflater = (LayoutInflater) getSystemService(Context.LAYOUT_INFLATER_SERVICE);
 
@@ -1106,34 +878,17 @@ public class ActivityMain extends Activity implements OnItemSelectedListener, Co
 				String initialRestrictionName) {
 			super(context, resource, objects);
 			mContext = context;
-			mListAppAll = new ArrayList<ApplicationInfoEx>();
-			mListAppAll.addAll(objects);
+			mListApp = new ArrayList<ApplicationInfoEx>();
+			mListApp.addAll(objects);
 			mRestrictionName = initialRestrictionName;
-			selectApps();
 		}
 
 		public void setRestrictionName(String restrictionName) {
 			mRestrictionName = restrictionName;
-			selectApps();
-			notifyDataSetChanged();
 		}
 
 		public String getRestrictionName() {
 			return mRestrictionName;
-		}
-
-		private void selectApps() {
-			mListAppSelected = new ArrayList<ApplicationInfoEx>();
-			if (PrivacyManager.getSettingBool(null, ActivityMain.this, 0, PrivacyManager.cSettingFPermission, true,
-					false)) {
-				for (ApplicationInfoEx appInfo : mListAppAll)
-					if (mRestrictionName == null)
-						mListAppSelected.add(appInfo);
-					else if (PrivacyManager.hasPermission(mContext, appInfo.getPackageName(), mRestrictionName)
-							|| PrivacyManager.getUsed(mContext, appInfo.getUid(), mRestrictionName, null) > 0)
-						mListAppSelected.add(appInfo);
-			} else
-				mListAppSelected.addAll(mListAppAll);
 		}
 
 		@Override
@@ -1151,15 +906,22 @@ public class ActivityMain extends Activity implements OnItemSelectedListener, Co
 
 				// Get arguments
 				String[] components = ((String) constraint).split("\\n");
-				boolean fUsed = Boolean.parseBoolean(components[0]);
-				boolean fInternet = Boolean.parseBoolean(components[1]);
-				String fName = components[2];
+				String fName = components[0];
+				boolean fUsed = Boolean.parseBoolean(components[1]);
+				boolean fInternet = Boolean.parseBoolean(components[2]);
 				boolean fRestricted = Boolean.parseBoolean(components[3]);
-				String fUserSystemBoth = components[4];
+				boolean fPermission = Boolean.parseBoolean(components[4]);
+				boolean fUser = Boolean.parseBoolean(components[5]);
+				boolean fSystem = Boolean.parseBoolean(components[6]);
 
 				// Match applications
 				List<ApplicationInfoEx> lstApp = new ArrayList<ApplicationInfoEx>();
-				for (ApplicationInfoEx xAppInfo : AppListAdapter.this.mListAppSelected) {
+				for (ApplicationInfoEx xAppInfo : AppListAdapter.this.mListApp) {
+					// Get if name contains
+					boolean contains = false;
+					if (!fName.equals(""))
+						contains = (xAppInfo.toString().toLowerCase().contains(((String) fName).toLowerCase()));
+
 					// Get if used
 					boolean used = false;
 					if (fUsed)
@@ -1171,17 +933,12 @@ public class ActivityMain extends Activity implements OnItemSelectedListener, Co
 					if (fInternet)
 						internet = xAppInfo.hasInternet();
 
-					// Get if name contains
-					boolean contains = false;
-					if (!fName.equals(""))
-						contains = (xAppInfo.toString().toLowerCase().contains(((String) fName).toLowerCase()));
-
 					// Get some restricted
 					boolean someRestricted = false;
 					if (fRestricted)
 						if (mRestrictionName == null) {
 							for (boolean restricted : PrivacyManager.getRestricted(getApplicationContext(),
-									xAppInfo.getUid(), false))
+									xAppInfo.getUid(), true))
 								if (restricted) {
 									someRestricted = true;
 									break;
@@ -1190,17 +947,29 @@ public class ActivityMain extends Activity implements OnItemSelectedListener, Co
 							someRestricted = PrivacyManager.getRestricted(null, getApplicationContext(),
 									xAppInfo.getUid(), mRestrictionName, null, false, false);
 
-					// Get if system or not
-					boolean userSystemBoth = false;
-					if (fUserSystemBoth.equals(APP_FILTER_SYS))
-						userSystemBoth = xAppInfo.getIsSystem();
-					else if (fUserSystemBoth.equals(APP_FILTER_USER))
-						userSystemBoth = !xAppInfo.getIsSystem();
+					// Get Android permission
+					boolean permission = false;
+					if (fPermission)
+						if (mRestrictionName == null)
+							permission = true;
+						else if (PrivacyManager.hasPermission(mContext, xAppInfo.getPackageName(), mRestrictionName)
+								|| PrivacyManager.getUsed(mContext, xAppInfo.getUid(), mRestrictionName, null) > 0)
+							permission = true;
+
+					// Get if user
+					boolean user = false;
+					if (fUser)
+						user = !xAppInfo.getIsSystem();
+
+					// Get if system
+					boolean system = false;
+					if (fSystem)
+						system = xAppInfo.getIsSystem();
 
 					// Match application
-					if ((fUsed ? used : true) && (fInternet ? internet : true) && (fName.equals("") ? true : contains)
-							&& (fRestricted ? someRestricted : true)
-							&& (fUserSystemBoth.equals(APP_FILTER_BOTH) ? true : userSystemBoth))
+					if ((fName.equals("") ? true : contains) && (fUsed ? used : true) && (fInternet ? internet : true)
+							&& (fRestricted ? someRestricted : true) && (fPermission ? permission : true)
+							&& (fUser ? user : true) && (fSystem ? system : true))
 						lstApp.add(xAppInfo);
 				}
 
@@ -1220,7 +989,7 @@ public class ActivityMain extends Activity implements OnItemSelectedListener, Co
 				ProgressBar pbFilter = (ProgressBar) findViewById(R.id.pbFilter);
 				pbFilter.setVisibility(ProgressBar.GONE);
 				tvStats.setVisibility(TextView.VISIBLE);
-				tvStats.setText(results.count + "/" + AppListAdapter.this.mListAppSelected.size());
+				tvStats.setText(results.count + "/" + AppListAdapter.this.mListApp.size());
 				if (results.values == null)
 					notifyDataSetInvalidated();
 				else {
@@ -1328,40 +1097,45 @@ public class ActivityMain extends Activity implements OnItemSelectedListener, Co
 					holder.imgFrozen.setVisibility(xAppInfo.isFrozen() ? View.VISIBLE : View.INVISIBLE);
 
 					// Display restriction
-					holder.imgCBName.setEnabled(mRestrictionName == null && someRestricted ? allRestricted : true);
 					holder.imgCBName.setImageResource(allRestricted ? R.drawable.checkbox_check
-							: (someRestricted ? (mRestrictionName == null ? R.drawable.checkbox_half
-									: R.drawable.checkbox_check) : android.R.color.transparent));
+							: (someRestricted ? R.drawable.checkbox_half : android.R.color.transparent));
 
 					// Listen for restriction changes
 					holder.rlName.setOnClickListener(new View.OnClickListener() {
 						@Override
 						public void onClick(View view) {
-							if (!holder.imgCBName.isEnabled())
-								return;
-
 							// Get all/some restricted
 							boolean allRestricted = true;
+							boolean someRestricted = false;
 							if (mRestrictionName == null)
 								for (boolean restricted : PrivacyManager.getRestricted(view.getContext(),
-										xAppInfo.getUid(), false))
+										xAppInfo.getUid(), true)) {
 									allRestricted = allRestricted && restricted;
+									someRestricted = someRestricted || restricted;
+								}
 							else {
 								boolean restricted = PrivacyManager.getRestricted(null, view.getContext(),
 										xAppInfo.getUid(), mRestrictionName, null, false, false);
 								allRestricted = restricted;
+								someRestricted = restricted;
 							}
 
 							// Process click
-							allRestricted = !allRestricted;
-							for (String restrictionName : listRestriction)
-								PrivacyManager.setRestricted(null, view.getContext(), xAppInfo.getUid(),
-										restrictionName, null, allRestricted);
-							holder.imgCBName.setEnabled(!(allRestricted && mRestrictionName == null));
-							holder.imgCBName
-									.setImageResource(allRestricted ? (mRestrictionName == null ? R.drawable.checkbox_half
-											: R.drawable.checkbox_check)
-											: android.R.color.transparent);
+							someRestricted = !someRestricted;
+							if (mRestrictionName == null && !someRestricted) {
+								allRestricted = false;
+								PrivacyManager.deleteRestrictions(view.getContext(), xAppInfo.getUid());
+							} else {
+								if (mRestrictionName != null)
+									allRestricted = someRestricted;
+								for (String restrictionName : listRestriction)
+									PrivacyManager.setRestricted(null, view.getContext(), xAppInfo.getUid(),
+											restrictionName, null, someRestricted);
+							}
+
+							// Update visible state
+							holder.imgCBName.setImageResource(allRestricted ? R.drawable.checkbox_check
+									: (someRestricted ? R.drawable.checkbox_half : android.R.color.transparent));
 						}
 					});
 				}
