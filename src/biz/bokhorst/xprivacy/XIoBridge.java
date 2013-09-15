@@ -18,7 +18,11 @@ public class XIoBridge extends XHook {
 	}
 
 	public String getClassName() {
-		return "libcore.io.IoBridge";
+		if (android.os.Build.VERSION.SDK_INT < android.os.Build.VERSION_CODES.ICE_CREAM_SANDWICH) {
+			return "dalvik.system.BlockGuard$WrappedFileSystem";
+		} else {
+			return "libcore.io.IoBridge";
+		}
 	}
 
 	// public static FileDescriptor open(String path, int flags)
