@@ -25,7 +25,11 @@ public class XApplicationPackageManager extends XHook {
 	}
 
 	public String getClassName() {
-		return "android.app.ApplicationPackageManager";
+		if (android.os.Build.VERSION.SDK_INT < android.os.Build.VERSION_CODES.HONEYCOMB) {
+			return "android.app.ContextImpl$ApplicationPackageManager";
+		} else {
+			return "android.app.ApplicationPackageManager";
+		}
 	}
 
 	// @formatter:off
