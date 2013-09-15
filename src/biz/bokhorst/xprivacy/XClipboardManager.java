@@ -42,6 +42,9 @@ public class XClipboardManager extends XHook {
 
 	public static List<XHook> getInstances() {
 		List<XHook> listHook = new ArrayList<XHook>();
+		if (android.os.Build.VERSION.SDK_INT < android.os.Build.VERSION_CODES.HONEYCOMB) {
+			return listHook;
+		}
 		for (Methods clip : Methods.values())
 			listHook.add(new XClipboardManager(clip, PrivacyManager.cClipboard));
 		return listHook;
