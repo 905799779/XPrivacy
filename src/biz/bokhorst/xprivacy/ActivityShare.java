@@ -106,12 +106,20 @@ public class ActivityShare extends Activity {
 			if (getIntent().getAction().equals("biz.bokhorst.xprivacy.action.FETCH")) {
 				if (extras != null && extras.containsKey(cPackageName)) {
 					FetchTask fetchTask = new FetchTask();
-					fetchTask.executeOnExecutor(mExecutor, extras.getString(cPackageName));
+					if (Build.VERSION.SDK_INT > Build.VERSION_CODES.GINGERBREAD_MR1) {
+						fetchTask.executeOnExecutor(mExecutor, extras.getString(cPackageName));
+					} else {
+						fetchTask.execute(extras.getString(cPackageName));
+					}
 				} else {
 					for (ApplicationInfo aInfo : getPackageManager().getInstalledApplications(0))
 						if ((aInfo.flags & (ApplicationInfo.FLAG_SYSTEM | ApplicationInfo.FLAG_UPDATED_SYSTEM_APP)) == 0) {
 							FetchTask fetchTask = new FetchTask();
-							fetchTask.executeOnExecutor(mExecutor, aInfo.packageName);
+							if (Build.VERSION.SDK_INT > Build.VERSION_CODES.GINGERBREAD_MR1) {
+								fetchTask.executeOnExecutor(mExecutor, extras.getString(cPackageName));
+							} else {
+								fetchTask.execute(extras.getString(cPackageName));
+							}
 						}
 				}
 			}

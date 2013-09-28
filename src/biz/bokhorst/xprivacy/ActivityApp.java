@@ -95,6 +95,9 @@ public class ActivityApp extends ActionBarActivity {
 	}
 
 	public void onCreate(Bundle savedInstanceState) {
+		if (getIntent().hasExtra("bundle") && savedInstanceState == null) {
+			savedInstanceState = getIntent().getExtras().getBundle("bundle");
+		}
 		super.onCreate(savedInstanceState);
 		// Set theme
 		String themeName = PrivacyManager.getSetting(null, this, 0, PrivacyManager.cSettingTheme, "", false);
@@ -214,6 +217,20 @@ public class ActivityApp extends ActionBarActivity {
 			NotificationManager notificationManager = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
 			notificationManager.cancel(mAppInfo.getUid());
 			optionClear();
+		}
+	}
+
+	@Override
+	public void recreate() {
+		if (Build.VERSION.SDK_INT > Build.VERSION_CODES.GINGERBREAD_MR1) {
+			super.recreate();
+		} else {
+			Bundle bundle = new Bundle();
+			onSaveInstanceState(bundle);
+			Intent intent = new Intent(this, ActivityApp.class);
+			intent.putExtra("bundle", bundle);
+			startActivity(getIntent());
+			finish();
 		}
 	}
 
