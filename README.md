@@ -10,6 +10,7 @@ Index
 * [Features](https://github.com/M66B/XPrivacy#features)
 * [Restrictions](https://github.com/M66B/XPrivacy#restrictions)
 * [Limitations](https://github.com/M66B/XPrivacy#limitations)
+* [Compatibility](https://github.com/M66B/XPrivacy#compatibility)
 * [Installation](https://github.com/M66B/XPrivacy#installation)
 * [Upgrading](https://github.com/M66B/XPrivacy#upgrading)
 * [Usage](https://github.com/M66B/XPrivacy#usage)
@@ -41,7 +42,8 @@ is restricted by denying access (revoking permissions).
 There is no other way to realize this, since these permissions are handled by Android in a special way.
 Android delegates handling of these permission to the underlying Linux network/file system.
 XPrivacy will fake offline (internet) and/or unmounted (storage) state,
-but some applications try to access the internet/storage nevertheless, potentially resulting in crashes.
+but some applications try to access the internet/storage nevertheless,
+potentially resulting in crashes or error messages.
 
 If restricting a category of data for an application results in problems for the application,
 it is possible to allow access to the data category again to solve the issue.
@@ -57,9 +59,9 @@ It is also possible to edit all data categories for one application.
 
 To help you identify potential data leaks,
 XPrivacy will monitor attempts made by all applications to access sensitive data.
-XPrivacy will display a warning triangle icon as soon as data of a data category has been used.
+XPrivacy will display an orange warning triangle icon as soon as data of a data category has been used.
 If an application has requested Android permissions to access data in a data category,
-this will be displayed with a key icon.
+this will be displayed with a green key icon.
 XPrivacy will also display if an application has internet access,
 indicating that the application poses a risk of sharing the data it obtains with an external server.
 
@@ -69,8 +71,8 @@ Depending on the function, XPrivacy conditionally skips execution of the origina
 (for example when an application tries to set a proximity alert)
 or alters the result of the original function (for example to return an empty message list).
 
-XPrivacy has been tested with CyanogenMod 10 and 10.1 (Android 4.1 and 4.2),
-and is reported to work with any Android version 4.0, 4.1 or 4.2 variant, including stock ROMs.
+XPrivacy has been tested with CyanogenMod 10, 10.1 and 10.2 (Android 4.1, 4.2 and 4.3),
+and is reported to work with most Android version 4.0, 4.1, 4.2 and 4.3 variants, including stock ROMs.
 Root access is needed to install the Xposed framework.
 
 
@@ -190,6 +192,8 @@ For easy usage, data is restricted by category:
 	* return a fake own/in/outgoing/voicemail number
 	* return a fake subscriber ID (IMSI for a GSM phone)
 	* return a fake phone device ID (IMEI): 000000000000000
+	* return a fake phone type: GSM (matching IMEI)
+	* return a fake network type: unknown
 	* return a empty ISIM/ISIM domain
 	* return a empty IMPI/IMPU
 	* return a fake MSISDN
@@ -242,17 +246,29 @@ Limitations
 * /proc and system properties cannot be restricted for Android (serial number, IMEI, MAC address, etc)
 * Phone number cannot be restricted for the standard phone application
 * Internet and storage can only be restricted for applications/providers/services started by the Android package manager
+* Due to its static nature Build.Serial can only be randomized on application start
+
+Compatibility
+-------------
+
+XPrivacy has been tested with CyanogenMod 10, 10.1 and 10.2 (Android 4.1, 4.2 and 4.3),
+and is reported to work with most Android version 4.0, 4.1, 4.2 and 4.3 variants, including stock ROMs.
+
+* **LG L7, stock Android 4.0.3**: know to restart/freeze now and then ([issue](https://github.com/M66B/XPrivacy/issues/694))
 
 Installation
 ------------
+
+*Instead of following the steps below, you can try the beta version of the [XPrivacy Installer](http://d-h.st/SUF).*
 
 It seems like a lot of steps, but it is done in no time:
 
 1. Requirements:
 	* Android 4.0+ (ICS) or 4.1/4.2/4.3+ (JellyBean); check with *System Settings* > *About phone* > *Android version*
-	* Custom recovery ([CWM](http://forum.xda-developers.com/wiki/ClockworkMod_Recovery), [TWRP](http://teamw.in/project/twrp2), no stock recovery)
+	* Custom recovery ([CWM](http://forum.xda-developers.com/wiki/ClockworkMod_Recovery), [TWRP](http://teamw.in/project/twrp2) or similar)
 1. **Make a backup**
 1. If not done already: root your device; the procedure depends on the brand and model of your device
+	* You can find a guide [here](http://www.androidcentral.com/root) for most devices
 1. Enable *System settings* > *Security* > *Unknown sources*
 1. Install the [Xposed framework](http://forum.xda-developers.com/showthread.php?t=1574401)
 	* Be sure to install [the latest version](http://dl.xposed.info/latest.apk)
@@ -266,7 +282,7 @@ It seems like a lot of steps, but it is done in no time:
 
 I do not recommend using XPrivacy in combination with any of the
 [similar solutions](https://github.com/M66B/XPrivacy#similar-solutions),
-because it will most probably result in conflicts (with as possible consequence data leakage).
+because it could result in conflicts (with as possible consequence data leakage).
 
 If you want to uninstall XPrivacy, you have two options:
 
@@ -292,12 +308,12 @@ Usage
 
 The application starts in the main view, where at the top a data category can be selected.
 By ticking one or more check boxes in the list below, the selected data category can be restricted for the chosen applications.
-The default category is 'all', meaning that all data categories will be restricted.
-The main view functions as a batch editor.
+The default category is *All*, meaning that all data categories will be restricted.
 
 Tapping on an application icon shows the detailed view, where all the data categories for the selected application can be managed.
 This view will also appear by tapping on the notification that appears after updating or installing an application.
 By default all data categories will be restricted for new installed applications to prevent leaking privacy sensitive data from the beginning.
+You can change wich data categories will be restricted by changing the *Template* available from the main menu.
 
 Data categories exist to make it easier to manage restrictions.
 The data categories in the detailed view can be drilled down to individual functions.
@@ -310,34 +326,22 @@ or try restriction the category *Contacts* for the Contacts application.
 **Applying some restrictions require restarting applications and/or your device**
 
 If an application requested Android permissions for a data category,
-the category will be marked with a key icon.
-If an application used/tried to use data, the data category will be marked with a warning triangle icon.
-If an application has internet permissions to access a world globe icon will be shown.
-These icons are just a guideline, because an application can access privacy sensitive data without Android permissions,
+the category will be marked with a green key icon.
+If an application used/tried to use data, the data category will be marked with an orange warning triangle icon.
+If an application has internet permissions a world globe icon will be shown.
+These icons are just a guideline, because an application can access some privacy sensitive data without Android permissions,
 for example the serial number of your device
 and because is not possible to monitor data usage in each and every situation,
 for example not for access to the internet or the external storage.
-Be aware that an application could access the internet through another (sister) application.
+Be aware that an application could access the internet through other (sister) applications.
 
 Enabling the internet or storage restriction means blocking access to the internet
 or to the external storage (typically the SD card).
 This may result in error messages and even in forced closes of the application.
 
-Filtering:
-
-* Tap the grayed triangle icon to filter applications that used the data in the selected data category
-* Tap the grayed globe icon to filter applications that have internet permission
-* Type in the edit box to filter applications by name (tap the cross to clear)
-* Tick the check box to filter applications with the selected data category restricted
-
-Applications are by default filtered by having Android permissions and not being system applications.
-These filters can be disabled in the settings.
-
-Exceptions:
-
-* */proc* and *GservicesProvider* in the category *Identification* needs to be set manually
-* *getScanResults* in the category *Location* needs to be set manually
-* *load* and *loadLibrary* in the category *Shell* need to be set manually
+Some category and function restrictions are considered dangerous.
+These categories and functions are marked with a redish background color.
+Some applications will crash if you restrict these categories and/or functions.
 
 **Using XPrivacy is entirely at your own risk**
 
@@ -349,7 +353,7 @@ XPrivacy asks for the following Android permissions:
 * Accounts: to select accounts to allow for applications
 * Contacts: to select contacts to allow for applications
 * Boot: to check if XPrivacy is enabled
-* Internet: to check for updates (only manual from the menu)
+* Internet: to submit/fetch [crowd sourced restrictions](http://updates.faircode.eu/xprivacy)
 * Storage: to export settings to the SD card (only [pro version](http://www.faircode.eu/xprivacy/))
 
 If you don't like this, you can always restrict XPrivacy itself ...
@@ -379,8 +383,8 @@ Reboot.
 **(6) Can I backup XPrivacy and settings?**
 
 Yes, you can, for example with [Titanium backup](https://play.google.com/store/apps/details?id=com.keramidas.TitaniumBackup),
-but you can only restore onto the same device.
-Exporting/importing settings will work across devices.
+but you can only restore into the same environment (device/ROM).
+Exporting/importing settings will work across devices/ROMs.
 To export/import settings you will need the [pro version](http://www.faircode.eu/xprivacy/).
 
 **(10) Which functions are exactly restricted?**
@@ -390,7 +394,7 @@ Many, see [here](https://github.com/M66B/XPrivacy/blob/master/src/biz/bokhorst/x
 **(12) How safe is XPrivacy?**
 
 Great care has been taken to develop XPrivacy, nevertheless data could leak and applications can crash,
-although this is fortunately rare. So far no critical bugs have been reported.
+although this is fortunately rare.
 
 **(14) I get 'Incompatible ...' !**
 
@@ -422,7 +426,7 @@ For export/importing XPrivacy data you need [pro version](http://www.faircode.eu
 
 **(16) Can I restrict an application with root access?**
 
-Yes, you can by restricting shell access.
+Yes, you can by restricting su shell access.
 
 **(17) Will restrictions be applied immediately?**
 
@@ -438,7 +442,7 @@ because this will probably result into confusion only.
 
 There is a lot of privacy sensitive data processed within Android,
 especially if there are a lot of applications installed.
-It would slow down your device considerably if XPrivacy would notify data usage.
+It would slow down your device significantly if XPrivacy would notify data usage.
 
 Newly installed applications are by default fully restricted.
 Restricting an application should not result into any force closes (crashes),
@@ -452,7 +456,7 @@ Yes, you can restrict internet access for any application.
 If you want to partly enable internet, for example for Wi-Fi only,
 you will have to use a firewall application, like [AFWall+](http://forum.xda-developers.com/showthread.php?t=1957231).
 The reason is that XPrivacy works within Android
-and that detailed firewall rules can only be applied within the Linux kernel.
+and detailed firewall rules can only be applied within the Linux kernel.
 
 **(21) I get 'Unable to parse package'**
 
@@ -465,18 +469,13 @@ See [here](http://forum.xda-developers.com/showthread.php?t=1726238).
 
 **(23) Where are the settings of XPrivacy stored?**
 
-The restriction settings of XPrivacy are stored as private application data,
-because the settings of XPrivacy should be considered as privacy sensitive data too.
-It is possible to backup the application and the data, but you can restore it onto the same device only.
+The restriction settings of XPrivacy are stored as private application data.
+It is possible to backup the application and the data,
+but you can restore it onto the same environment (device/ROM) only.
 This is because Android assigns different UID's to the same applications on different devices.
 Exporting settings on one device and importing settings onto another device will work,
 but this requires the [pro version](http://www.faircode.eu/xprivacy/).
 If you want to backup the exported settings, they are in the folder *.xprivacy* on the SD card.
-
-**(24) Can you make possible to randomize data?**
-
-Everything is possible, but some applications crash when feeded with random data
-and it is not always possible to randomize things (like IMEI or MAC addresses).
 
 **(25) Why doesn't undoing a data category restriction disable the function exceptions too?**
 
@@ -488,18 +487,12 @@ The function exceptions only apply when the data category is restricted.
 For this you need the [pro version](http://www.faircode.eu/xprivacy/).
 Exported settings are stored in the folder *.xprivacy* in the file *XPrivacy.xml*.
 You can copy this file to the same place on a second device.
-When importing, settings are only applied to applications that exist on the second device and have exported settings.
+When importing, settings are only applied to applications that exist on the second device.
 This also applies to system apps.
 
 Note that allowed accounts and allowed contacts (not the accounts and contacts itself)
 can only be imported when the android ID is the same.
 See question 15 about what to do when updating your ROM.
-
-**(27) How can I filter restriction categories by Android permissions?**
-
-The default is to show only restriction categories for which an application has Android permissions.
-This can be changed using the settings.
-Some restriction categories don't require Android permissions, however.
 
 **(28) I have restricted locations but my GPS status icon still appears**
 
@@ -528,10 +521,27 @@ No.
 
 Read [here](http://forum.xda-developers.com/showpost.php?p=44427089&postcount=2433) why.
 
-**(33) What is 'template' used for?**
+**(33) What is 'Template' used for?**
 
 The template is used to apply restrictions to newly installed applications
-and when you use the menu *All*.
+and when you use the menu *Apply template*.
+
+**(34) Will there be a iOS / Window phone version?**
+
+No, because these OS'es are to closed to implement something like XPrivacy.
+
+**(35) Will you restrict ...?**
+
+* The device manufacturer
+* The device model/product name
+* Synchronization state
+* Screen locking
+* Display settings
+* Wi-Fi settings
+* Bluetooth settings
+
+No, because I don't consider this as privacy sensitive data.
+I am happy to add new restrictions for data that is really privacy sensitive.
 
 Support
 -------
@@ -547,6 +557,8 @@ If you have any question, you can leave a message in the [XDA XPrivacy forum thr
 **Before submitting any issue please ensure you are running the latest version of XPrivacy.**
 
 **Before submitting any issue please [read this](http://forum.xda-developers.com/showpost.php?p=43892381&postcount=1703).**
+
+**One bug/feature request per issue please!**
 
 Changelog
 ---------
@@ -605,36 +617,36 @@ Translations:
 
 Current translations:
 
-* Bulgarian (bg)
-* Catalan (ca)
-* Czech (cs)
-* Danish (da)
-* Dutch/Flemish (nl)
-* English
-* Estonian (ee)
-* Farsi (fa)
-* French (fr)
-* German (de)
-* Greek (el)
-* Hebrew (he/iw)
-* Hindi (hi)
-* Hungarian (hu)
-* Italian (it)
-* Japanese (ja)
-* Lithuanian (lt)
-* Norwegian (nb-rNO, nn-rNO, no-rNO)
-* Polish (pl)
-* Portuguese (pt)
-* Romanian (ro)
-* Rusian (ru)
-* Serbian (sr)
-* Simplified Chinese (zh-rCN)
-* Slovak (sk)
-* Slovenian (sl)
-* Spanish (es)
-* Swedish (sv)
-* Turkish (tr)
-* Vietnamese (vi)
+1. Bulgarian (bg)
+1. Catalan (ca)
+1. Czech (cs)
+1. Danish (da)
+1. Dutch/Flemish (nl)
+1. English
+1. Estonian (ee)
+1. Farsi (fa)
+1. French (fr)
+1. German (de)
+1. Greek (el)
+1. Hebrew (he/iw)
+1. Hindi (hi)
+1. Hungarian (hu)
+1. Italian (it)
+1. Japanese (ja)
+1. Lithuanian (lt)
+1. Norwegian (nb-rNO, nn-rNO, no-rNO)
+1. Polish (pl)
+1. Portuguese (pt)
+1. Romanian (ro)
+1. Rusian (ru)
+1. Serbian (sr)
+1. Simplified Chinese (zh-rCN)
+1. Slovak (sk)
+1. Slovenian (sl)
+1. Spanish (es)
+1. Swedish (sv)
+1. Turkish (tr)
+1. Vietnamese (vi)
 
 Restrict new data:
 

@@ -3,7 +3,33 @@ Changelog
 
 **Next release**
 
-* ...
+* Updated Catalan translation
+
+**Version 1.9.27 release candidate**
+
+* Restore previous up navigation, but disable up navigation if started from notification
+
+**Version 1.9.26 release candidate**
+
+* Fixed up navigation (again) ([issue](https://github.com/M66B/XPrivacy/issues/681))
+* Updated German translation
+* Updated Norwegian translation
+* Updated Simplified Chinese translation
+* Updated Swedish translation
+
+**Version 1.9.25 release candidate**
+
+* Fixed always asking for clear when tapping notification
+* Remove notification when selecting clear
+
+**Version 1.9.24 release candidate**
+
+* Option to clear restrictions from notification (if your Android version supports this)
+
+**Version 1.9.23 release candidate**
+
+* Fixed up navigation ([issue](https://github.com/M66B/XPrivacy/issues/681))
+* Ask if sure when clearing restrictions / applying template
 
 **Version 1.9.22 release candidate**
 
