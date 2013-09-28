@@ -33,7 +33,7 @@ There are several data categories which can be restricted, for example *contacts
 For example, if you restrict access to contacts for an application,
 this will result in sending an empty contact list to the application.
 Similarly, restricting an application's access to your location
-will result in a set location being sent to the application.
+will result in a fake location being sent to the application.
 
 XPrivacy doesn't revoke (i.e. block) permissions from an application,
 which means that most applications will continue to work as before and won't force close.
@@ -259,7 +259,7 @@ and is reported to work with most Android version 4.0, 4.1, 4.2 and 4.3 variants
 Installation
 ------------
 
-*Instead of following the steps below, you can try the beta version of the [XPrivacy Installer](http://d-h.st/SUF).*
+**Instead of following the steps below, you can use the [XPrivacy Installer](https://play.google.com/store/apps/details?id=biz.bokhorst.xprivacy.installer).**
 
 It seems like a lot of steps, but it is done in no time:
 

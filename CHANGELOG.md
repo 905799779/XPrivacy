@@ -3,6 +3,10 @@ Changelog
 
 **Next release**
 
+* Updated Arabic translation
+
+**Version 1.10 stable**
+
 * Updated Catalan translation
 
 **Version 1.9.27 release candidate**
