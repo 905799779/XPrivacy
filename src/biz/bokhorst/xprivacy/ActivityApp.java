@@ -34,6 +34,7 @@ import android.app.AlertDialog;
 import android.app.Dialog;
 import android.app.Notification;
 import android.app.NotificationManager;
+import android.app.PendingIntent;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
@@ -748,6 +749,8 @@ public class ActivityApp extends ActionBarActivity {
 				notificationBuilder.setContentText(result.toString());
 			notificationBuilder.setWhen(System.currentTimeMillis());
 			notificationBuilder.setAutoCancel(true);
+			PendingIntent pi = PendingIntent.getActivity(ActivityApp.this, 0, new Intent(), Intent.FLAG_ACTIVITY_NEW_TASK);
+			notificationBuilder.setContentIntent(pi);
 			Notification notification = notificationBuilder.build();
 			NotificationManager notificationManager = (NotificationManager) ActivityApp.this
 					.getSystemService(Context.NOTIFICATION_SERVICE);
