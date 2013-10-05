@@ -111,6 +111,8 @@ public class PackageChange extends BroadcastReceiver {
 					notificationBuilder.setContentText(context.getString(R.string.msg_reboot));
 					notificationBuilder.setWhen(System.currentTimeMillis());
 					notificationBuilder.setAutoCancel(true);
+					PendingIntent pi = PendingIntent.getActivity(context, 0, new Intent(), Intent.FLAG_ACTIVITY_NEW_TASK);
+					notificationBuilder.setContentIntent(pi);
 					Notification notification = notificationBuilder.build();
 
 					// Notify
