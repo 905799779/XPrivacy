@@ -170,8 +170,7 @@ public class XActivityThread extends XHook {
 
 		// data.finish
 		try {
-			// BroadcastReceiver.PendingResult since api-11
-			if (Build.VERSION.SDK_INT > Build.VERSION_CODES.GINGERBREAD_MR1) {
+			if (param.args[0] instanceof BroadcastReceiver.PendingResult) {
 				BroadcastReceiver.PendingResult pr = (BroadcastReceiver.PendingResult) param.args[0];
 				pr.finish();
 			}
