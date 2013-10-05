@@ -14,6 +14,7 @@ import android.net.Uri;
 import android.os.Binder;
 import android.os.Build;
 import android.util.Log;
+
 import de.robv.android.xposed.XC_MethodHook.MethodHookParam;
 
 public class XContentProvider extends XHook {
