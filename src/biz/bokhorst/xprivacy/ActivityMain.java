@@ -7,7 +7,6 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadFactory;
 
 import android.annotation.SuppressLint;
-import android.app.Activity;
 import android.app.AlertDialog;
 import android.app.Dialog;
 import android.app.ProgressDialog;
@@ -20,12 +19,10 @@ import android.content.pm.PackageInfo;
 import android.graphics.Color;
 import android.graphics.Typeface;
 import android.net.Uri;
-import android.os.AsyncTask;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Environment;
 import android.os.Handler;
-import android.support.v4.app.ActivityCompat;
 import android.text.Editable;
 import android.text.TextWatcher;
 import android.util.Log;
@@ -87,7 +84,6 @@ public class ActivityMain extends Activity implements OnItemSelectedListener, Co
 	}
 
 	private BroadcastReceiver mPackageChangeReceiver = new BroadcastReceiver() {
-		@SuppressLint("Override")
 		@Override
 		public void onReceive(Context context, Intent intent) {
 			ActivityMain.this.recreate();
@@ -96,9 +92,6 @@ public class ActivityMain extends Activity implements OnItemSelectedListener, Co
 
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
-		if (getIntent().hasExtra("bundle") && savedInstanceState == null) {
-			savedInstanceState = getIntent().getExtras().getBundle("bundle");
-		}
 		super.onCreate(savedInstanceState);
 		// Salt should be the same when exporting/importing
 		String salt = PrivacyManager.getSetting(null, this, 0, PrivacyManager.cSettingSalt, null, false);
@@ -239,11 +232,7 @@ public class ActivityMain extends Activity implements OnItemSelectedListener, Co
 
 		// Start task to get app list
 		AppListTask appListTask = new AppListTask();
-		if (Build.VERSION.SDK_INT > Build.VERSION_CODES.GINGERBREAD_MR1) {
-			appListTask.executeOnExecutor(mExecutor, (Object) null);
-		} else {
-			appListTask.execute((Object) null);
-		}
+		appListTask.executeOnExecutor(mExecutor, (Object) null);
 
 		// Check environment
 		Requirements.check(this);
@@ -262,20 +251,6 @@ public class ActivityMain extends Activity implements OnItemSelectedListener, Co
 		if (PrivacyManager.getSettingBool(null, this, 0, PrivacyManager.cSettingFirstRun, true, false)) {
 			optionAbout();
 			PrivacyManager.setSetting(null, this, 0, PrivacyManager.cSettingFirstRun, Boolean.FALSE.toString());
-		}
-	}
-
-	@Override
-	public void recreate() {
-		if (Build.VERSION.SDK_INT > Build.VERSION_CODES.GINGERBREAD_MR1) {
-			super.recreate();
-		} else {
-			Bundle bundle = new Bundle();
-			onSaveInstanceState(bundle);
-			Intent intent = new Intent(this, ActivityMain.class);
-			intent.putExtra("bundle", bundle);
-			startActivity(getIntent());
-			finish();
 		}
 	}
 
@@ -368,15 +343,6 @@ public class ActivityMain extends Activity implements OnItemSelectedListener, Co
 		} else if (requestCode == ACTIVITY_FETCH) {
 			// Fetched: recreate UI
 			ActivityMain.this.recreate();
-		}
-	}
-
-	@Override
-	public void invalidateOptionsMenu() {
-		if (Build.VERSION.SDK_INT > Build.VERSION_CODES.GINGERBREAD_MR1) {
-			super.invalidateOptionsMenu();
-		} else {
-			ActivityCompat.invalidateOptionsMenu(ActivityMain.this);
 		}
 	}
 
@@ -1211,11 +1177,7 @@ public class ActivityMain extends Activity implements OnItemSelectedListener, Co
 			holder.imgCBName.setEnabled(false);
 
 			// Async update
-			if (Build.VERSION.SDK_INT > Build.VERSION_CODES.GINGERBREAD_MR1) {
-				new HolderTask(position, holder, xAppInfo).executeOnExecutor(mExecutor, (Object) null);
-			} else {
-				new HolderTask(position, holder, xAppInfo).execute((Object) null);
-			}
+			new HolderTask(position, holder, xAppInfo).executeOnExecutor(mExecutor, (Object) null);
 
 			return convertView;
 		}

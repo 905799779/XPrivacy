@@ -46,7 +46,6 @@ import android.content.Intent;
 import android.content.pm.ApplicationInfo;
 import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager.NameNotFoundException;
-import android.os.AsyncTask;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Environment;
@@ -84,42 +83,26 @@ public class ActivityShare extends Activity {
 			if (getIntent().getAction().equals("biz.bokhorst.xprivacy.action.IMPORT")) {
 				String fileName = (extras.containsKey(cFileName) ? extras.getString(cFileName) : getFileName(false));
 				ImportTask importTask = new ImportTask();
-				if (Build.VERSION.SDK_INT > Build.VERSION_CODES.GINGERBREAD_MR1) {
-					importTask.executeOnExecutor(mExecutor, new File(fileName));
-				} else {
-					importTask.execute(new File(fileName));
-				}
+				importTask.executeOnExecutor(mExecutor, new File(fileName));
 			}
 
 			// Export
 			if (getIntent().getAction().equals("biz.bokhorst.xprivacy.action.EXPORT")) {
 				String fileName = (extras.containsKey(cFileName) ? extras.getString(cFileName) : getFileName(false));
 				ExportTask exportTask = new ExportTask();
-				if (Build.VERSION.SDK_INT > Build.VERSION_CODES.GINGERBREAD_MR1) {
-					exportTask.executeOnExecutor(mExecutor, new File(fileName));
-				} else {
-					exportTask.execute(new File(fileName));
-				}
+				exportTask.executeOnExecutor(mExecutor, new File(fileName));
 			}
 
 			// Fetch
 			if (getIntent().getAction().equals("biz.bokhorst.xprivacy.action.FETCH")) {
 				if (extras != null && extras.containsKey(cPackageName)) {
 					FetchTask fetchTask = new FetchTask();
-					if (Build.VERSION.SDK_INT > Build.VERSION_CODES.GINGERBREAD_MR1) {
-						fetchTask.executeOnExecutor(mExecutor, extras.getString(cPackageName));
-					} else {
-						fetchTask.execute(extras.getString(cPackageName));
-					}
+					fetchTask.executeOnExecutor(mExecutor, extras.getString(cPackageName));
 				} else {
 					for (ApplicationInfo aInfo : getPackageManager().getInstalledApplications(0))
 						if ((aInfo.flags & (ApplicationInfo.FLAG_SYSTEM | ApplicationInfo.FLAG_UPDATED_SYSTEM_APP)) == 0) {
 							FetchTask fetchTask = new FetchTask();
-							if (Build.VERSION.SDK_INT > Build.VERSION_CODES.GINGERBREAD_MR1) {
-								fetchTask.executeOnExecutor(mExecutor, extras.getString(cPackageName));
-							} else {
-								fetchTask.execute(extras.getString(cPackageName));
-							}
+							fetchTask.executeOnExecutor(mExecutor, aInfo.packageName);
 						}
 				}
 			}

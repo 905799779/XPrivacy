@@ -9,11 +9,8 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadFactory;
 
-import android.support.v7.app.ActionBarActivity;
 import android.content.Context;
 import android.content.Intent;
-import android.os.AsyncTask;
-import android.os.Build;
 import android.os.Bundle;
 import android.support.v4.app.NavUtils;
 import android.support.v4.app.TaskStackBuilder;
@@ -30,7 +27,7 @@ import android.widget.ImageView;
 import android.widget.ListView;
 import android.widget.TextView;
 
-public class ActivityUsage extends ActionBarActivity {
+public class ActivityUsage extends Activity {
 	private int mThemeId;
 	private boolean mAll = true;
 	private int mUid;
@@ -68,11 +65,7 @@ public class ActivityUsage extends ActionBarActivity {
 
 		// Start task to get usage data
 		UsageTask usageTask = new UsageTask();
-		if (Build.VERSION.SDK_INT > Build.VERSION_CODES.GINGERBREAD_MR1) {
-			usageTask.executeOnExecutor(mExecutor, (Object) null);
-		} else {
-			usageTask.execute((Object) null);
-		}
+		usageTask.executeOnExecutor(mExecutor, (Object) null);
 
 		// Listen for clicks
 		ListView lvUsage = (ListView) findViewById(R.id.lvUsage);
@@ -113,7 +106,6 @@ public class ActivityUsage extends ActionBarActivity {
 	@Override
 	public boolean onOptionsItemSelected(MenuItem item) {
 		switch (item.getItemId()) {
-		case R.id.home:
 		case android.R.id.home:
 			Intent upIntent = NavUtils.getParentActivityIntent(this);
 			if (upIntent != null)
@@ -129,11 +121,7 @@ public class ActivityUsage extends ActionBarActivity {
 			return true;
 		case R.id.menu_refresh:
 			UsageTask usageTask = new UsageTask();
-			if (Build.VERSION.SDK_INT > Build.VERSION_CODES.GINGERBREAD_MR1) {
-				usageTask.executeOnExecutor(mExecutor, (Object) null);
-			} else {
-				usageTask.execute((Object) null);
-			}
+			usageTask.executeOnExecutor(mExecutor, (Object) null);
 			return true;
 		default:
 			return super.onOptionsItemSelected(item);

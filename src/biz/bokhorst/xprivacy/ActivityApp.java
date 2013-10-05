@@ -29,7 +29,6 @@ import org.json.JSONObject;
 import android.accounts.Account;
 import android.accounts.AccountManager;
 import android.annotation.SuppressLint;
-import android.support.v7.app.ActionBarActivity;
 import android.app.AlertDialog;
 import android.app.Dialog;
 import android.app.Notification;
@@ -44,7 +43,6 @@ import android.database.Cursor;
 import android.graphics.Color;
 import android.graphics.Typeface;
 import android.net.Uri;
-import android.os.AsyncTask;
 import android.os.Build;
 import android.os.Bundle;
 import android.provider.ContactsContract;
@@ -69,7 +67,7 @@ import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 
-public class ActivityApp extends ActionBarActivity {
+public class ActivityApp extends Activity {
 
 	private int mThemeId;
 	private ApplicationInfoEx mAppInfo = null;
@@ -96,9 +94,6 @@ public class ActivityApp extends ActionBarActivity {
 	}
 
 	public void onCreate(Bundle savedInstanceState) {
-		if (getIntent().hasExtra("bundle") && savedInstanceState == null) {
-			savedInstanceState = getIntent().getExtras().getBundle("bundle");
-		}
 		super.onCreate(savedInstanceState);
 		// Set theme
 		String themeName = PrivacyManager.getSetting(null, this, 0, PrivacyManager.cSettingTheme, "", false);
@@ -222,20 +217,6 @@ public class ActivityApp extends ActionBarActivity {
 	}
 
 	@Override
-	public void recreate() {
-		if (Build.VERSION.SDK_INT > Build.VERSION_CODES.GINGERBREAD_MR1) {
-			super.recreate();
-		} else {
-			Bundle bundle = new Bundle();
-			onSaveInstanceState(bundle);
-			Intent intent = new Intent(this, ActivityApp.class);
-			intent.putExtra("bundle", bundle);
-			startActivity(getIntent());
-			finish();
-		}
-	}
-
-	@Override
 	protected void onResume() {
 		super.onResume();
 		if (mPrivacyListAdapter != null)
@@ -275,7 +256,6 @@ public class ActivityApp extends ActionBarActivity {
 	@Override
 	public boolean onOptionsItemSelected(MenuItem item) {
 		switch (item.getItemId()) {
-		case R.id.home:
 		case android.R.id.home:
 			Intent upIntent = NavUtils.getParentActivityIntent(this);
 			if (upIntent != null)
@@ -425,11 +405,7 @@ public class ActivityApp extends ActionBarActivity {
 			@Override
 			public void onClick(DialogInterface dialog, int which) {
 				SubmitTask submitTask = new SubmitTask();
-				if (Build.VERSION.SDK_INT > Build.VERSION_CODES.GINGERBREAD_MR1) {
-					submitTask.executeOnExecutor(mExecutor, mAppInfo);
-				} else {
-					submitTask.execute(mAppInfo);
-				}
+				submitTask.executeOnExecutor(mExecutor, mAppInfo);
 			}
 		});
 		alertDialogBuilder.setNegativeButton(getString(android.R.string.cancel), new DialogInterface.OnClickListener() {
@@ -455,11 +431,7 @@ public class ActivityApp extends ActionBarActivity {
 
 	private void optionAccounts() {
 		AccountsTask accountsTask = new AccountsTask();
-		if (Build.VERSION.SDK_INT > Build.VERSION_CODES.GINGERBREAD_MR1) {
-			accountsTask.executeOnExecutor(mExecutor, (Object) null);
-		} else {
-			accountsTask.execute((Object) null);
-		}
+		accountsTask.executeOnExecutor(mExecutor, (Object) null);
 	}
 
 	private void optionLaunch() {
@@ -481,11 +453,7 @@ public class ActivityApp extends ActionBarActivity {
 
 	private void optionContacts() {
 		ContactsTask contactsTask = new ContactsTask();
-		if (Build.VERSION.SDK_INT > Build.VERSION_CODES.GINGERBREAD_MR1) {
-			contactsTask.executeOnExecutor(mExecutor, (Object) null);
-		} else {
-			contactsTask.execute((Object) null);
-		}
+		contactsTask.executeOnExecutor(mExecutor, (Object) null);
 	}
 
 	// Tasks
@@ -915,11 +883,7 @@ public class ActivityApp extends ActionBarActivity {
 			holder.ctvRestriction.setClickable(false);
 
 			// Async update
-			if (Build.VERSION.SDK_INT > Build.VERSION_CODES.GINGERBREAD_MR1) {
-				new GroupHolderTask(groupPosition, holder, restrictionName).executeOnExecutor(mExecutor, (Object) null);
-			} else {
-				new GroupHolderTask(groupPosition, holder, restrictionName).execute((Object) null);
-			}
+			new GroupHolderTask(groupPosition, holder, restrictionName).executeOnExecutor(mExecutor, (Object) null);
 
 			return convertView;
 		}
@@ -1069,12 +1033,8 @@ public class ActivityApp extends ActionBarActivity {
 			holder.ctvMethodName.setClickable(false);
 
 			// Async update
-			if (Build.VERSION.SDK_INT > Build.VERSION_CODES.GINGERBREAD_MR1) {
-				new ChildHolderTask(groupPosition, childPosition, holder, restrictionName).executeOnExecutor(mExecutor,
-						(Object) null);
-			} else {
-				new ChildHolderTask(groupPosition, childPosition, holder, restrictionName).execute((Object) null);
-			}
+			new ChildHolderTask(groupPosition, childPosition, holder, restrictionName).executeOnExecutor(mExecutor,
+					(Object) null);
 
 			return convertView;
 		}
