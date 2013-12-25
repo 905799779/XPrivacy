@@ -15,7 +15,6 @@ import android.net.Uri;
 import android.net.wifi.WifiInfo;
 import android.os.Build;
 import android.util.Log;
-import android.util.TypedValue;
 
 public class Requirements {
 
@@ -26,18 +25,19 @@ public class Requirements {
 				&& Build.VERSION.SDK_INT != Build.VERSION_CODES.ICE_CREAM_SANDWICH_MR1
 				&& Build.VERSION.SDK_INT != Build.VERSION_CODES.JELLY_BEAN
 				&& Build.VERSION.SDK_INT != Build.VERSION_CODES.JELLY_BEAN_MR1
-				&& Build.VERSION.SDK_INT != Build.VERSION_CODES.JELLY_BEAN_MR2) {
+				&& Build.VERSION.SDK_INT != Build.VERSION_CODES.JELLY_BEAN_MR2
+				&& Build.VERSION.SDK_INT != Build.VERSION_CODES.KITKAT) {
 			AlertDialog.Builder alertDialogBuilder = new AlertDialog.Builder(context);
 			alertDialogBuilder.setTitle(context.getString(R.string.app_name));
 			alertDialogBuilder.setMessage(context.getString(R.string.app_wrongandroid));
-			alertDialogBuilder.setIcon(getThemed(R.attr.icon_launcher, context));
+			alertDialogBuilder.setIcon(Util.getThemed(context, R.attr.icon_launcher));
 			alertDialogBuilder.setPositiveButton(context.getString(android.R.string.ok),
 					new DialogInterface.OnClickListener() {
 						@Override
 						public void onClick(DialogInterface dialog, int which) {
-							Intent xposedIntent = new Intent(Intent.ACTION_VIEW);
-							xposedIntent.setData(Uri.parse("https://github.com/M66B/XPrivacy#installation"));
-							context.startActivity(xposedIntent);
+							Intent androidIntent = new Intent(Intent.ACTION_VIEW);
+							androidIntent.setData(Uri.parse("https://github.com/M66B/XPrivacy#installation"));
+							context.startActivity(androidIntent);
 						}
 					});
 			AlertDialog alertDialog = alertDialogBuilder.create();
@@ -45,15 +45,16 @@ public class Requirements {
 		}
 
 		// Check Xposed version
-		int xVersion = Util.getXposedVersion();
-		if (xVersion < PrivacyManager.cXposedMinVersion) {
-			String msg = String.format(context.getString(R.string.app_notxposed), PrivacyManager.cXposedMinVersion);
+		int xVersion = Util.getXposedAppProcessVersion();
+		if (xVersion < PrivacyManager.cXposedAppProcessMinVersion) {
+			String msg = String.format(context.getString(R.string.app_notxposed),
+					PrivacyManager.cXposedAppProcessMinVersion);
 			Util.log(null, Log.WARN, msg);
 
 			AlertDialog.Builder alertDialogBuilder = new AlertDialog.Builder(context);
 			alertDialogBuilder.setTitle(context.getString(R.string.app_name));
 			alertDialogBuilder.setMessage(msg);
-			alertDialogBuilder.setIcon(getThemed(R.attr.icon_launcher, context));
+			alertDialogBuilder.setIcon(Util.getThemed(context, R.attr.icon_launcher));
 			alertDialogBuilder.setPositiveButton(context.getString(android.R.string.ok),
 					new DialogInterface.OnClickListener() {
 						@Override
@@ -75,7 +76,7 @@ public class Requirements {
 			AlertDialog.Builder alertDialogBuilder = new AlertDialog.Builder(context);
 			alertDialogBuilder.setTitle(context.getString(R.string.app_name));
 			alertDialogBuilder.setMessage(msg);
-			alertDialogBuilder.setIcon(getThemed(R.attr.icon_launcher, context));
+			alertDialogBuilder.setIcon(Util.getThemed(context, R.attr.icon_launcher));
 			alertDialogBuilder.setPositiveButton(context.getString(android.R.string.ok),
 					new DialogInterface.OnClickListener() {
 						@Override
@@ -84,6 +85,29 @@ public class Requirements {
 									"de.robv.android.xposed.installer");
 							if (xInstallerIntent != null)
 								context.startActivity(xInstallerIntent);
+						}
+					});
+			AlertDialog alertDialog = alertDialogBuilder.create();
+			alertDialog.show();
+		}
+
+		// Check pro enabler
+		Version version = Util.getProEnablerVersion(context);
+		if (version != null && !Util.isValidProEnablerVersion(version)) {
+			String msg = context.getString(R.string.app_wrongenabler);
+			Util.log(null, Log.WARN, msg);
+
+			AlertDialog.Builder alertDialogBuilder = new AlertDialog.Builder(context);
+			alertDialogBuilder.setTitle(context.getString(R.string.app_name));
+			alertDialogBuilder.setMessage(msg);
+			alertDialogBuilder.setIcon(Util.getThemed(context, R.attr.icon_launcher));
+			alertDialogBuilder.setPositiveButton(context.getString(android.R.string.ok),
+					new DialogInterface.OnClickListener() {
+						@Override
+						public void onClick(DialogInterface dialog, int which) {
+							Intent storeIntent = new Intent(Intent.ACTION_VIEW, Uri.parse("market://details?id="
+									+ context.getPackageName() + ".pro"));
+							context.startActivity(storeIntent);
 						}
 					});
 			AlertDialog alertDialog = alertDialogBuilder.create();
@@ -180,8 +204,11 @@ public class Requirements {
 		if (checkField(WifiInfo.class, "mWifiSsid"))
 			try {
 				Class<?> clazz = Class.forName("android.net.wifi.WifiSsid");
-				if (!checkField(clazz, "octets"))
+				try {
+					clazz.getDeclaredMethod("createFromAsciiEncoded", String.class);
+				} catch (NoSuchMethodError ex) {
 					reportClass(clazz, context);
+				}
 			} catch (Throwable ex) {
 				sendSupportInfo(ex.toString(), context);
 			}
@@ -211,7 +238,7 @@ public class Requirements {
 			// Check field
 			if (field != null) {
 				Object value = field.get(obj);
-				if (value != null && expectedClass.isAssignableFrom(value.getClass()))
+				if (value == null || expectedClass.isAssignableFrom(value.getClass()))
 					return true;
 			}
 		} catch (Throwable ex) {
@@ -235,7 +262,7 @@ public class Requirements {
 		AlertDialog.Builder alertDialogBuilder = new AlertDialog.Builder(context);
 		alertDialogBuilder.setTitle(context.getString(R.string.app_name));
 		alertDialogBuilder.setMessage(msg);
-		alertDialogBuilder.setIcon(getThemed(R.attr.icon_launcher, context));
+		alertDialogBuilder.setIcon(Util.getThemed(context, R.attr.icon_launcher));
 		alertDialogBuilder.setPositiveButton(context.getString(android.R.string.ok),
 				new DialogInterface.OnClickListener() {
 					@Override
@@ -286,9 +313,10 @@ public class Requirements {
 		}
 
 		StringBuilder sb = new StringBuilder(text);
-		sb.insert(0, String.format("Android SDK %d\r\n", Build.VERSION.SDK_INT));
-		sb.insert(0, String.format("XPrivacy %s\r\n", xversion));
-		sb.append("\r\n");
+		sb.insert(0, "\r\n");
+		sb.insert(0, String.format("Model: %s\r\n", android.os.Build.MODEL));
+		sb.insert(0, String.format("Android SDK int: %d\r\n", Build.VERSION.SDK_INT));
+		sb.insert(0, String.format("XPrivacy version: %s\r\n", xversion));
 
 		Intent sendEmail = new Intent(Intent.ACTION_SEND);
 		sendEmail.setType("message/rfc822");
@@ -300,11 +328,5 @@ public class Requirements {
 		} catch (Throwable ex) {
 			Util.bug(null, ex);
 		}
-	}
-
-	private static int getThemed(int attr, Context context) {
-		TypedValue typedvalueattr = new TypedValue();
-		context.getTheme().resolveAttribute(attr, typedvalueattr, true);
-		return typedvalueattr.resourceId;
 	}
 }

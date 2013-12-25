@@ -7,8 +7,11 @@
         android:showAsAction="always"
         android:title="@string/menu_help"/>
     <item
+        android:id="@+id/menu_tutorial"
+        android:title="@string/menu_tutorial"/>
+    <item
         android:id="@+id/menu_all"
-        android:title="@string/menu_all"/>
+        android:title="@string/menu_restriction_all"/>
     <item
         android:id="@+id/menu_usage"
         android:title="@string/menu_usage"/>
@@ -20,8 +23,10 @@
         android:title="@string/menu_import"/>
     <item
         android:id="@+id/menu_fetch"
-        android:title="@string/menu_fetch"
-        android:visible="true"/>
+        android:title="@string/menu_fetch"/>
+    <item
+        android:id="@+id/menu_refresh"
+        android:title="@string/menu_refresh"/>
     <item
         android:id="@+id/menu_pro"
         android:title="@string/menu_pro"/>

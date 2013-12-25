@@ -5,7 +5,7 @@
     <string name="app_wrongandroid">فقط لأندرويد نسخة 4.0+</string>
     <string name="app_version" formatted="false">نسخة XPrivacy : %s (%d)</string>
     <string name="app_xversion" formatted="false">إطار  Xposed نسخة : %d</string>
-    <string name="app_copyright">حقوق الطبع \u00A9 2013 ب M. Bokhorst (M66B)</string>
+    <string name="app_copyright">حقوق الطبع \u00A9 2013-2014 ل M. Bokhorst (M66B)</string>
     <string name="menu_usage">الإستخدام</string>
     <string name="menu_refresh">إنعاش</string>
     <string name="menu_settings">الإعدادات</string>
@@ -20,24 +20,37 @@
     <string name="menu_about">عن التطبيق</string>
     <string name="menu_help">مساعدة</string>
     <string name="menu_all">تحديد الكل</string>
+    <string name="menu_restriction_all">تبديل القيود</string>
+    <string name="menu_clear_all">مسح الكل</string>
+    <string name="menu_restrict_all">تقييد الكل</string>
+    <string name="menu_clear_usage">إزالة</string>
+    <string name="menu_usage_all">تغيير الفلتر</string>
     <string name="menu_apply">تطبيق القالب</string>
     <string name="menu_clear">إلغاء التحديد</string>
     <string name="menu_app_launch">تشغيل التطبيق</string>
     <string name="menu_app_settings">إعدادات التطبيق</string>
     <string name="menu_app_store">متجر قوقل</string>
+    <string name="menu_app_kill">Kill</string>
+    <string name="menu_applications">إختر التطبيقات التي تود تمكينها</string>
     <string name="menu_accounts">إختر الحسابات التي تود تمكينها</string>
     <string name="menu_contacts">إختر الأسماء التي تود تمكينها</string>
+    <string name="menu_tutorial">تعليمي</string>
     <string name="msg_new">جديد</string>
     <string name="msg_update">تحديث</string>
-    <string name="msg_restricted" formatted="false">%s تم تقيده بواسطة XPrivacy</string>
     <string name="msg_licensed" formatted="false">مرخص ل: %s</string>
     <string name="msg_loading">جاري التحميل</string>
-    <string name="msg_edit">إضغط ايقونة التطبيق لتعديل كل القيود</string>
+    <string name="msg_applying">تطبيق</string>
+    <string name="msg_applied">تم تطبيق القالب</string>
+    <string name="msg_saved_to" formatted="false">حُفِظت في  %s</string>
+    <string name="msg_no_restrictions">لا توجد قيود</string>
     <string name="msg_sure">هل أنت متأكد ؟</string>
     <string name="msg_done">إنتهى</string>
     <string name="msg_reboot">يحتاج إعادة تشغيل</string>
-    <string name="msg_random">عشوائي</string>
+    <string name="msg_random_now">عشوائي</string>
+    <string name="msg_random_access">عشوائية الوصول</string>
     <string name="msg_random_boot">عشوائي بعد الإقلاع</string>
+    <string name="msg_usage">تحديث بيانات المستخدم</string>
+    <string name="msg_restart">التطبيق يتطلب إعادة التشغيل</string>
     <string name="msg_first"><b>بُذلت عناية كبيرة لتطوير وإختبار XPrivacy,
 ومع ذلك فإنه من المستحيل ضمان أنه سيعمل خالياً من العيوب على كل جهاز ولكل تطبيق.
 \n\nالإستخدام على مسئوليتك الخاصة.</b>\n\nراجع أيضاً الترخيص:</string>
@@ -56,16 +69,18 @@
     <string name="restrict_messages">الرسائل (النصية , الوسائط)</string>
     <string name="restrict_network">الشبكة (العناوين)</string>
     <string name="restrict_notifications">الإشعارات</string>
+    <string name="restrict_overlay">غشاء</string>
     <string name="restrict_phone">الهاتف (المعرف,الأرقام,المكالمات)</string>
+    <string name="restrict_sensors">الحساسات</string>
     <string name="restrict_storage">التخزين (الميديا’الذاكرة الخارجية)</string>
     <string name="restrict_shell">سطر الأوامر (الأوامر,المستخدم الجذر)</string>
     <string name="restrict_system">النظام (البرامج المنزلة)</string>
     <string name="restrict_view">تصفح (المتصفح)</string>
-    <string name="title_category">الفئة:</string>
+    <string name="title_categories">الفئات</string>
     <string name="title_restrict">إختر للتقيد:</string>
-    <string name="title_nofilter">لايوجد فلتر مُنشّط</string>
+    <string name="title_filters">فلاتر</string>
 
-    <plurals name="title_filters">
+    <plurals name="title_active_filters">
         <item quantity="one">1 فلتر نشط</item>
         <item quantity="other">%d فلاتر نشِطة</item>
     </plurals>
@@ -76,6 +91,7 @@
     <string name="title_frestricted">التصفية حسب التقييد</string>
     <string name="title_fuser">تصفية برامج المستخدم</string>
     <string name="title_fsystem">تصفية برامج النظام</string>
+    <string name="title_fnot">العكس</string>
     <string name="settings_serial">السيريال#</string>
     <string name="settings_lat">خط العرض</string>
     <string name="settings_lon">خط الطول</string>
@@ -83,16 +99,36 @@
     <string name="settings_ip">عنوان الايبي</string>
     <string name="settings_phone">رقم الهاتف</string>
     <string name="settings_id">هوية اندرويد</string>
+    <string name="settings_adid">رقم تعريف الإعلان</string>
     <string name="settings_country">الدولة</string>
     <string name="settings_operator">المُشغل</string>
-    <string name="settings_subscriber">IMSI</string>
+    <string name="settings_subscriber">IMSI(الهوية العالمية لمشتركي الهواتف)</string>
     <string name="settings_ua">وكيل المستخدم</string>
+    <string name="settings_general">عام</string>
+    <string name="settings_fake_data">بيانات وهمية</string>
+    <string name="settings_global">إستخدام بيانات وهمية عامة</string>
+    <string name="settings_notify">تحديث الإشعارات</string>
+    <string name="settings_usage">بيانات إستخدام الأندرويد (يتطلب إعادة التشغيل)</string>
     <string name="settings_log"> سِجِل تصحيح الأخطاء (يتطلب إعادة التشغيل) </string>
+    <string name="settings_expert">وضع الخبراء</string>
+    <string name="settings_dangerous">تقييد الوظائف الخطيرة</string>
+    <string name="settings_confidence">الحد الأقصى لجلب فترة الثقة</string>
+    <string name="settings_experimental">وظائف تجريبية</string>
     <string name="help_application">التطبيق</string>
     <string name="help_internet">لديه صلاحية الوصول للإنترنت</string>
     <string name="help_granted">لديه صلاحية أندرويد</string>
     <string name="help_used">يستخدم هذه البيانات</string>
     <string name="help_frozen">مُعطل</string>
     <string name="help_dangerous">خطير</string>
+    <string name="help_half">تقييد جزئي</string>
+    <string name="help_attention">قيود تحتاج لعناية</string>
+    <string name="help_restricted">القيود التي تم تغييرها</string>
+    <string name="help_shared">القيود تم تسجيلها</string>
+    <string name="tutorial_mainheader">إختر الفئة لتقييدها,إختر التطبيقات الظاهرة مع المرشحات</string>
+    <string name="tutorial_mainlist">إلمس مربع الإختيار لتقييد الفئة المحددة للتطبيق\n
+\nوسوف يتم إعطاء بيانات فارغة أو وهمية للفئات المقيدة\n
+\nإلمس ايقونة التطبيق لتفاصيل القيود والإعدادات</string>
+    <string name="tutorial_detailsheader">انقر على أيقونة التطبيق لمزيد من الإجراءات</string>
+    <string name="tutorial_detailslist">انقر على السهم المتجه لأسفل لرؤية الوظائف الإستثنائية في الفئة المُقيدة</string>
 
 </resources>

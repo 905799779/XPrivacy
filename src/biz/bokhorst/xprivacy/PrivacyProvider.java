@@ -32,13 +32,14 @@ import android.util.Log;
 @SuppressWarnings("deprecation")
 @SuppressLint({ "DefaultLocale", "WorldReadableFiles" })
 public class PrivacyProvider extends ContentProvider {
-	public static final String AUTHORITY = "biz.bokhorst.xprivacy.provider";
-	public static final String PREF_RESTRICTION = AUTHORITY;
-	public static final String PREF_USAGE = AUTHORITY + ".usage";
-	public static final String PREF_SETTINGS = AUTHORITY + ".settings";
-	public static final String PATH_RESTRICTION = "restriction";
-	public static final String PATH_USAGE = "usage";
-	public static final String PATH_SETTINGS = "settings";
+	private static final String AUTHORITY = "biz.bokhorst.xprivacy.provider";
+	private static final String PREF_RESTRICTION = AUTHORITY;
+	private static final String PREF_USAGE = AUTHORITY + ".usage";
+	private static final String PREF_SETTINGS = AUTHORITY + ".settings";
+	private static final String PATH_RESTRICTION = "restriction";
+	private static final String PATH_USAGE = "usage";
+	private static final String PATH_SETTINGS = "settings";
+
 	public static final Uri URI_RESTRICTION = Uri.parse("content://" + AUTHORITY + "/" + PATH_RESTRICTION);
 	public static final Uri URI_USAGE = Uri.parse("content://" + AUTHORITY + "/" + PATH_USAGE);
 	public static final Uri URI_SETTING = Uri.parse("content://" + AUTHORITY + "/" + PATH_SETTINGS);
@@ -100,26 +101,20 @@ public class PrivacyProvider extends ContentProvider {
 	@Override
 	public Cursor query(Uri uri, String[] projection, String selection, String[] selectionArgs, String sortOrder) {
 		if (sUriMatcher.match(uri) == TYPE_RESTRICTION && selectionArgs != null && selectionArgs.length >= 2) {
-			// Get arguments
-			final String restrictionName = selection;
-			final int uid = Integer.parseInt(selectionArgs[0]);
+			// Query restrictions
+			String restrictionName = selection;
+			int uid = Integer.parseInt(selectionArgs[0]);
 			boolean usage = Boolean.parseBoolean(selectionArgs[1]);
-			final String methodName = (selectionArgs.length >= 3 ? selectionArgs[2] : null);
+			String methodName = (selectionArgs.length >= 3 ? selectionArgs[2] : null);
 
 			return queryRestrictions(uid, restrictionName, methodName, usage);
 		} else if (sUriMatcher.match(uri) == TYPE_USAGE && selectionArgs != null && selectionArgs.length >= 1) {
-			// Return usage
-			List<String> listRestriction;
-			if (selection == null)
-				listRestriction = PrivacyManager.getRestrictions(true);
-			else {
-				listRestriction = new ArrayList<String>();
-				listRestriction.add(selection);
-			}
+			// Query usage
+			String restrictionName = selection;
 			int uid = Integer.parseInt(selectionArgs[0]);
 			String methodName = (selectionArgs.length >= 2 ? selectionArgs[1] : null);
 
-			return queryUsage(uid, listRestriction, methodName);
+			return queryUsage(uid, restrictionName, methodName);
 		} else if (sUriMatcher.match(uri) == TYPE_SETTING && selectionArgs == null)
 			return querySettings(selection);
 
@@ -132,7 +127,7 @@ public class PrivacyProvider extends ContentProvider {
 		// Build restriction list
 		List<String> listRestrictionName;
 		if (restrictionName == null)
-			listRestrictionName = PrivacyManager.getRestrictions(true);
+			listRestrictionName = PrivacyManager.getRestrictions();
 		else {
 			listRestrictionName = new ArrayList<String>();
 			listRestrictionName.add(restrictionName);
@@ -153,10 +148,9 @@ public class PrivacyProvider extends ContentProvider {
 
 						// Exceptions
 						for (PrivacyManager.MethodDescription md : PrivacyManager.getMethods(eRestrictionName)) {
-							boolean restricted = getRestricted(eRestrictionName, md.getMethodName(), prefs);
-							if (!restricted || PrivacyManager.isDangerousMethod(eRestrictionName, md.getMethodName()))
-								cursor.addRow(new Object[] { appInfo.uid, eRestrictionName, md.getMethodName(),
-										restricted });
+							boolean restricted = getRestricted(eRestrictionName, md.getName(), prefs);
+							if (!restricted || md.isDangerous())
+								cursor.addRow(new Object[] { appInfo.uid, eRestrictionName, md.getName(), restricted });
 						}
 					}
 			}
@@ -166,18 +160,29 @@ public class PrivacyProvider extends ContentProvider {
 
 			// Process restrictions
 			boolean restricted = false;
-			for (String eRestrictionName : listRestrictionName) {
-				boolean eRestricted = getRestricted(eRestrictionName, methodName, prefs);
-				cursor.addRow(new Object[] { uid, eRestrictionName, methodName, Boolean.toString(eRestricted) });
-				restricted = restricted || eRestricted;
+			if (methodName != null && methodName.equals("*")) {
+				for (String eRestrictionName : listRestrictionName) {
+					boolean eRestricted = getRestricted(eRestrictionName, null, prefs);
+					cursor.addRow(new Object[] { uid, eRestrictionName, null, Boolean.toString(eRestricted) });
+					for (PrivacyManager.MethodDescription md : PrivacyManager.getMethods(eRestrictionName)) {
+						eRestricted = getRestricted(eRestrictionName, md.getName(), prefs);
+						cursor.addRow(new Object[] { uid, eRestrictionName, md.getName(), Boolean.toString(eRestricted) });
+					}
+				}
+			} else {
+				for (String eRestrictionName : listRestrictionName) {
+					boolean eRestricted = getRestricted(eRestrictionName, methodName, prefs);
+					cursor.addRow(new Object[] { uid, eRestrictionName, methodName, Boolean.toString(eRestricted) });
+					restricted = (restricted || eRestricted);
+				}
 			}
 
 			// Update usage data
-			if (usage && restrictionName != null && methodName != null) {
+			if (usage && restrictionName != null && methodName != null && !methodName.equals("*")) {
 				final boolean isRestricted = restricted;
+				final long timeStamp = new Date().getTime();
 				mExecutor.execute(new Runnable() {
 					public void run() {
-						long timeStamp = new Date().getTime();
 						updateUsage(uid, restrictionName, methodName, isRestricted, timeStamp);
 					}
 				});
@@ -199,30 +204,39 @@ public class PrivacyProvider extends ContentProvider {
 		return restricted;
 	}
 
-	private Cursor queryUsage(int uid, List<String> listRestriction, String methodName) {
+	private Cursor queryUsage(int uid, String restrictionName, String methodName) {
 		MatrixCursor cursor = new MatrixCursor(new String[] { COL_UID, COL_RESTRICTION, COL_METHOD, COL_RESTRICTED,
 				COL_USED });
+
+		List<String> listRestriction;
+		if (restrictionName == null)
+			listRestriction = PrivacyManager.getRestrictions();
+		else {
+			listRestriction = new ArrayList<String>();
+			listRestriction.add(restrictionName);
+		}
+
 		if (uid == 0) {
 			// All
-			for (String restrictionName : PrivacyManager.getRestrictions(true)) {
-				SharedPreferences prefs = getContext().getSharedPreferences(PREF_USAGE + "." + restrictionName,
+			for (String eRestrictionName : PrivacyManager.getRestrictions()) {
+				SharedPreferences prefs = getContext().getSharedPreferences(PREF_USAGE + "." + eRestrictionName,
 						Context.MODE_PRIVATE);
 				for (String prefName : prefs.getAll().keySet())
 					if (prefName.startsWith(COL_USED)) {
 						String[] prefParts = prefName.split("\\.");
 						int rUid = Integer.parseInt(prefParts[1]);
 						String rMethodName = prefParts[2];
-						getUsage(rUid, restrictionName, rMethodName, cursor);
+						getUsage(rUid, eRestrictionName, rMethodName, cursor);
 					}
 			}
 		} else {
 			// Selected restrictions/methods
-			for (String restrictionName : listRestriction)
+			for (String eRestrictionName : listRestriction)
 				if (methodName == null)
-					for (PrivacyManager.MethodDescription md : PrivacyManager.getMethods(restrictionName))
-						getUsage(uid, restrictionName, md.getMethodName(), cursor);
+					for (PrivacyManager.MethodDescription md : PrivacyManager.getMethods(eRestrictionName))
+						getUsage(uid, eRestrictionName, md.getName(), cursor);
 				else
-					getUsage(uid, restrictionName, methodName, cursor);
+					getUsage(uid, eRestrictionName, methodName, cursor);
 		}
 		return cursor;
 	}
@@ -321,7 +335,7 @@ public class PrivacyProvider extends ContentProvider {
 			editor.putBoolean(getRestrictionPref(restrictionName), !allowed);
 		if (methodName != null)
 			editor.putBoolean(getExceptionPref(restrictionName, methodName), allowed);
-		editor.apply();
+		editor.commit();
 		setPrefFileReadable(PREF_RESTRICTION, uid);
 	}
 
@@ -334,14 +348,17 @@ public class PrivacyProvider extends ContentProvider {
 		String prefValue = String.format("%d:%b", timeStamp, restricted);
 		editor.remove(prefName);
 		editor.putString(prefName, prefValue);
-		editor.apply();
+		editor.commit();
 	}
 
 	private void updateSetting(String name, String value) {
 		SharedPreferences prefs = getContext().getSharedPreferences(PREF_SETTINGS, Context.MODE_WORLD_READABLE);
 		SharedPreferences.Editor editor = prefs.edit();
-		editor.putString(getSettingPref(name), value);
-		editor.apply();
+		if (value == null)
+			editor.remove(getSettingPref(name));
+		else
+			editor.putString(getSettingPref(name), value);
+		editor.commit();
 		setPrefFileReadable(PREF_SETTINGS);
 	}
 
@@ -356,8 +373,9 @@ public class PrivacyProvider extends ContentProvider {
 		} else if (sUriMatcher.match(uri) == TYPE_USAGE) {
 			int uid = Integer.parseInt(selectionArgs[0]);
 			return deleteUsage(uid);
-		} else if (sUriMatcher.match(uri) == TYPE_SETTING && selectionArgs == null) {
-			return deleteSettings();
+		} else if (sUriMatcher.match(uri) == TYPE_SETTING) {
+			int uid = Integer.parseInt(selectionArgs[0]);
+			return deleteSettings(uid);
 		}
 
 		throw new IllegalArgumentException(uri.toString());
@@ -373,43 +391,45 @@ public class PrivacyProvider extends ContentProvider {
 			editor.remove(pref);
 			rows++;
 		}
-		editor.apply();
+		editor.commit();
 		setPrefFileReadable(PREF_RESTRICTION, uid);
-
 		return rows;
 	}
 
 	private int deleteUsage(int uid) {
 		int rows = 0;
 		String sUid = Integer.toString(uid);
-		for (String restrictionName : PrivacyManager.getRestrictions(true)) {
+		for (String restrictionName : PrivacyManager.getRestrictions()) {
 			SharedPreferences prefs = getContext().getSharedPreferences(PREF_USAGE + "." + restrictionName,
 					Context.MODE_PRIVATE);
 			SharedPreferences.Editor editor = prefs.edit();
 			for (String pref : prefs.getAll().keySet()) {
 				String[] component = pref.split("\\.");
-				if (component.length >= 2 && component[1].equals(sUid)) {
-					Util.log(null, Log.INFO, "Removed usage=" + pref + " uid=" + uid);
+				if (uid == 0 || (component.length >= 2 && component[1].equals(sUid))) {
+					Util.log(null, Log.INFO, "Removed usage=" + pref);
 					editor.remove(pref);
 					rows++;
 				}
 			}
-			editor.apply();
+			editor.commit();
 		}
-
 		return rows;
 	}
 
-	private int deleteSettings() {
+	private int deleteSettings(int uid) {
 		int rows = 0;
+		String sUid = Integer.toString(uid);
 		SharedPreferences prefs = getContext().getSharedPreferences(PREF_SETTINGS, Context.MODE_WORLD_READABLE);
 		SharedPreferences.Editor editor = prefs.edit();
 		for (String pref : prefs.getAll().keySet()) {
-			rows++;
-			editor.remove(pref);
-			Util.log(null, Log.INFO, "Removed setting=" + pref);
+			String[] component = pref.split("\\.");
+			if (component.length >= 3 && component[2].equals(sUid)) {
+				Util.log(null, Log.INFO, "Removed setting=" + pref + " uid=" + uid);
+				editor.remove(pref);
+				rows++;
+			}
 		}
-		editor.apply();
+		editor.commit();
 		setPrefFileReadable(PREF_SETTINGS);
 		return rows;
 	}
@@ -449,7 +469,7 @@ public class PrivacyProvider extends ContentProvider {
 		}
 	}
 
-	public static String getSettingFallback(String settingName, String defaultValue) {
+	public static String getSettingFallback(String name, String defaultValue) {
 		try {
 			long now = new Date().getTime();
 			File file = new File(getPrefFileName(PREF_SETTINGS));
@@ -473,10 +493,20 @@ public class PrivacyProvider extends ContentProvider {
 				}
 			}
 
-			return mFallbackSettings.getString(getSettingPref(settingName), defaultValue);
+			return mFallbackSettings.getString(getSettingPref(name), defaultValue);
 		} catch (Throwable ex) {
 			Util.bug(null, ex);
 			return defaultValue;
+		}
+	}
+
+	public static void flush() {
+		Util.log(null, Log.WARN, "Flush uid=" + Binder.getCallingUid());
+		synchronized (mFallbackRestrictionLock) {
+			mFallbackRestrictions = null;
+		}
+		synchronized (mFallbackSettingsLock) {
+			mFallbackSettings = null;
 		}
 	}
 
@@ -599,9 +629,9 @@ public class PrivacyProvider extends ContentProvider {
 				if (PrivacyManager.cValueRandomLegacy.equals(value))
 					editor.putString(key, PrivacyManager.cValueRandom);
 			} catch (Throwable ex) {
-
 			}
-		editor.apply();
+
+		editor.commit();
 		setPrefFileReadable(PREF_SETTINGS);
 	}
 }

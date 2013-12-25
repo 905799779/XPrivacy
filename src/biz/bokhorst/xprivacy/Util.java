@@ -26,22 +26,31 @@ import android.content.pm.ApplicationInfo;
 import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
 import android.content.pm.PackageManager.NameNotFoundException;
-import android.content.res.Resources;
+import android.graphics.Bitmap;
+import android.graphics.Bitmap.Config;
+import android.graphics.Canvas;
+import android.graphics.Color;
+import android.graphics.Paint;
+import android.graphics.drawable.Drawable;
 import android.os.Environment;
 import android.os.Process;
 import android.util.Base64;
 import android.util.Log;
+import android.util.TypedValue;
 
 public class Util {
 	private static boolean mPro = false;
 	private static boolean mLog = true;
 	private static boolean mLogDetermined = false;
+	private static Version MIN_PRO_VERSION = new Version("1.12");
+	private static String LICENSE_FILE_NAME = "XPrivacy_license.txt";
 
 	public static void log(XHook hook, int priority, String msg) {
 		// Check if logging enabled
 		if (Process.myUid() != 0 && !mLogDetermined) {
+			mLog = false;
 			mLogDetermined = true;
-			mLog = PrivacyManager.getSettingBool(null, null, 0, PrivacyManager.cSettingLog, false, true);
+			mLog = PrivacyManager.getSettingBool(null, null, 0, PrivacyManager.cSettingLog, false, false);
 		}
 
 		// Log if enabled
@@ -53,7 +62,7 @@ public class Util {
 	}
 
 	public static void bug(XHook hook, Throwable ex) {
-		log(hook, Log.ERROR, ex.toString());
+		log(hook, Log.ERROR, ex.toString() + " uid=" + Process.myUid());
 		ex.printStackTrace();
 	}
 
@@ -61,7 +70,7 @@ public class Util {
 		log(hook, Log.INFO, Log.getStackTraceString(new Exception("StackTrace")));
 	}
 
-	public static int getXposedVersion() {
+	public static int getXposedAppProcessVersion() {
 		final Pattern PATTERN_APP_PROCESS_VERSION = Pattern.compile(".*with Xposed support \\(version (.+)\\).*");
 		try {
 			InputStream is = new FileInputStream("/system/bin/app_process");
@@ -100,8 +109,11 @@ public class Util {
 			if (mPro)
 				return "";
 
+			// Disable storage restriction
+			PrivacyManager.setRestricted(null, context, Process.myUid(), PrivacyManager.cStorage, null, false);
+
 			// Get license
-			String[] license = getLicense();
+			String[] license = getProLicense();
 			if (license == null)
 				return null;
 			String name = license[0];
@@ -118,7 +130,7 @@ public class Util {
 
 			// Verify license
 			boolean licensed = verifyData(bEmail, bSignature, getPublicKey(context));
-			if (licensed && (isDebug(context) || validFingerPrint(context)))
+			if (licensed && (isDebuggable(context) || hasValidFingerPrint(context)))
 				Util.log(null, Log.INFO, "Licensing: ok for " + name);
 			else
 				Util.log(null, Log.ERROR, "Licensing: invalid for " + name);
@@ -132,15 +144,42 @@ public class Util {
 		return null;
 	}
 
-	public static String[] getLicense() {
+	public static String[] getProLicense() {
 		// Get license file name
-		String folder = Environment.getExternalStorageDirectory().getAbsolutePath();
-		String fileName = folder + File.separator + "XPrivacy_license.txt";
-		File licenseFile = new File(fileName);
-		if (!licenseFile.exists()) {
-			fileName = folder + File.separator + ".xprivacy" + File.separator + "XPrivacy_license.txt";
-			licenseFile = new File(fileName);
+		String storageDir = Environment.getExternalStorageDirectory().getAbsolutePath();
+		File licenseFile = new File(storageDir + File.separator + LICENSE_FILE_NAME);
+		if (!licenseFile.exists())
+			licenseFile = new File(storageDir + File.separator + ".xprivacy" + File.separator + LICENSE_FILE_NAME);
+
+		// Get imported license file name
+		String packageName = Util.class.getPackage().getName();
+		String importedLicense = Environment.getDataDirectory() + File.separator + "data" + File.separator
+				+ packageName + File.separator + LICENSE_FILE_NAME;
+
+		// Import license file
+		if (licenseFile.exists()) {
+			try {
+				File out = new File(importedLicense);
+				Util.log(null, Log.WARN, "Licensing: importing " + out.getAbsolutePath());
+				InputStream is = new FileInputStream(licenseFile.getAbsolutePath());
+				OutputStream os = new FileOutputStream(out.getAbsolutePath());
+				byte[] buffer = new byte[1024];
+				int read;
+				while ((read = is.read(buffer)) != -1)
+					os.write(buffer, 0, read);
+				is.close();
+				os.flush();
+				os.close();
+
+				out.setWritable(false);
+				licenseFile.delete();
+			} catch (Throwable ex) {
+				Util.bug(null, ex);
+			}
 		}
+
+		// Check license file
+		licenseFile = new File(importedLicense);
 		if (licenseFile.exists()) {
 			// Read license
 			try {
@@ -154,24 +193,38 @@ public class Util {
 				return null;
 			}
 		} else
-			Util.log(null, Log.INFO, "Licensing: no license folder=" + Environment.getExternalStorageDirectory());
+			Util.log(null, Log.INFO, "Licensing: no license file");
 		return null;
 	}
 
-	public static boolean isProInstalled(Context context) {
+	public static Version getProEnablerVersion(Context context) {
 		try {
-			String proPackageName = "biz.bokhorst.xprivacy.pro";
+			String proPackageName = context.getPackageName() + ".pro";
 			PackageManager pm = context.getPackageManager();
 			PackageInfo pi = pm.getPackageInfo(proPackageName, 0);
-			Version vPro = new Version(pi.versionName);
-			if (pm.checkSignatures(context.getPackageName(), proPackageName) == PackageManager.SIGNATURE_MATCH
-					&& vPro.compareTo(new Version("1.10")) >= 0 && validFingerPrint(context)) {
-				Util.log(null, Log.INFO, "Licensing: enabler installed");
-				return true;
-			}
+			return new Version(pi.versionName);
 		} catch (NameNotFoundException ignored) {
 		} catch (Throwable ex) {
 			Util.bug(null, ex);
+		}
+		return null;
+	}
+
+	public static boolean isValidProEnablerVersion(Version version) {
+		return (version.compareTo(MIN_PRO_VERSION) >= 0);
+	}
+
+	private static boolean hasValidProEnablerSignature(Context context) {
+		return (context.getPackageManager()
+				.checkSignatures(context.getPackageName(), context.getPackageName() + ".pro") == PackageManager.SIGNATURE_MATCH);
+	}
+
+	public static boolean isProEnablerInstalled(Context context) {
+		Version version = getProEnablerVersion(context);
+		if (version != null && isValidProEnablerVersion(version) && hasValidProEnablerSignature(context)
+				&& hasValidFingerPrint(context)) {
+			Util.log(null, Log.INFO, "Licensing: enabler installed");
+			return true;
 		}
 		Util.log(null, Log.INFO, "Licensing: enabler not installed");
 		return false;
@@ -249,7 +302,7 @@ public class Util {
 	}
 
 	@SuppressLint("DefaultLocale")
-	public static boolean validFingerPrint(Context context) {
+	public static boolean hasValidFingerPrint(Context context) {
 		try {
 			PackageManager pm = context.getPackageManager();
 			String packageName = context.getPackageName();
@@ -274,23 +327,8 @@ public class Util {
 		}
 	}
 
-	public static boolean isDebug(Context context) {
+	public static boolean isDebuggable(Context context) {
 		return ((context.getApplicationContext().getApplicationInfo().flags & ApplicationInfo.FLAG_DEBUGGABLE) != 0);
-	}
-
-	public static Context getXContext(Context context) throws Throwable {
-		String xPackageName = Util.class.getPackage().getName();
-		return context.createPackageContext(xPackageName, 0);
-	}
-
-	public static Resources getXResources(Context context) throws Throwable {
-		String xPackageName = Util.class.getPackage().getName();
-		PackageManager pm = context.getPackageManager();
-		return pm.getResourcesForApplication(xPackageName);
-	}
-
-	public static String getXString(Context context, int id) throws Throwable {
-		return getXResources(context).getString(id);
 	}
 
 	public static boolean containsIgnoreCase(List<String> strings, String value) {
@@ -314,5 +352,48 @@ public class Util {
 			out.write(buf, 0, len);
 		in.close();
 		out.close();
+	}
+
+	public static Bitmap[] getTriStateCheckBox(Context context) {
+		Bitmap[] bitmap = new Bitmap[3];
+
+		int size = 24;
+		int border0 = 4;
+		int border1 = border0 * 2;
+		int border2 = border0;
+
+		// Create off check box
+		bitmap[0] = Bitmap.createBitmap(size, size, Config.ARGB_8888);
+		Canvas canvas0 = new Canvas(bitmap[0]);
+		Paint paint0 = new Paint();
+		paint0.setStyle(Paint.Style.STROKE);
+		paint0.setColor(Color.GRAY);
+		paint0.setStrokeWidth(2);
+		canvas0.drawRect(border0, border0, bitmap[0].getWidth() - border0, bitmap[0].getHeight() - border0, paint0);
+
+		// Create half check box
+		bitmap[1] = Bitmap.createBitmap(bitmap[0].getWidth(), bitmap[0].getHeight(), bitmap[0].getConfig());
+		Canvas canvas1 = new Canvas(bitmap[1]);
+		Paint paint1 = new Paint();
+		paint1.setStyle(Paint.Style.FILL);
+		paint1.setColor(Color.GRAY);
+		canvas1.drawBitmap(bitmap[0], 0, 0, paint1);
+		canvas1.drawRect(border1, border1, bitmap[1].getWidth() - border1, bitmap[1].getHeight() - border1, paint1);
+
+		// Create full check box
+		bitmap[2] = Bitmap.createBitmap(bitmap[0].getWidth(), bitmap[0].getHeight(), bitmap[0].getConfig());
+		Canvas canvas2 = new Canvas(bitmap[2]);
+		canvas2.drawBitmap(bitmap[0], 0, 0, new Paint());
+		Drawable checkmark = context.getResources().getDrawable(getThemed(context, R.attr.icon_checked));
+		checkmark.setBounds(border2, border2, bitmap[2].getWidth() - border2, bitmap[2].getHeight() - border2);
+		checkmark.draw(canvas2);
+
+		return bitmap;
+	}
+
+	public static int getThemed(Context context, int attr) {
+		TypedValue tv = new TypedValue();
+		context.getTheme().resolveAttribute(attr, tv, true);
+		return tv.resourceId;
 	}
 }

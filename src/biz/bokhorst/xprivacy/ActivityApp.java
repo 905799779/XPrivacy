@@ -1,13 +1,11 @@
 package biz.bokhorst.xprivacy;
 
 import java.io.ByteArrayOutputStream;
-import java.io.IOException;
-import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -31,15 +29,15 @@ import android.accounts.AccountManager;
 import android.annotation.SuppressLint;
 import android.app.AlertDialog;
 import android.app.Dialog;
-import android.app.Notification;
 import android.app.NotificationManager;
-import android.app.PendingIntent;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
+import android.content.pm.PackageManager.NameNotFoundException;
 import android.database.Cursor;
+import android.graphics.Bitmap;
 import android.graphics.Color;
 import android.graphics.Typeface;
 import android.net.Uri;
@@ -49,21 +47,26 @@ import android.provider.ContactsContract;
 import android.provider.ContactsContract.CommonDataKinds.Phone;
 import android.provider.Settings.Secure;
 import android.support.v4.app.NavUtils;
-import android.support.v4.app.NotificationCompat;
 import android.support.v4.app.TaskStackBuilder;
-import android.util.TypedValue;
+import android.text.TextUtils;
+import android.text.format.DateUtils;
+import android.view.ContextMenu;
+import android.view.ContextMenu.ContextMenuInfo;
 import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuInflater;
 import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
+import android.view.ViewParent;
 import android.view.Window;
 import android.widget.BaseExpandableListAdapter;
+import android.widget.Button;
 import android.widget.CheckedTextView;
 import android.widget.ExpandableListView;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
+import android.widget.RelativeLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -72,14 +75,19 @@ public class ActivityApp extends Activity {
 	private int mThemeId;
 	private ApplicationInfoEx mAppInfo = null;
 	private RestrictionAdapter mPrivacyListAdapter = null;
+	private Bitmap[] mCheck;
 
-	public static final String cPackageName = "PackageName";
+	public static final String cUid = "Uid";
 	public static final String cRestrictionName = "RestrictionName";
 	public static final String cMethodName = "MethodName";
 	public static final String cActionClear = "Clear";
-	public static final String cNotified = "Notified";
 
 	private static final int ACTIVITY_FETCH = 1;
+
+	private static final int MENU_LAUNCH = 1;
+	private static final int MENU_SETTINGS = 2;
+	private static final int MENU_KILL = 3;
+	private static final int MENU_STORE = 4;
 
 	private static ExecutorService mExecutor = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors(),
 			new PriorityThreadFactory());
@@ -95,6 +103,7 @@ public class ActivityApp extends Activity {
 
 	public void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
+
 		// Set theme
 		String themeName = PrivacyManager.getSetting(null, this, 0, PrivacyManager.cSettingTheme, "", false);
 		mThemeId = (themeName.equals("Dark") ? R.style.CustomTheme : R.style.CustomTheme_Light);
@@ -105,32 +114,31 @@ public class ActivityApp extends Activity {
 
 		// Get arguments
 		Bundle extras = getIntent().getExtras();
-		String packageName = extras.getString(cPackageName);
+		int uid = extras.getInt(cUid);
 		String restrictionName = (extras.containsKey(cRestrictionName) ? extras.getString(cRestrictionName) : null);
 		String methodName = (extras.containsKey(cMethodName) ? extras.getString(cMethodName) : null);
 
-		// Failsafe
-		if (mAppInfo != null && !mAppInfo.getPackageName().equals(packageName)) {
-			recreate();
-			return;
-		}
-
 		// Get app info
-		mAppInfo = new ApplicationInfoEx(this, packageName);
-		if (!mAppInfo.getIsInstalled()) {
+		try {
+			mAppInfo = new ApplicationInfoEx(this, uid);
+		} catch (NameNotFoundException ignored) {
 			finish();
 			return;
 		}
+
+		// Set title
+		setTitle(String.format("%s - %s", getString(R.string.app_name),
+				TextUtils.join(", ", mAppInfo.getApplicationName())));
 
 		// Handle info click
 		ImageView imgInfo = (ImageView) findViewById(R.id.imgInfo);
 		imgInfo.setOnClickListener(new View.OnClickListener() {
 			@Override
 			public void onClick(View view) {
+				// Packages can be selected on the web site
 				Intent infoIntent = new Intent(Intent.ACTION_VIEW);
-				infoIntent.setData(Uri.parse(String.format(ActivityShare.BASE_URL
-						+ "?application_name=%s&package_name=%s", mAppInfo.getFirstApplicationName(),
-						mAppInfo.getPackageName())));
+				infoIntent.setData(Uri.parse(String.format(ActivityShare.BASE_URL + "?package_name=%s", mAppInfo
+						.getPackageName().get(0))));
 				startActivity(infoIntent);
 			}
 		});
@@ -140,73 +148,85 @@ public class ActivityApp extends Activity {
 		tvAppName.setText(mAppInfo.toString());
 
 		// Background color
-		if (mAppInfo.getIsSystem()) {
+		if (mAppInfo.isSystem()) {
 			LinearLayout llInfo = (LinearLayout) findViewById(R.id.llInfo);
-			llInfo.setBackgroundColor(getResources().getColor(getThemed(R.attr.color_dangerous)));
+			llInfo.setBackgroundColor(getResources().getColor(Util.getThemed(this, R.attr.color_dangerous)));
 		}
 
 		// Display app icon
-		ImageView imgIcon = (ImageView) findViewById(R.id.imgIcon);
-		imgIcon.setImageDrawable(mAppInfo.getIcon());
+		final ImageView imgIcon = (ImageView) findViewById(R.id.imgIcon);
+		imgIcon.setImageDrawable(mAppInfo.getIcon(this));
 
 		// Handle icon click
 		imgIcon.setOnClickListener(new View.OnClickListener() {
 			@Override
 			public void onClick(View view) {
-				Intent intentApp = getPackageManager().getLaunchIntentForPackage(mAppInfo.getPackageName());
-				if (intentApp != null) {
-					intentApp.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-					view.getContext().startActivity(intentApp);
-				}
+				openContextMenu(imgIcon);
 			}
 		});
 
+		// Add context menu to icon
+		registerForContextMenu(imgIcon);
+
 		// Check if internet access
-		if (!mAppInfo.hasInternet()) {
+		if (!mAppInfo.hasInternet(this)) {
 			ImageView imgInternet = (ImageView) findViewById(R.id.imgInternet);
 			imgInternet.setVisibility(View.INVISIBLE);
 		}
 
 		// Check if frozen
-		if (!mAppInfo.isFrozen()) {
+		if (!mAppInfo.isFrozen(this)) {
 			ImageView imgFrozen = (ImageView) findViewById(R.id.imgFrozen);
 			imgFrozen.setVisibility(View.INVISIBLE);
 		}
 
 		// Display version
 		TextView tvVersion = (TextView) findViewById(R.id.tvVersion);
-		tvVersion.setText(mAppInfo.getVersion());
+		tvVersion.setText(TextUtils.join(", ", mAppInfo.getPackageVersionName(this)));
 
 		// Display package name
 		TextView tvPackageName = (TextView) findViewById(R.id.tvPackageName);
-		tvPackageName.setText(mAppInfo.getPackageName());
-
-		// Get applicable restrictions
-		boolean fPermission = PrivacyManager.getSettingBool(null, this, 0, PrivacyManager.cSettingFPermission, true,
-				false);
-		if (restrictionName != null && methodName != null)
-			fPermission = false;
-		List<String> listRestriction = new ArrayList<String>();
-		for (String rRestrictionName : PrivacyManager.getRestrictions(true))
-			if (fPermission ? PrivacyManager.hasPermission(this, mAppInfo.getPackageName(), rRestrictionName)
-					|| PrivacyManager.getUsed(this, mAppInfo.getUid(), rRestrictionName, null) > 0 : true)
-				listRestriction.add(rRestrictionName);
+		tvPackageName.setText(TextUtils.join(", ", mAppInfo.getPackageName()));
 
 		// Fill privacy list view adapter
 		final ExpandableListView lvRestriction = (ExpandableListView) findViewById(R.id.elvRestriction);
 		lvRestriction.setGroupIndicator(null);
-		mPrivacyListAdapter = new RestrictionAdapter(R.layout.restrictionentry, mAppInfo, listRestriction);
+		mPrivacyListAdapter = new RestrictionAdapter(R.layout.restrictionentry, mAppInfo, restrictionName, methodName);
 		lvRestriction.setAdapter(mPrivacyListAdapter);
-		if (restrictionName != null && methodName != null) {
-			int groupPosition = PrivacyManager.getRestrictions(true).indexOf(restrictionName);
-			int childPosition = PrivacyManager.getMethods(restrictionName).indexOf(
-					new PrivacyManager.MethodDescription(methodName));
+		if (restrictionName != null) {
+			int groupPosition = PrivacyManager.getRestrictions().indexOf(restrictionName);
 			lvRestriction.expandGroup(groupPosition);
-			lvRestriction.setSelectedChild(groupPosition, childPosition, true);
+			lvRestriction.setSelectedGroup(groupPosition);
+			if (methodName != null) {
+				int childPosition = PrivacyManager.getMethods(restrictionName).indexOf(
+						new PrivacyManager.MethodDescription(restrictionName, methodName));
+				lvRestriction.setSelectedChild(groupPosition, childPosition, true);
+			}
 		}
 
 		// Up navigation
-		getSupportActionBar().setDisplayHomeAsUpEnabled(!extras.containsKey(cNotified));
+		getSupportActionBar().setDisplayHomeAsUpEnabled(true);
+
+		mCheck = Util.getTriStateCheckBox(this);
+
+		// Tutorial
+		if (!PrivacyManager.getSettingBool(null, this, 0, PrivacyManager.cSettingTutorialDetails, false, false)) {
+			((RelativeLayout) findViewById(R.id.rlTutorialHeader)).setVisibility(View.VISIBLE);
+			((RelativeLayout) findViewById(R.id.rlTutorialDetails)).setVisibility(View.VISIBLE);
+		}
+		View.OnClickListener listener = new View.OnClickListener() {
+			@Override
+			public void onClick(View view) {
+				ViewParent parent = view.getParent();
+				while (!parent.getClass().equals(RelativeLayout.class))
+					parent = parent.getParent();
+				((View) parent).setVisibility(View.GONE);
+				PrivacyManager.setSetting(null, ActivityApp.this, 0, PrivacyManager.cSettingTutorialDetails,
+						Boolean.TRUE.toString());
+			}
+		};
+		((Button) findViewById(R.id.btnTutorialHeader)).setOnClickListener(listener);
+		((Button) findViewById(R.id.btnTutorialDetails)).setOnClickListener(listener);
 
 		// Clear
 		if (extras.containsKey(cActionClear)) {
@@ -214,6 +234,11 @@ public class ActivityApp extends Activity {
 			notificationManager.cancel(mAppInfo.getUid());
 			optionClear();
 		}
+	}
+
+	@Override
+	protected void onNewIntent(Intent intent) {
+		super.onNewIntent(intent);
 	}
 
 	@Override
@@ -227,16 +252,6 @@ public class ActivityApp extends Activity {
 	public boolean onCreateOptionsMenu(Menu menu) {
 		MenuInflater inflater = getMenuInflater();
 		inflater.inflate(R.menu.app, menu);
-
-		// Launch
-		PackageManager pm = getPackageManager();
-		if (pm.getLaunchIntentForPackage(mAppInfo.getPackageName()) == null)
-			menu.findItem(R.id.menu_app_launch).setEnabled(false);
-
-		// Play
-		boolean hasMarketLink = Util.hasMarketLink(this, mAppInfo.getPackageName());
-		menu.findItem(R.id.menu_app_store).setEnabled(hasMarketLink);
-
 		return true;
 	}
 
@@ -245,12 +260,48 @@ public class ActivityApp extends Activity {
 		// Accounts
 		boolean accountsRestricted = PrivacyManager.getRestricted(null, this, mAppInfo.getUid(),
 				PrivacyManager.cAccounts, null, false, false);
+		boolean appsRestricted = PrivacyManager.getRestricted(null, this, mAppInfo.getUid(), PrivacyManager.cSystem,
+				null, false, false);
 		boolean contactsRestricted = PrivacyManager.getRestricted(null, this, mAppInfo.getUid(),
 				PrivacyManager.cContacts, null, false, false);
+
 		menu.findItem(R.id.menu_accounts).setEnabled(accountsRestricted);
+		menu.findItem(R.id.menu_applications).setEnabled(appsRestricted);
 		menu.findItem(R.id.menu_contacts).setEnabled(contactsRestricted);
 
 		return super.onPrepareOptionsMenu(menu);
+	}
+
+	@Override
+	public void onCreateContextMenu(ContextMenu menu, View v, ContextMenuInfo menuInfo) {
+		super.onCreateContextMenu(menu, v, menuInfo);
+
+		PackageManager pm = getPackageManager();
+		List<String> listPackageNames = mAppInfo.getPackageName();
+		List<String> listApplicationName = mAppInfo.getApplicationName();
+		for (int i = 0; i < listPackageNames.size(); i++) {
+			Menu appMenu = (listPackageNames.size() == 1) ? menu : menu.addSubMenu(i, Menu.NONE, Menu.NONE,
+					listApplicationName.get(i));
+
+			// Launch
+			MenuItem launch = appMenu.add(i, MENU_LAUNCH, Menu.NONE, getString(R.string.menu_app_launch));
+			if (pm.getLaunchIntentForPackage(listPackageNames.get(i)) == null)
+				launch.setEnabled(false);
+
+			// Settings
+			appMenu.add(i, MENU_SETTINGS, Menu.NONE, getString(R.string.menu_app_settings));
+
+			// Kill
+			boolean experimental = PrivacyManager.getSettingBool(null, this, 0, PrivacyManager.cSettingExperimental,
+					PrivacyManager.cTestVersion, true);
+			MenuItem kill = appMenu.add(i, MENU_KILL, Menu.NONE, getString(R.string.menu_app_kill));
+			kill.setVisible(experimental);
+
+			// Play store
+			MenuItem store = appMenu.add(i, MENU_STORE, Menu.NONE, getString(R.string.menu_app_store));
+			if (!Util.hasMarketLink(this, listPackageNames.get(i)))
+				store.setEnabled(false);
+		}
 	}
 
 	@Override
@@ -267,6 +318,9 @@ public class ActivityApp extends Activity {
 		case R.id.menu_help:
 			optionHelp();
 			return true;
+		case R.id.menu_tutorial:
+			optionTutorial();
+			return true;
 		case R.id.menu_apply:
 			optionApply();
 			return true;
@@ -282,17 +336,11 @@ public class ActivityApp extends Activity {
 		case R.id.menu_fetch:
 			optionFetch();
 			return true;
-		case R.id.menu_app_launch:
-			optionLaunch();
-			return true;
-		case R.id.menu_app_settings:
-			optionSettings();
-			return true;
-		case R.id.menu_app_store:
-			optionStore();
-			return true;
 		case R.id.menu_accounts:
 			optionAccounts();
+			return true;
+		case R.id.menu_applications:
+			optionApplications();
 			return true;
 		case R.id.menu_contacts:
 			optionContacts();
@@ -306,11 +354,41 @@ public class ActivityApp extends Activity {
 	}
 
 	@Override
-	protected void onActivityResult(int requestCode, int resultCode, Intent data) {
-		super.onActivityResult(requestCode, resultCode, data);
-		if (requestCode == ACTIVITY_FETCH)
+	public boolean onContextItemSelected(MenuItem item) {
+		switch (item.getItemId()) {
+		case MENU_LAUNCH:
+			optionLaunch(item.getGroupId());
+			return true;
+		case MENU_SETTINGS:
+			optionSettings(item.getGroupId());
+			return true;
+		case MENU_KILL:
+			optionKill(item.getGroupId());
+			return true;
+		case MENU_STORE:
+			optionStore(item.getGroupId());
+			return true;
+		default:
+			return super.onContextItemSelected(item);
+		}
+	}
+
+	@Override
+	protected void onActivityResult(int requestCode, int resultCode, Intent dataIntent) {
+		super.onActivityResult(requestCode, resultCode, dataIntent);
+		if (requestCode == ACTIVITY_FETCH) {
 			if (mPrivacyListAdapter != null)
 				mPrivacyListAdapter.notifyDataSetChanged();
+
+			String errorMessage = null;
+			if (dataIntent != null && dataIntent.hasExtra(ActivityShare.cErrorMessage))
+				errorMessage = dataIntent.getStringExtra(ActivityShare.cErrorMessage);
+
+			String text = String.format("%s: %s", getString(R.string.menu_fetch),
+					errorMessage == null ? getString(R.string.msg_done) : errorMessage);
+			Toast toast = Toast.makeText(this, text, Toast.LENGTH_LONG);
+			toast.show();
+		}
 	}
 
 	// Options
@@ -319,44 +397,59 @@ public class ActivityApp extends Activity {
 		// Show help
 		Dialog dialog = new Dialog(ActivityApp.this);
 		dialog.requestWindowFeature(Window.FEATURE_LEFT_ICON);
-		dialog.setTitle(getString(R.string.help_application));
+		dialog.setTitle(getString(R.string.menu_help));
 		dialog.setContentView(R.layout.help);
-		dialog.setFeatureDrawableResource(Window.FEATURE_LEFT_ICON, getThemed(R.attr.icon_launcher));
+		dialog.setFeatureDrawableResource(Window.FEATURE_LEFT_ICON, Util.getThemed(this, R.attr.icon_launcher));
+		ImageView imgHelpHalf = (ImageView) dialog.findViewById(R.id.imgHelpHalf);
+		imgHelpHalf.setImageBitmap(mCheck[1]);
 		dialog.setCancelable(true);
 		dialog.show();
 	}
 
+	private void optionTutorial() {
+		((RelativeLayout) findViewById(R.id.rlTutorialHeader)).setVisibility(View.VISIBLE);
+		((RelativeLayout) findViewById(R.id.rlTutorialDetails)).setVisibility(View.VISIBLE);
+		PrivacyManager.setSetting(null, this, 0, PrivacyManager.cSettingTutorialDetails, Boolean.FALSE.toString());
+	}
+
 	private void optionApply() {
+		// Get toggle
+		boolean some = false;
+		final List<String> listRestriction = PrivacyManager.getRestrictions();
+		for (String restrictionName : listRestriction) {
+			String templateName = PrivacyManager.cSettingTemplate + "." + restrictionName;
+			if (PrivacyManager.getSettingBool(null, ActivityApp.this, 0, templateName, true, false))
+				if (PrivacyManager.getRestricted(null, ActivityApp.this, mAppInfo.getUid(), restrictionName, null,
+						false, false)) {
+					some = true;
+					break;
+				}
+		}
+		final boolean restricted = !some;
+
 		AlertDialog.Builder alertDialogBuilder = new AlertDialog.Builder(ActivityApp.this);
-		alertDialogBuilder.setTitle(getString(R.string.app_name));
+		alertDialogBuilder.setTitle(getString(restricted ? R.string.menu_apply : R.string.menu_clear_all));
 		alertDialogBuilder.setMessage(getString(R.string.msg_sure));
-		alertDialogBuilder.setIcon(getThemed(R.attr.icon_launcher));
+		alertDialogBuilder.setIcon(Util.getThemed(this, R.attr.icon_launcher));
 		alertDialogBuilder.setPositiveButton(getString(android.R.string.ok), new DialogInterface.OnClickListener() {
 			@Override
 			public void onClick(DialogInterface dialog, int which) {
-				// Get toggle
-				boolean restricted = false;
-				List<String> listRestriction = PrivacyManager.getRestrictions(false);
-				for (String restrictionName : listRestriction)
-					if (PrivacyManager.getSettingBool(null, ActivityApp.this, 0,
-							String.format("Template.%s", restrictionName), true, false))
-						if (PrivacyManager.getRestricted(null, ActivityApp.this, mAppInfo.getUid(), restrictionName,
-								null, false, false)) {
-							restricted = true;
-							break;
-						}
-
 				// Do toggle
-				restricted = !restricted;
-				for (String restrictionName : listRestriction)
-					if (PrivacyManager.getSettingBool(null, ActivityApp.this, 0,
-							String.format("Template.%s", restrictionName), true, false))
-						PrivacyManager.setRestricted(null, ActivityApp.this, mAppInfo.getUid(), restrictionName, null,
-								restricted);
+				boolean restart = false;
+				for (String restrictionName : listRestriction) {
+					String templateName = PrivacyManager.cSettingTemplate + "." + restrictionName;
+					if (PrivacyManager.getSettingBool(null, ActivityApp.this, 0, templateName, true, false))
+						restart = PrivacyManager.setRestricted(null, ActivityApp.this, mAppInfo.getUid(),
+								restrictionName, null, restricted) || restart;
+				}
 
 				// Refresh display
 				if (mPrivacyListAdapter != null)
 					mPrivacyListAdapter.notifyDataSetChanged();
+
+				// Notify restart
+				if (restart)
+					Toast.makeText(ActivityApp.this, getString(R.string.msg_restart), Toast.LENGTH_SHORT).show();
 			}
 		});
 		alertDialogBuilder.setNegativeButton(getString(android.R.string.cancel), new DialogInterface.OnClickListener() {
@@ -370,15 +463,21 @@ public class ActivityApp extends Activity {
 
 	private void optionClear() {
 		AlertDialog.Builder alertDialogBuilder = new AlertDialog.Builder(ActivityApp.this);
-		alertDialogBuilder.setTitle(getString(R.string.app_name));
+		alertDialogBuilder.setTitle(getString(R.string.menu_clear_all));
 		alertDialogBuilder.setMessage(getString(R.string.msg_sure));
-		alertDialogBuilder.setIcon(getThemed(R.attr.icon_launcher));
+		alertDialogBuilder.setIcon(Util.getThemed(this, R.attr.icon_launcher));
 		alertDialogBuilder.setPositiveButton(getString(android.R.string.ok), new DialogInterface.OnClickListener() {
 			@Override
 			public void onClick(DialogInterface dialog, int which) {
-				PrivacyManager.deleteRestrictions(ActivityApp.this, mAppInfo.getUid());
+				boolean restart = PrivacyManager.deleteRestrictions(ActivityApp.this, mAppInfo.getUid());
+
+				// Refresh display
 				if (mPrivacyListAdapter != null)
 					mPrivacyListAdapter.notifyDataSetChanged();
+
+				// Notify restart
+				if (restart)
+					Toast.makeText(ActivityApp.this, getString(R.string.msg_restart), Toast.LENGTH_SHORT).show();
 			}
 		});
 		alertDialogBuilder.setNegativeButton(getString(android.R.string.cancel), new DialogInterface.OnClickListener() {
@@ -393,14 +492,15 @@ public class ActivityApp extends Activity {
 	private void optionUsage() {
 		Intent intent = new Intent(this, ActivityUsage.class);
 		intent.putExtra(ActivityUsage.cUid, mAppInfo.getUid());
+		intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
 		startActivity(intent);
 	}
 
 	private void optionSubmit() {
 		AlertDialog.Builder alertDialogBuilder = new AlertDialog.Builder(this);
-		alertDialogBuilder.setTitle(getString(R.string.app_name));
+		alertDialogBuilder.setTitle(getString(R.string.menu_submit));
 		alertDialogBuilder.setMessage(getString(R.string.msg_sure));
-		alertDialogBuilder.setIcon(getThemed(R.attr.icon_launcher));
+		alertDialogBuilder.setIcon(Util.getThemed(this, R.attr.icon_launcher));
 		alertDialogBuilder.setPositiveButton(getString(android.R.string.ok), new DialogInterface.OnClickListener() {
 			@Override
 			public void onClick(DialogInterface dialog, int which) {
@@ -418,14 +518,31 @@ public class ActivityApp extends Activity {
 	}
 
 	private void optionFetch() {
-		if (Util.getLicense() == null) {
+		if (Util.getProLicense() == null) {
 			// Redirect to pro page
-			Intent browserIntent = new Intent(Intent.ACTION_VIEW, Uri.parse("http://www.faircode.eu/xprivacy/"));
+			Intent browserIntent = new Intent(Intent.ACTION_VIEW, ActivityMain.cProUri);
 			startActivity(browserIntent);
 		} else {
-			Intent intent = new Intent("biz.bokhorst.xprivacy.action.FETCH");
-			intent.putExtra(ActivityShare.cPackageName, mAppInfo.getPackageName());
-			startActivityForResult(intent, ACTIVITY_FETCH);
+			AlertDialog.Builder alertDialogBuilder = new AlertDialog.Builder(this);
+			alertDialogBuilder.setTitle(getString(R.string.menu_fetch));
+			alertDialogBuilder.setMessage(getString(R.string.msg_sure));
+			alertDialogBuilder.setIcon(Util.getThemed(this, R.attr.icon_launcher));
+			alertDialogBuilder.setPositiveButton(getString(android.R.string.ok), new DialogInterface.OnClickListener() {
+				@Override
+				public void onClick(DialogInterface dialog, int which) {
+					Intent intent = new Intent("biz.bokhorst.xprivacy.action.FETCH");
+					intent.putExtra(ActivityShare.cUid, mAppInfo.getUid());
+					startActivityForResult(intent, ACTIVITY_FETCH);
+				}
+			});
+			alertDialogBuilder.setNegativeButton(getString(android.R.string.cancel),
+					new DialogInterface.OnClickListener() {
+						@Override
+						public void onClick(DialogInterface dialog, int which) {
+						}
+					});
+			AlertDialog alertDialog = alertDialogBuilder.create();
+			alertDialog.show();
 		}
 	}
 
@@ -434,26 +551,64 @@ public class ActivityApp extends Activity {
 		accountsTask.executeOnExecutor(mExecutor, (Object) null);
 	}
 
-	private void optionLaunch() {
-		Intent intentLaunch = getPackageManager().getLaunchIntentForPackage(mAppInfo.getPackageName());
-		startActivity(intentLaunch);
-	}
-
-	private void optionSettings() {
-		Intent intentSettings = new Intent(android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
-				Uri.parse("package:" + mAppInfo.getPackageName()));
-		startActivity(intentSettings);
-	}
-
-	private void optionStore() {
-		Intent intentStore = new Intent(Intent.ACTION_VIEW, Uri.parse("market://details?id="
-				+ mAppInfo.getPackageName()));
-		startActivity(intentStore);
+	private void optionApplications() {
+		if (Util.getProLicense() == null) {
+			// Redirect to pro page
+			Intent browserIntent = new Intent(Intent.ACTION_VIEW, ActivityMain.cProUri);
+			startActivity(browserIntent);
+		} else {
+			ApplicationsTask appsTask = new ApplicationsTask();
+			appsTask.executeOnExecutor(mExecutor, (Object) null);
+		}
 	}
 
 	private void optionContacts() {
-		ContactsTask contactsTask = new ContactsTask();
-		contactsTask.executeOnExecutor(mExecutor, (Object) null);
+		if (Util.getProLicense() == null) {
+			// Redirect to pro page
+			Intent browserIntent = new Intent(Intent.ACTION_VIEW, ActivityMain.cProUri);
+			startActivity(browserIntent);
+		} else {
+			ContactsTask contactsTask = new ContactsTask();
+			contactsTask.executeOnExecutor(mExecutor, (Object) null);
+		}
+	}
+
+	private void optionLaunch(int which) {
+		Intent intentLaunch = getPackageManager().getLaunchIntentForPackage(mAppInfo.getPackageName().get(which));
+		startActivity(intentLaunch);
+	}
+
+	private void optionSettings(int which) {
+		Intent intentSettings = new Intent(android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
+				Uri.parse("package:" + mAppInfo.getPackageName().get(which)));
+		startActivity(intentSettings);
+	}
+
+	private void optionKill(final int which) {
+		AlertDialog.Builder alertDialogBuilder = new AlertDialog.Builder(ActivityApp.this);
+		alertDialogBuilder.setTitle(getString(R.string.menu_app_kill));
+		alertDialogBuilder.setMessage(getString(R.string.msg_sure));
+		alertDialogBuilder.setIcon(Util.getThemed(this, R.attr.icon_launcher));
+		alertDialogBuilder.setPositiveButton(getString(android.R.string.ok), new DialogInterface.OnClickListener() {
+			@Override
+			public void onClick(DialogInterface dialog, int _which) {
+				XApplication.manage(ActivityApp.this, mAppInfo.getPackageName().get(which),
+						XApplication.cActionKillProcess);
+			}
+		});
+		alertDialogBuilder.setNegativeButton(getString(android.R.string.cancel), new DialogInterface.OnClickListener() {
+			@Override
+			public void onClick(DialogInterface dialog, int which) {
+			}
+		});
+		AlertDialog alertDialog = alertDialogBuilder.create();
+		alertDialog.show();
+	}
+
+	private void optionStore(int which) {
+		Intent intentStore = new Intent(Intent.ACTION_VIEW, Uri.parse("market://details?id="
+				+ mAppInfo.getPackageName().get(which)));
+		startActivity(intentStore);
 	}
 
 	// Tasks
@@ -467,7 +622,7 @@ public class ActivityApp extends Activity {
 		protected Object doInBackground(Object... params) {
 			// Get accounts
 			mListAccount = new ArrayList<CharSequence>();
-			AccountManager accountManager = AccountManager.get(getApplicationContext());
+			AccountManager accountManager = AccountManager.get(ActivityApp.this);
 			mAccounts = accountManager.getAccounts();
 			mSelection = new boolean[mAccounts.length];
 			for (int i = 0; i < mAccounts.length; i++)
@@ -487,7 +642,7 @@ public class ActivityApp extends Activity {
 			// Build dialog
 			AlertDialog.Builder alertDialogBuilder = new AlertDialog.Builder(ActivityApp.this);
 			alertDialogBuilder.setTitle(getString(R.string.menu_accounts));
-			alertDialogBuilder.setIcon(getThemed(R.attr.icon_launcher));
+			alertDialogBuilder.setIcon(Util.getThemed(ActivityApp.this, R.attr.icon_launcher));
 			alertDialogBuilder.setMultiChoiceItems(mListAccount.toArray(new CharSequence[0]), mSelection,
 					new DialogInterface.OnMultiChoiceClickListener() {
 						public void onClick(DialogInterface dialog, int whichButton, boolean isChecked) {
@@ -504,6 +659,76 @@ public class ActivityApp extends Activity {
 							}
 						}
 					});
+			alertDialogBuilder.setPositiveButton(getString(R.string.msg_done), new DialogInterface.OnClickListener() {
+				@Override
+				public void onClick(DialogInterface dialog, int which) {
+					// Do nothing
+				}
+			});
+
+			// Show dialog
+			AlertDialog alertDialog = alertDialogBuilder.create();
+			alertDialog.show();
+
+			super.onPostExecute(result);
+		}
+	}
+
+	private class ApplicationsTask extends AsyncTask<Object, Object, Object> {
+		private CharSequence[] mApp;
+		private String[] mPackage;
+		private boolean[] mSelection;
+
+		@Override
+		protected Object doInBackground(Object... params) {
+			// Get applications
+			List<ApplicationInfoEx> listInfo = ApplicationInfoEx.getXApplicationList(ActivityApp.this, null);
+
+			// Count packages
+			int packages = 0;
+			for (ApplicationInfoEx appInfo : listInfo)
+				packages += appInfo.getPackageName().size();
+
+			// Build selection list
+			int i = 0;
+			mApp = new CharSequence[packages];
+			mPackage = new String[packages];
+			mSelection = new boolean[packages];
+			for (ApplicationInfoEx appInfo : listInfo)
+				for (int p = 0; p < appInfo.getPackageName().size(); p++)
+					try {
+						String appName = appInfo.getApplicationName().get(p);
+						String pkgName = appInfo.getPackageName().get(p);
+						mApp[i] = String.format("%s (%s)", appName, pkgName);
+						mPackage[i] = pkgName;
+						mSelection[i] = PrivacyManager.getSettingBool(null, ActivityApp.this, 0,
+								String.format("Application.%d.%s", mAppInfo.getUid(), pkgName), false, false);
+						i++;
+					} catch (Throwable ex) {
+						Util.bug(null, ex);
+					}
+			return null;
+		}
+
+		@Override
+		protected void onPostExecute(Object result) {
+			// Build dialog
+			AlertDialog.Builder alertDialogBuilder = new AlertDialog.Builder(ActivityApp.this);
+			alertDialogBuilder.setTitle(getString(R.string.menu_applications));
+			alertDialogBuilder.setIcon(Util.getThemed(ActivityApp.this, R.attr.icon_launcher));
+			alertDialogBuilder.setMultiChoiceItems(mApp, mSelection, new DialogInterface.OnMultiChoiceClickListener() {
+				public void onClick(DialogInterface dialog, int whichButton, boolean isChecked) {
+					try {
+						PrivacyManager.setSetting(null, ActivityApp.this, 0,
+								String.format("Application.%d.%s", mAppInfo.getUid(), mPackage[whichButton]),
+								Boolean.toString(isChecked));
+					} catch (Throwable ex) {
+						Util.bug(null, ex);
+						Toast toast = Toast.makeText(ActivityApp.this, ex.toString(), Toast.LENGTH_LONG);
+						toast.show();
+					}
+				}
+			});
 			alertDialogBuilder.setPositiveButton(getString(R.string.msg_done), new DialogInterface.OnClickListener() {
 				@Override
 				public void onClick(DialogInterface dialog, int which) {
@@ -562,7 +787,7 @@ public class ActivityApp extends Activity {
 			// Build dialog
 			AlertDialog.Builder alertDialogBuilder = new AlertDialog.Builder(ActivityApp.this);
 			alertDialogBuilder.setTitle(getString(R.string.menu_contacts));
-			alertDialogBuilder.setIcon(getThemed(R.attr.icon_launcher));
+			alertDialogBuilder.setIcon(Util.getThemed(ActivityApp.this, R.attr.icon_launcher));
 			alertDialogBuilder.setMultiChoiceItems(mListContact.toArray(new CharSequence[0]), mSelection,
 					new DialogInterface.OnMultiChoiceClickListener() {
 						public void onClick(DialogInterface dialog, int whichButton, boolean isChecked) {
@@ -603,21 +828,58 @@ public class ActivityApp extends Activity {
 	}
 
 	@SuppressLint("DefaultLocale")
-	private class SubmitTask extends AsyncTask<ApplicationInfoEx, Object, Object> {
-		private final static int NOTIFY_ID = 5;
-
+	private class SubmitTask extends AsyncTask<ApplicationInfoEx, Object, String> {
 		@Override
-		protected void onPreExecute() {
-			notify(null);
-		}
-
-		@Override
-		protected Object doInBackground(ApplicationInfoEx... params) {
+		protected String doInBackground(ApplicationInfoEx... params) {
 			try {
+				// Check if any account allowed
+				boolean allowedAccounts = false;
+				AccountManager accountManager = AccountManager.get(ActivityApp.this);
+				for (Account account : accountManager.getAccounts()) {
+					String sha1 = Util.sha1(account.name + account.type);
+					boolean allowed = PrivacyManager.getSettingBool(null, ActivityApp.this, 0,
+							String.format("Account.%d.%s", mAppInfo.getUid(), sha1), false, false);
+					if (allowed) {
+						allowedAccounts = true;
+						break;
+					}
+				}
+
+				// Check if any application allowed
+				boolean allowedApplications = false;
+				for (ApplicationInfoEx appInfo : ApplicationInfoEx.getXApplicationList(ActivityApp.this, null))
+					for (String packageName : appInfo.getPackageName()) {
+						boolean allowed = PrivacyManager.getSettingBool(null, ActivityApp.this, 0,
+								String.format("Application.%d.%s", mAppInfo.getUid(), packageName), false, false);
+						if (allowed) {
+							allowedApplications = true;
+							break;
+						}
+					}
+
+				// Check if any contact allowed
+				boolean allowedContacts = false;
+				Cursor cursor = getContentResolver().query(ContactsContract.Contacts.CONTENT_URI,
+						new String[] { ContactsContract.Contacts._ID }, null, null, null);
+				if (cursor != null)
+					try {
+						while (cursor.moveToNext()) {
+							long id = cursor.getLong(cursor.getColumnIndex(ContactsContract.Contacts._ID));
+							boolean allowed = PrivacyManager.getSettingBool(null, ActivityApp.this, 0,
+									String.format("Contact.%d.%d", mAppInfo.getUid(), id), false, false);
+							if (allowed) {
+								allowedContacts = true;
+								break;
+							}
+						}
+					} finally {
+						cursor.close();
+					}
+
 				// Encode restrictions
 				int uid = params[0].getUid();
 				JSONArray jSettings = new JSONArray();
-				for (String restrictionName : PrivacyManager.getRestrictions(true)) {
+				for (String restrictionName : PrivacyManager.getRestrictions()) {
 					boolean restricted = PrivacyManager.getRestricted(null, ActivityApp.this, uid, restrictionName,
 							null, false, false);
 					// Category
@@ -626,17 +888,23 @@ public class ActivityApp extends Activity {
 					jRestriction.put("restriction", restrictionName);
 					jRestriction.put("restricted", restricted);
 					jRestriction.put("used", used);
+					if (restrictionName.equals(PrivacyManager.cAccounts))
+						jRestriction.put("allowed", allowedAccounts ? 1 : 0);
+					else if (restrictionName.equals(PrivacyManager.cSystem))
+						jRestriction.put("allowed", allowedApplications ? 1 : 0);
+					else if (restrictionName.equals(PrivacyManager.cContacts))
+						jRestriction.put("allowed", allowedContacts ? 1 : 0);
 					jSettings.put(jRestriction);
 
 					// Methods
 					for (PrivacyManager.MethodDescription md : PrivacyManager.getMethods(restrictionName)) {
 						boolean mRestricted = restricted
 								&& PrivacyManager.getRestricted(null, ActivityApp.this, uid, restrictionName,
-										md.getMethodName(), false, false);
-						long mUsed = PrivacyManager.getUsed(ActivityApp.this, uid, restrictionName, md.getMethodName());
+										md.getName(), false, false);
+						long mUsed = PrivacyManager.getUsed(ActivityApp.this, uid, restrictionName, md.getName());
 						JSONObject jMethod = new JSONObject();
 						jMethod.put("restriction", restrictionName);
-						jMethod.put("method", md.getMethodName());
+						jMethod.put("method", md.getName());
 						jMethod.put("restricted", mRestricted);
 						jMethod.put("used", mUsed);
 						jSettings.put(jMethod);
@@ -647,22 +915,38 @@ public class ActivityApp extends Activity {
 				PackageInfo pInfo = getPackageManager().getPackageInfo(getPackageName(), 0);
 				String android_id = Secure.getString(ActivityApp.this.getContentResolver(), Secure.ANDROID_ID);
 
+				JSONArray appName = new JSONArray();
+				for (String name : params[0].getApplicationName())
+					appName.put(name);
+
+				JSONArray pkgName = new JSONArray();
+				for (String name : params[0].getPackageName())
+					pkgName.put(name);
+
+				JSONArray pkgVersionName = new JSONArray();
+				for (String version : params[0].getPackageVersionName(ActivityApp.this))
+					pkgVersionName.put(version);
+
+				JSONArray pkgVersionCode = new JSONArray();
+				for (Integer version : params[0].getPackageVersionCode(ActivityApp.this))
+					pkgVersionCode.put((int) version);
+
 				// Encode package
 				JSONObject jRoot = new JSONObject();
 				jRoot.put("protocol_version", 4);
 				jRoot.put("android_id", Util.md5(android_id).toLowerCase());
 				jRoot.put("android_sdk", Build.VERSION.SDK_INT);
 				jRoot.put("xprivacy_version", pInfo.versionCode);
-				jRoot.put("application_name", params[0].getFirstApplicationName());
-				jRoot.put("package_name", params[0].getPackageName());
-				jRoot.put("package_version", params[0].getVersion());
+				jRoot.put("application_name", appName);
+				jRoot.put("package_name", pkgName);
+				jRoot.put("package_version_name", pkgVersionName);
+				jRoot.put("package_version_code", pkgVersionCode);
 				jRoot.put("settings", jSettings);
 
 				// Submit
-				int TIMEOUT_MILLISEC = 45000; // 45 seconds
 				HttpParams httpParams = new BasicHttpParams();
-				HttpConnectionParams.setConnectionTimeout(httpParams, TIMEOUT_MILLISEC);
-				HttpConnectionParams.setSoTimeout(httpParams, TIMEOUT_MILLISEC);
+				HttpConnectionParams.setConnectionTimeout(httpParams, ActivityShare.TIMEOUT_MILLISEC);
+				HttpConnectionParams.setSoTimeout(httpParams, ActivityShare.TIMEOUT_MILLISEC);
 				HttpClient httpclient = new DefaultHttpClient(httpParams);
 
 				HttpPost httpost = new HttpPost(ActivityShare.BASE_URL + "?format=json&action=submit");
@@ -677,52 +961,31 @@ public class ActivityApp extends Activity {
 					ByteArrayOutputStream out = new ByteArrayOutputStream();
 					response.getEntity().writeTo(out);
 					out.close();
-					return new JSONObject(out.toString("UTF-8"));
+					JSONObject status = new JSONObject(out.toString("UTF-8"));
+					if (status.getBoolean("ok")) {
+						// Mark as shared
+						PrivacyManager.setSetting(null, ActivityApp.this, mAppInfo.getUid(),
+								PrivacyManager.cSettingState, Integer.toString(ActivityMain.STATE_SHARED));
+						return getString(R.string.msg_done);
+					} else
+						return status.getString("error");
 				} else {
 					// Failed
 					response.getEntity().getContent().close();
-					throw new IOException(statusLine.getReasonPhrase());
+					return statusLine.getReasonPhrase();
 				}
 			} catch (Throwable ex) {
 				Util.bug(null, ex);
-				return ex;
+				return ex.toString();
 			}
 		}
 
 		@Override
-		protected void onPostExecute(Object result) {
-			notify(result);
+		protected void onPostExecute(String result) {
+			Toast toast = Toast.makeText(ActivityApp.this,
+					String.format("%s: %s", getString(R.string.menu_submit), result), Toast.LENGTH_LONG);
+			toast.show();
 			super.onPostExecute(result);
-		}
-
-		private void notify(Object result) {
-			NotificationCompat.Builder notificationBuilder = new NotificationCompat.Builder(ActivityApp.this);
-			notificationBuilder.setSmallIcon(R.drawable.ic_launcher);
-			notificationBuilder.setContentTitle(getString(R.string.menu_submit));
-			if (result == null) {
-				notificationBuilder.setContentText(mAppInfo.getFirstApplicationName());
-			} else if (result.getClass().equals(JSONObject.class)) {
-				JSONObject status = (JSONObject) result;
-				try {
-					if (status.getBoolean("ok"))
-						notificationBuilder.setContentText(String.format("%s: %s", mAppInfo.getFirstApplicationName(),
-								getString(R.string.msg_done)));
-					else
-						notificationBuilder.setContentText(String.format("%s: %s", mAppInfo.getFirstApplicationName(),
-								status.getString("error")));
-				} catch (Throwable ex) {
-					notificationBuilder.setContentText(String.format("%s: %s", mAppInfo.getFirstApplicationName(), ex));
-				}
-			} else
-				notificationBuilder.setContentText(result.toString());
-			notificationBuilder.setWhen(System.currentTimeMillis());
-			notificationBuilder.setAutoCancel(true);
-			PendingIntent pi = PendingIntent.getActivity(ActivityApp.this, 0, new Intent(), Intent.FLAG_ACTIVITY_NEW_TASK);
-			notificationBuilder.setContentIntent(pi);
-			Notification notification = notificationBuilder.build();
-			NotificationManager notificationManager = (NotificationManager) ActivityApp.this
-					.getSystemService(Context.NOTIFICATION_SERVICE);
-			notificationManager.notify(NOTIFY_ID, notification);
 		}
 	}
 
@@ -730,12 +993,33 @@ public class ActivityApp extends Activity {
 
 	private class RestrictionAdapter extends BaseExpandableListAdapter {
 		private ApplicationInfoEx mAppInfo;
+		private String mSelectedRestrictionName;
+		private String mSelectedMethodName;
 		private List<String> mRestrictions;
+		private HashMap<Integer, List<PrivacyManager.MethodDescription>> mMethodDescription;
 		private LayoutInflater mInflater = (LayoutInflater) getSystemService(Context.LAYOUT_INFLATER_SERVICE);
 
-		public RestrictionAdapter(int resource, ApplicationInfoEx appInfo, List<String> restrictions) {
+		public RestrictionAdapter(int resource, ApplicationInfoEx appInfo, String selectedRestrictionName,
+				String selectedMethodName) {
 			mAppInfo = appInfo;
-			mRestrictions = restrictions;
+			mSelectedRestrictionName = selectedRestrictionName;
+			mSelectedMethodName = selectedMethodName;
+			mRestrictions = new ArrayList<String>();
+			mMethodDescription = new LinkedHashMap<Integer, List<PrivacyManager.MethodDescription>>();
+
+			boolean fUsed = PrivacyManager.getSettingBool(null, ActivityApp.this, 0, PrivacyManager.cSettingFUsed,
+					false, false);
+			boolean fPermission = PrivacyManager.getSettingBool(null, ActivityApp.this, 0,
+					PrivacyManager.cSettingFPermission, false, false);
+
+			for (String rRestrictionName : PrivacyManager.getRestrictions()) {
+				boolean isUsed = (PrivacyManager.getUsed(ActivityApp.this, mAppInfo.getUid(), rRestrictionName, null) > 0);
+				boolean hasPermission = PrivacyManager.hasPermission(ActivityApp.this, mAppInfo.getPackageName(),
+						rRestrictionName);
+				if (mSelectedRestrictionName != null
+						|| ((fUsed ? isUsed : true) && (fPermission ? isUsed || hasPermission : true)))
+					mRestrictions.add(rRestrictionName);
+			}
 		}
 
 		@Override
@@ -760,7 +1044,9 @@ public class ActivityApp extends Activity {
 			public ImageView imgUsed;
 			public ImageView imgGranted;
 			public ImageView imgInfo;
-			public CheckedTextView ctvRestriction;
+			public TextView tvName;
+			public ImageView imgCBName;
+			public RelativeLayout rlName;
 
 			public GroupViewHolder(View theRow, int thePosition) {
 				row = theRow;
@@ -769,7 +1055,9 @@ public class ActivityApp extends Activity {
 				imgUsed = (ImageView) row.findViewById(R.id.imgUsed);
 				imgGranted = (ImageView) row.findViewById(R.id.imgGranted);
 				imgInfo = (ImageView) row.findViewById(R.id.imgInfo);
-				ctvRestriction = (CheckedTextView) row.findViewById(R.id.ctvName);
+				tvName = (TextView) row.findViewById(R.id.tvName);
+				imgCBName = (ImageView) row.findViewById(R.id.imgCBName);
+				rlName = (RelativeLayout) row.findViewById(R.id.rlName);
 			}
 		}
 
@@ -779,7 +1067,8 @@ public class ActivityApp extends Activity {
 			private String restrictionName;
 			private boolean used;
 			private boolean permission;
-			private boolean restricted;
+			private boolean allRestricted = true;
+			private boolean someRestricted = false;
 
 			public GroupHolderTask(int thePosition, GroupViewHolder theHolder, String theRestrictionName) {
 				position = thePosition;
@@ -789,13 +1078,17 @@ public class ActivityApp extends Activity {
 
 			@Override
 			protected Object doInBackground(Object... params) {
-				if (holder.position == position) {
+				if (holder.position == position && restrictionName != null) {
 					// Get info
 					used = (PrivacyManager.getUsed(holder.row.getContext(), mAppInfo.getUid(), restrictionName, null) != 0);
 					permission = PrivacyManager.hasPermission(holder.row.getContext(), mAppInfo.getPackageName(),
 							restrictionName);
-					restricted = PrivacyManager.getRestricted(null, holder.row.getContext(), mAppInfo.getUid(),
-							restrictionName, null, false, false);
+
+					for (boolean restricted : PrivacyManager.getRestricted(holder.row.getContext(), mAppInfo.getUid(),
+							restrictionName)) {
+						allRestricted = (allRestricted && restricted);
+						someRestricted = (someRestricted || restricted);
+					}
 				}
 				return null;
 			}
@@ -804,22 +1097,58 @@ public class ActivityApp extends Activity {
 			protected void onPostExecute(Object result) {
 				if (holder.position == position && restrictionName != null) {
 					// Set data
-					holder.ctvRestriction.setTypeface(null, used ? Typeface.BOLD_ITALIC : Typeface.NORMAL);
+					holder.tvName.setTypeface(null, used ? Typeface.BOLD_ITALIC : Typeface.NORMAL);
 					holder.imgUsed.setVisibility(used ? View.VISIBLE : View.INVISIBLE);
 					holder.imgGranted.setVisibility(permission ? View.VISIBLE : View.INVISIBLE);
-					holder.ctvRestriction.setChecked(restricted);
+
+					// Display restriction
+					if (allRestricted)
+						holder.imgCBName.setImageBitmap(mCheck[2]); // Full
+					else if (someRestricted)
+						holder.imgCBName.setImageBitmap(mCheck[1]); // Half
+					else
+						holder.imgCBName.setImageBitmap(mCheck[0]); // Off
+					holder.imgCBName.setVisibility(View.VISIBLE);
 
 					// Listen for restriction changes
-					holder.ctvRestriction.setOnClickListener(new View.OnClickListener() {
+					holder.rlName.setOnClickListener(new View.OnClickListener() {
 						@Override
 						public void onClick(View view) {
-							boolean restricted = PrivacyManager.getRestricted(null, view.getContext(),
-									mAppInfo.getUid(), restrictionName, null, false, false);
-							restricted = !restricted;
-							holder.ctvRestriction.setChecked(restricted);
-							PrivacyManager.setRestricted(null, view.getContext(), mAppInfo.getUid(), restrictionName,
-									null, restricted);
+							// Get all/some restricted
+							boolean allRestricted = true;
+							boolean someRestricted = false;
+							for (boolean restricted : PrivacyManager.getRestricted(view.getContext(),
+									mAppInfo.getUid(), restrictionName)) {
+								allRestricted = (allRestricted && restricted);
+								someRestricted = (someRestricted || restricted);
+							}
+							boolean restart = PrivacyManager.setRestricted(null, view.getContext(), mAppInfo.getUid(),
+									restrictionName, null, !someRestricted);
+
+							// Update all/some restricted
+							allRestricted = true;
+							someRestricted = false;
+							for (boolean restricted : PrivacyManager.getRestricted(holder.row.getContext(),
+									mAppInfo.getUid(), restrictionName)) {
+								allRestricted = (allRestricted && restricted);
+								someRestricted = (someRestricted || restricted);
+							}
+
+							// Display restriction
+							if (allRestricted)
+								holder.imgCBName.setImageBitmap(mCheck[2]); // Full
+							else if (someRestricted)
+								holder.imgCBName.setImageBitmap(mCheck[1]); // Half
+							else
+								holder.imgCBName.setImageBitmap(mCheck[0]); // Off
+
+							// Refresh display
 							notifyDataSetChanged(); // Needed to update childs
+
+							// Notify restart
+							if (restart)
+								Toast.makeText(view.getContext(), getString(R.string.msg_restart), Toast.LENGTH_SHORT)
+										.show();
 						}
 					});
 				}
@@ -841,15 +1170,9 @@ public class ActivityApp extends Activity {
 			// Get entry
 			final String restrictionName = (String) getGroup(groupPosition);
 
-			// Set background color
-			if (PrivacyManager.isDangerousRestriction(restrictionName))
-				holder.row.setBackgroundColor(getResources().getColor(getThemed(R.attr.color_dangerous)));
-			else
-				holder.row.setBackgroundColor(Color.TRANSPARENT);
-
 			// Indicator state
-			holder.imgIndicator.setImageResource(getThemed(isExpanded ? R.attr.icon_expander_maximized
-					: R.attr.icon_expander_minimized));
+			holder.imgIndicator.setImageResource(Util.getThemed(ActivityApp.this,
+					isExpanded ? R.attr.icon_expander_maximized : R.attr.icon_expander_minimized));
 
 			// Disable indicator for empty groups
 			if (getChildrenCount(groupPosition) == 0)
@@ -858,7 +1181,7 @@ public class ActivityApp extends Activity {
 				holder.imgIndicator.setVisibility(View.VISIBLE);
 
 			// Display if used
-			holder.ctvRestriction.setTypeface(null, Typeface.NORMAL);
+			holder.tvName.setTypeface(null, Typeface.NORMAL);
 			holder.imgUsed.setVisibility(View.INVISIBLE);
 
 			// Check if permission
@@ -869,18 +1192,16 @@ public class ActivityApp extends Activity {
 				@Override
 				public void onClick(View view) {
 					Intent infoIntent = new Intent(Intent.ACTION_VIEW);
-					infoIntent.setData(Uri.parse(String.format("http://wiki.faircode.eu/index.php?title=%s",
-							restrictionName)));
+					infoIntent.setData(Uri.parse(ActivityMain.cXUrl + "#" + restrictionName));
 					startActivity(infoIntent);
 				}
 			});
 
 			// Display localized name
-			holder.ctvRestriction.setText(PrivacyManager.getLocalizedName(holder.row.getContext(), restrictionName));
+			holder.tvName.setText(PrivacyManager.getLocalizedName(holder.row.getContext(), restrictionName));
 
 			// Display restriction
-			holder.ctvRestriction.setChecked(false);
-			holder.ctvRestriction.setClickable(false);
+			holder.imgCBName.setVisibility(View.INVISIBLE);
 
 			// Async update
 			new GroupHolderTask(groupPosition, holder, restrictionName).executeOnExecutor(mExecutor, (Object) null);
@@ -888,9 +1209,31 @@ public class ActivityApp extends Activity {
 			return convertView;
 		}
 
+		private List<PrivacyManager.MethodDescription> getMethodDescriptions(int groupPosition) {
+			if (!mMethodDescription.containsKey(groupPosition)) {
+				boolean fUsed = PrivacyManager.getSettingBool(null, ActivityApp.this, 0, PrivacyManager.cSettingFUsed,
+						false, false);
+				boolean fPermission = PrivacyManager.getSettingBool(null, ActivityApp.this, 0,
+						PrivacyManager.cSettingFPermission, false, false);
+				List<PrivacyManager.MethodDescription> listMethod = new ArrayList<PrivacyManager.MethodDescription>();
+				String restrictionName = mRestrictions.get(groupPosition);
+				for (PrivacyManager.MethodDescription md : PrivacyManager.getMethods((String) getGroup(groupPosition))) {
+					boolean isUsed = (PrivacyManager.getUsed(ActivityApp.this, mAppInfo.getUid(), restrictionName,
+							md.getName()) > 0);
+					boolean hasPermission = PrivacyManager.hasPermission(ActivityApp.this, mAppInfo.getPackageName(),
+							md);
+					if (mSelectedMethodName != null
+							|| ((fUsed ? isUsed : true) && (fPermission ? isUsed || hasPermission : true)))
+						listMethod.add(md);
+				}
+				mMethodDescription.put(groupPosition, listMethod);
+			}
+			return mMethodDescription.get(groupPosition);
+		}
+
 		@Override
 		public Object getChild(int groupPosition, int childPosition) {
-			return PrivacyManager.getMethods((String) getGroup(groupPosition)).get(childPosition);
+			return getMethodDescriptions(groupPosition).get(childPosition);
 		}
 
 		@Override
@@ -900,7 +1243,7 @@ public class ActivityApp extends Activity {
 
 		@Override
 		public int getChildrenCount(int groupPosition) {
-			return PrivacyManager.getMethods((String) getGroup(groupPosition)).size();
+			return getMethodDescriptions(groupPosition).size();
 		}
 
 		@Override
@@ -946,16 +1289,17 @@ public class ActivityApp extends Activity {
 
 			@Override
 			protected Object doInBackground(Object... params) {
-				if (holder.groupPosition == groupPosition && holder.childPosition == childPosition) {
+				if (holder.groupPosition == groupPosition && holder.childPosition == childPosition
+						&& restrictionName != null) {
 					// Get info
 					md = (PrivacyManager.MethodDescription) getChild(groupPosition, childPosition);
 					lastUsage = PrivacyManager.getUsed(holder.row.getContext(), mAppInfo.getUid(), restrictionName,
-							md.getMethodName());
+							md.getName());
 					parentRestricted = PrivacyManager.getRestricted(null, holder.row.getContext(), mAppInfo.getUid(),
 							restrictionName, null, false, false);
 					permission = PrivacyManager.hasPermission(holder.row.getContext(), mAppInfo.getPackageName(), md);
 					restricted = PrivacyManager.getRestricted(null, holder.row.getContext(), mAppInfo.getUid(),
-							restrictionName, md.getMethodName(), false, false);
+							restrictionName, md.getName(), false, false);
 				}
 				return null;
 			}
@@ -963,12 +1307,12 @@ public class ActivityApp extends Activity {
 			@Override
 			protected void onPostExecute(Object result) {
 				if (holder.groupPosition == groupPosition && holder.childPosition == childPosition
-						&& restrictionName != null && md != null) {
+						&& restrictionName != null) {
 					// Set data
 					if (lastUsage > 0) {
-						Date date = new Date(lastUsage);
-						SimpleDateFormat format = new SimpleDateFormat("dd/HH:mm", Locale.ROOT);
-						holder.ctvMethodName.setText(String.format("%s %s", md.getMethodName(), format.format(date)));
+						CharSequence sLastUsage = DateUtils.getRelativeTimeSpanString(lastUsage, new Date().getTime(),
+								DateUtils.SECOND_IN_MILLIS, 0);
+						holder.ctvMethodName.setText(String.format("%s (%s)", md.getName(), sLastUsage));
 					}
 					holder.ctvMethodName.setEnabled(parentRestricted);
 					holder.imgUsed.setVisibility(lastUsage == 0 ? View.INVISIBLE : View.VISIBLE);
@@ -981,11 +1325,19 @@ public class ActivityApp extends Activity {
 						@Override
 						public void onClick(View view) {
 							boolean restricted = PrivacyManager.getRestricted(null, view.getContext(),
-									mAppInfo.getUid(), restrictionName, md.getMethodName(), false, false);
+									mAppInfo.getUid(), restrictionName, md.getName(), false, false);
 							restricted = !restricted;
 							holder.ctvMethodName.setChecked(restricted);
-							PrivacyManager.setRestricted(null, view.getContext(), mAppInfo.getUid(), restrictionName,
-									md.getMethodName(), restricted);
+							boolean restart = PrivacyManager.setRestricted(null, view.getContext(), mAppInfo.getUid(),
+									restrictionName, md.getName(), restricted);
+
+							// Refresh display
+							notifyDataSetChanged(); // Needed to update parent
+
+							// Notify restart
+							if (restart)
+								Toast.makeText(view.getContext(), getString(R.string.msg_restart), Toast.LENGTH_SHORT)
+										.show();
 						}
 					});
 				}
@@ -1012,13 +1364,14 @@ public class ActivityApp extends Activity {
 					childPosition);
 
 			// Set background color
-			if (PrivacyManager.isDangerousMethod(restrictionName, md.getMethodName()))
-				holder.row.setBackgroundColor(getResources().getColor(getThemed(R.attr.color_dangerous)));
+			if (md.isDangerous())
+				holder.row.setBackgroundColor(getResources().getColor(
+						Util.getThemed(ActivityApp.this, R.attr.color_dangerous)));
 			else
 				holder.row.setBackgroundColor(Color.TRANSPARENT);
 
 			// Display method name
-			holder.ctvMethodName.setText(md.getMethodName());
+			holder.ctvMethodName.setText(md.getName());
 			holder.ctvMethodName.setEnabled(false);
 			holder.ctvMethodName.setTypeface(null, Typeface.NORMAL);
 
@@ -1043,13 +1396,5 @@ public class ActivityApp extends Activity {
 		public boolean hasStableIds() {
 			return true;
 		}
-	}
-
-	// Helper methods
-
-	private int getThemed(int attr) {
-		TypedValue typedvalueattr = new TypedValue();
-		getTheme().resolveAttribute(attr, typedvalueattr, true);
-		return typedvalueattr.resourceId;
 	}
 }

@@ -1,13 +1,19 @@
 package biz.bokhorst.xprivacy;
 
+import java.text.Collator;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Locale;
+import java.util.Map;
+import java.util.TreeMap;
 
 import android.annotation.SuppressLint;
 import android.app.ProgressDialog;
 import android.content.Context;
 import android.content.pm.ApplicationInfo;
+import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
 import android.content.pm.PackageManager.NameNotFoundException;
 import android.graphics.drawable.Drawable;
@@ -16,67 +22,22 @@ import android.util.SparseArray;
 
 @SuppressLint("DefaultLocale")
 public class ApplicationInfoEx implements Comparable<ApplicationInfoEx> {
-	private List<String> mListApplicationName;
-	private String mPackageName;
-	private boolean mHasInternet;
-	private boolean mIsFrozen;
-	private int mUid;
-	private String mVersion;
-	private boolean mSystem;
-	private boolean mInstalled;
-	private Drawable mIcon;
+	private TreeMap<String, ApplicationInfo> mMapAppInfo = null;
+	private Map<String, PackageInfo> mMapPkgInfo = new HashMap<String, PackageInfo>();
 
-	public ApplicationInfoEx(Context context, String packageName) {
-		// Get app info
-		try {
-			ApplicationInfo appInfo = context.getPackageManager().getApplicationInfo(packageName, 0);
-			this.Initialize(context, appInfo);
-		} catch (NameNotFoundException ex) {
-			mInstalled = false;
-		} catch (Throwable ex) {
-			Util.bug(null, ex);
-			return;
-		}
-	}
+	// Cache
+	private Drawable mIcon = null;
+	private boolean mInternet = false;
+	private boolean mInternetDetermined = false;
+	private boolean mFrozen = false;
+	private boolean mFrozenDetermined = false;
 
-	private ApplicationInfoEx(Context context, ApplicationInfo appInfo) {
-		this.Initialize(context, appInfo);
-	}
-
-	private void Initialize(Context context, ApplicationInfo appInfo) {
+	public ApplicationInfoEx(Context context, int uid) throws NameNotFoundException {
+		mMapAppInfo = new TreeMap<String, ApplicationInfo>();
 		PackageManager pm = context.getPackageManager();
-		mListApplicationName = new ArrayList<String>();
-		mListApplicationName.add(getApplicationName(appInfo, pm));
-		mPackageName = appInfo.packageName;
-		mHasInternet = PrivacyManager.hasInternet(context, appInfo.packageName);
-		mUid = appInfo.uid;
-
-		// Get version
-		try {
-			mVersion = pm.getPackageInfo(appInfo.packageName, 0).versionName;
-			mInstalled = true;
-		} catch (NameNotFoundException ex) {
-			mInstalled = false;
-		} catch (Throwable ex) {
-			mInstalled = false;
-			Util.bug(null, ex);
-		}
-
-		// Get if system application
-		mSystem = ((appInfo.flags & (ApplicationInfo.FLAG_SYSTEM | ApplicationInfo.FLAG_UPDATED_SYSTEM_APP)) != 0);
-		mSystem = mSystem || appInfo.packageName.equals(ApplicationInfoEx.class.getPackage().getName());
-
-		// Get if frozen (not enabled)
-		int setting = pm.getApplicationEnabledSetting(appInfo.packageName);
-		boolean enabled = (setting == PackageManager.COMPONENT_ENABLED_STATE_DEFAULT);
-		enabled = (enabled || setting == PackageManager.COMPONENT_ENABLED_STATE_ENABLED);
-		mIsFrozen = !enabled;
-
-		// Get icon
-		try {
-			mIcon = pm.getApplicationInfo(mPackageName, 0).loadIcon(pm);
-		} catch (Throwable ex) {
-			Util.bug(null, ex);
+		for (String packageName : pm.getPackagesForUid(uid)) {
+			ApplicationInfo appInfo = pm.getApplicationInfo(packageName, 0);
+			mMapAppInfo.put(pm.getApplicationLabel(appInfo).toString(), appInfo);
 		}
 	}
 
@@ -88,18 +49,18 @@ public class ApplicationInfoEx implements Comparable<ApplicationInfoEx> {
 		SparseArray<ApplicationInfoEx> mapApp = new SparseArray<ApplicationInfoEx>();
 		List<ApplicationInfoEx> listApp = new ArrayList<ApplicationInfoEx>();
 		List<ApplicationInfo> listAppInfo = pm.getInstalledApplications(PackageManager.GET_META_DATA);
-		dialog.setMax(listAppInfo.size());
+		if (dialog != null)
+			dialog.setMax(listAppInfo.size());
 		for (int app = 0; app < listAppInfo.size(); app++)
 			try {
-				dialog.setProgress(app + 1);
-				ApplicationInfoEx xAppInfo = new ApplicationInfoEx(context, listAppInfo.get(app));
-				ApplicationInfoEx yAppInfo = mapApp.get(xAppInfo.getUid());
-				if (yAppInfo == null) {
-					mapApp.put(xAppInfo.getUid(), xAppInfo);
-					listApp.add(xAppInfo);
-				} else
-					yAppInfo.AddApplicationName(getApplicationName(listAppInfo.get(app), pm));
-			} catch (Throwable ex) {
+				if (dialog != null)
+					dialog.setProgress(app + 1);
+				ApplicationInfoEx appInfo = new ApplicationInfoEx(context, listAppInfo.get(app).uid);
+				if (mapApp.get(appInfo.getUid()) == null) {
+					mapApp.put(appInfo.getUid(), appInfo);
+					listApp.add(appInfo);
+				}
+			} catch (NameNotFoundException ex) {
 				Util.bug(null, ex);
 			}
 
@@ -108,62 +69,129 @@ public class ApplicationInfoEx implements Comparable<ApplicationInfoEx> {
 		return listApp;
 	}
 
-	private static String getApplicationName(ApplicationInfo appInfo, PackageManager pm) {
-		return (String) pm.getApplicationLabel(appInfo);
+	public List<String> getApplicationName() {
+		return new ArrayList<String>(mMapAppInfo.navigableKeySet());
 	}
 
-	private void AddApplicationName(String Name) {
-		mListApplicationName.add(Name);
-		Collections.sort(mListApplicationName);
+	public List<String> getPackageName() {
+		List<String> listPackageName = new ArrayList<String>();
+		for (ApplicationInfo appInfo : mMapAppInfo.values())
+			listPackageName.add(appInfo.packageName);
+		return listPackageName;
 	}
 
-	public String getFirstApplicationName() {
-		return (mListApplicationName.size() > 0 ? mListApplicationName.get(0) : null);
+	private void getPackageInfo(Context context, String packageName) throws NameNotFoundException {
+		PackageManager pm = context.getPackageManager();
+		mMapPkgInfo.put(packageName, pm.getPackageInfo(packageName, 0));
 	}
 
-	public String getPackageName() {
-		return mPackageName;
+	public List<String> getPackageVersionName(Context context) {
+		List<String> listVersionName = new ArrayList<String>();
+		for (String packageName : this.getPackageName())
+			try {
+				getPackageInfo(context, packageName);
+				String version = mMapPkgInfo.get(packageName).versionName;
+				if (version == null)
+					listVersionName.add("???");
+				else
+					listVersionName.add(version);
+			} catch (NameNotFoundException ex) {
+				listVersionName.add(ex.getMessage());
+			}
+		return listVersionName;
 	}
 
-	public Drawable getIcon() {
+	public List<Integer> getPackageVersionCode(Context context) {
+		List<Integer> listVersionCode = new ArrayList<Integer>();
+		for (String packageName : this.getPackageName())
+			try {
+				getPackageInfo(context, packageName);
+				listVersionCode.add(mMapPkgInfo.get(packageName).versionCode);
+			} catch (NameNotFoundException ex) {
+				listVersionCode.add(0);
+			}
+		return listVersionCode;
+	}
+
+	public Drawable getIcon(Context context) {
+		if (mIcon == null)
+			// Pick first icon
+			mIcon = mMapAppInfo.firstEntry().getValue().loadIcon(context.getPackageManager());
 		return mIcon;
 	}
 
-	public boolean hasInternet() {
-		return mHasInternet;
+	public boolean hasInternet(Context context) {
+		if (!mInternetDetermined) {
+			PackageManager pm = context.getPackageManager();
+			for (ApplicationInfo appInfo : mMapAppInfo.values())
+				if (pm.checkPermission("android.permission.INTERNET", appInfo.packageName) == PackageManager.PERMISSION_GRANTED) {
+					mInternet = true;
+					break;
+				}
+			mInternetDetermined = true;
+		}
+		return mInternet;
 	}
 
-	public boolean isFrozen() {
-		return mIsFrozen;
+	public boolean isFrozen(Context context) {
+		if (!mFrozenDetermined) {
+			PackageManager pm = context.getPackageManager();
+			boolean enabled = false;
+			for (ApplicationInfo appInfo : mMapAppInfo.values()) {
+				int setting = pm.getApplicationEnabledSetting(appInfo.packageName);
+				enabled = (enabled || setting == PackageManager.COMPONENT_ENABLED_STATE_DEFAULT);
+				enabled = (enabled || setting == PackageManager.COMPONENT_ENABLED_STATE_ENABLED);
+				if (enabled)
+					break;
+			}
+			mFrozen = !enabled;
+			mFrozenDetermined = true;
+		}
+		return mFrozen;
 	}
 
 	public int getUid() {
-		return mUid;
+		// All listed uid's are the same
+		return mMapAppInfo.firstEntry().getValue().uid;
 	}
 
-	public String getVersion() {
-		return mVersion;
-	}
-
-	public boolean getIsSystem() {
+	public boolean isSystem() {
+		boolean mSystem = false;
+		for (ApplicationInfo appInfo : mMapAppInfo.values()) {
+			mSystem = ((appInfo.flags & (ApplicationInfo.FLAG_SYSTEM | ApplicationInfo.FLAG_UPDATED_SYSTEM_APP)) != 0);
+			mSystem = mSystem || appInfo.packageName.equals(this.getClass().getPackage().getName());
+			mSystem = mSystem || appInfo.packageName.equals(this.getClass().getPackage().getName() + ".pro");
+			mSystem = mSystem || appInfo.packageName.equals("de.robv.android.xposed.installer");
+		}
 		return mSystem;
 	}
 
-	public boolean getIsInstalled() {
-		return mInstalled;
+	public boolean isShared() {
+		for (ApplicationInfo appInfo : mMapAppInfo.values())
+			if (PrivacyManager.isShared(appInfo.uid))
+				return true;
+		return false;
+	}
+
+	public boolean isIsolated() {
+		for (ApplicationInfo appInfo : mMapAppInfo.values())
+			if (PrivacyManager.isIsolated(appInfo.uid))
+				return true;
+		return false;
 	}
 
 	@Override
 	public String toString() {
-		return String.format("%d %s", mUid, getApplicationNames());
+		// All uid's are the same
+		return String.format("%d %s", mMapAppInfo.firstEntry().getValue().uid,
+				TextUtils.join(", ", getApplicationName()));
 	}
 
 	@Override
 	public int compareTo(ApplicationInfoEx other) {
-		return getApplicationNames().compareToIgnoreCase(other.getApplicationNames());
-	}
-
-	private String getApplicationNames() {
-		return TextUtils.join(", ", mListApplicationName);
+		// Locale respecting sorter
+		Collator collator = Collator.getInstance(Locale.getDefault());
+		return collator.compare(TextUtils.join(", ", getApplicationName()),
+				TextUtils.join(", ", other.getApplicationName()));
 	}
 }

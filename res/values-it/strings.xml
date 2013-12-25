@@ -5,7 +5,7 @@
     <string name="app_wrongandroid">Solo per Android versione 4.0+</string>
     <string name="app_version" formatted="false">Versione di XPrivacy: %s (%d)</string>
     <string name="app_xversion" formatted="false">Versione di Xposed framework: %d</string>
-    <string name="app_copyright">Copyright \u00A9 2013 by M. Bokhorst (M66B)</string>
+    <string name="app_copyright">Copyright \u00A9 2013-2014 by M. Bokhorst (M66B)</string>
     <string name="menu_usage">Utilizzo</string>
     <string name="menu_refresh">Aggiorna</string>
     <string name="menu_settings">Impostazioni</string>
@@ -20,26 +20,39 @@
     <string name="menu_about">Riguardo a</string>
     <string name="menu_help">Aiuto</string>
     <string name="menu_all">Tutto</string>
-    <string name="menu_apply">Apply template</string>
+    <string name="menu_restriction_all">Imposta restrizioni</string>
+    <string name="menu_clear_all">Deseleziona tutto</string>
+    <string name="menu_restrict_all">Seleziona tutto</string>
+    <string name="menu_clear_usage">Clear</string>
+    <string name="menu_usage_all">Imposta filtro</string>
+    <string name="menu_apply">Applica template</string>
     <string name="menu_clear">Pulisci</string>
     <string name="menu_app_launch">Lancia</string>
     <string name="menu_app_settings">Impostazioni</string>
     <string name="menu_app_store">Play Store</string>
+    <string name="menu_app_kill">Kill</string>
     <string name="menu_accounts">Seleziona account consentiti</string>
+    <string name="menu_applications">Seleziona le applicazioni permesse</string>
     <string name="menu_contacts">Seleziona contatti consentiti</string>
-    <string name="msg_new">New</string>
-    <string name="msg_update">Update</string>
-    <string name="msg_restricted" formatted="false">%s limitato da XPrivacy</string>
+    <string name="menu_tutorial">Tutorial</string>
+    <string name="msg_new">Nuovo</string>
+    <string name="msg_update">Aggiorna</string>
     <string name="msg_licensed" formatted="false">Licenziato a: %s</string>
     <string name="msg_loading">Caricamento in corso</string>
-    <string name="msg_edit">Clicca l\'icona dell\'applicazione per modificare tutte le restrizioni</string>
+    <string name="msg_applying">Applicazione in corso</string>
+    <string name="msg_applied">Template applied</string>
+    <string name="msg_saved_to" formatted="false">Salvato su %s</string>
+    <string name="msg_no_restrictions">Nessuna restrizione trovata</string>
     <string name="msg_sure">Sei sicuro?</string>
     <string name="msg_done">Fatto</string>
     <string name="msg_reboot">Riavvio richiesto</string>
-    <string name="msg_random">Generazione casuale</string>
+    <string name="msg_random_now">Generazione casuale</string>
+    <string name="msg_random_access">Generazione casuale all\'accesso</string>
     <string name="msg_random_boot">Generazione casuale all\'avvio</string>
+    <string name="msg_usage">Aggiornamento dati di utilizzo</string>
+    <string name="msg_restart">Richiesto riavvio dell\'applicazione</string>
     <string name="msg_first"><b>XPrivacy è stato testato e sviluppato con cura,
-        ma è impossibile garantire che funzionerà in modo impeccabile su ogni dispositivo e per ogni applicazione.
+ma è impossibile garantire che funzionerà in modo impeccabile su ogni dispositivo e per ogni applicazione.
 \n\nUsalo a tuo rischio.</b>\n\nLeggi la licenza:</string>
     <string name="restrict_accounts">Accounts (Google, Facebook, etc)</string>
     <string name="restrict_browser">Browser (bookmarks/history)</string>
@@ -56,43 +69,66 @@
     <string name="restrict_messages">Messaggi (SMS, MMS)</string>
     <string name="restrict_network">Rete (indirizzi)</string>
     <string name="restrict_notifications">Notifiche</string>
+    <string name="restrict_overlay">Overlay</string>
     <string name="restrict_phone">Telefono (ID, numeri, chiamate)</string>
+    <string name="restrict_sensors">Sensori</string>
     <string name="restrict_storage">Memoria (media, scheda SD)</string>
     <string name="restrict_shell">Shell (comandi, superuser)</string>
     <string name="restrict_system">Sistema (applicazioni installate)</string>
     <string name="restrict_view">Visualizzazione (browser)</string>
-    <string name="title_category">Categoria:</string>
+    <string name="title_categories">Categorie</string>
     <string name="title_restrict">Spunta per limitare:</string>
-    <string name="title_nofilter">Nessun filtro attivo</string>
+    <string name="title_filters">Filtri</string>
 
-    <plurals name="title_filters">
+    <plurals name="title_active_filters">
         <item quantity="one">1 filtro attivo</item>
         <item quantity="other">%d filtri attivi</item>
     </plurals>
 
-    <string name="title_fused">Filter on data usage</string>
-    <string name="title_finternet">Filter on internet access</string>
-    <string name="title_fpermission">Filter on permission</string>
-    <string name="title_frestricted">Filter on restricted</string>
-    <string name="title_fuser">Filter on user applications</string>
-    <string name="title_fsystem">Filter on system applications</string>
+    <string name="title_fused">Filtra per utilizzo dati</string>
+    <string name="title_finternet">Filtra per accesso a internet</string>
+    <string name="title_fpermission">Filtra per permesso</string>
+    <string name="title_frestricted">Filtra per restrizione</string>
+    <string name="title_fuser">Filtra per app utente</string>
+    <string name="title_fsystem">Filtra per app di sistema</string>
+    <string name="title_fnot">Nega</string>
     <string name="settings_serial">Numero di serie#</string>
     <string name="settings_lat">Latitudine</string>
     <string name="settings_lon">Longitudine</string>
     <string name="settings_mac">Indirizzo MAC</string>
-    <string name="settings_ip">IP address</string>
+    <string name="settings_ip">Indirizzo IP</string>
     <string name="settings_phone">Numero di Telefono</string>
     <string name="settings_id">Android ID</string>
+    <string name="settings_adid">ID Pubblicità</string>
     <string name="settings_country">Nazione</string>
     <string name="settings_operator">Operatore</string>
     <string name="settings_subscriber">Subscriber ID</string>
     <string name="settings_ua">User agent</string>
-    <string name="settings_log">Debug log (requires restart)</string>
+    <string name="settings_general">Generale</string>
+    <string name="settings_fake_data">Dati falsi</string>
+    <string name="settings_global">Usa dati falsi globali</string>
+    <string name="settings_notify">Aggiorna notifiche</string>
+    <string name="settings_usage">Utilizzo dati di Android (richiede riavvio)</string>
+    <string name="settings_log">Debug log (richiede riavvio)</string>
+    <string name="settings_expert">Modalità esperto</string>
+    <string name="settings_dangerous">Limita funzioni pericolose</string>
+    <string name="settings_confidence">Maximum fetch confidence interval</string>
+    <string name="settings_experimental">Experimental functions (requires restart)</string>
     <string name="help_application">Applicazione</string>
     <string name="help_internet">ha permesso internet</string>
     <string name="help_granted">ha permesso Android</string>
     <string name="help_used">ha usato questi dati</string>
     <string name="help_frozen">è disabilitato</string>
     <string name="help_dangerous">è pericoloso</string>
+    <string name="help_half">parzialmente limitato</string>
+    <string name="help_attention">restrictions need attention</string>
+    <string name="help_restricted">restrictions are changed</string>
+    <string name="help_shared">restrictions are submitted</string>
+    <string name="tutorial_mainheader">Select the category to restrict; choose visible apps with the filters</string>
+    <string name="tutorial_mainlist">Tap a check box to restrict the selected category for an app\n
+\nApps will be fed empty or fake data for restricted categories\n
+\nTap the app icon for detailed restrictions and settings</string>
+    <string name="tutorial_detailsheader">Tap the app icon for more actions</string>
+    <string name="tutorial_detailslist">Tap the down arrow to see the function exceptions of a restriction category</string>
 
 </resources>

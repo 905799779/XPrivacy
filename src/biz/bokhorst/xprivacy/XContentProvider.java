@@ -145,7 +145,7 @@ public class XContentProvider extends XHook {
 			if (cursor != null)
 				if (sUri.startsWith("content://com.google.android.gsf.gservices")) {
 					// Google services provider: block only android_id
-					if (param.args.length > 3) {
+					if (param.args.length > 3 && param.args[3] != null) {
 						List<String> selectionArgs = Arrays.asList((String[]) param.args[3]);
 						if (Util.containsIgnoreCase(selectionArgs, "android_id"))
 							if (isRestricted(param)) {
@@ -201,56 +201,27 @@ public class XContentProvider extends XHook {
 
 							// Conditionally copy row
 							if (copy)
-								try {
-									Object[] columns = new Object[cursor.getColumnCount()];
-									for (int i = 0; i < cursor.getColumnCount(); i++) {
-										int type = -1;
-										if (Build.VERSION.SDK_INT > Build.VERSION_CODES.GINGERBREAD_MR1) {
-											type = cursor.getType(i);
-										} else if (cursor.isNull(i)) {
-											type = Cursor.FIELD_TYPE_NULL;
-										// SQLiteCursor is subclass of AbstractWindowedCursor
-										} else if (cursor instanceof AbstractWindowedCursor) {
-											if (((AbstractWindowedCursor) cursor).isLong(i)) {
-												type = Cursor.FIELD_TYPE_INTEGER;
-											} else if (((AbstractWindowedCursor) cursor).isFloat(i)) {
-												type = Cursor.FIELD_TYPE_FLOAT;
-											} else if (((AbstractWindowedCursor) cursor).isString(i)) {
-												type = Cursor.FIELD_TYPE_STRING;
-											} else if (((AbstractWindowedCursor) cursor).isBlob(i)) {
-												type = Cursor.FIELD_TYPE_BLOB;
-											}
-										}
-										switch (type) {
-										case Cursor.FIELD_TYPE_NULL:
-											columns[i] = null;
-											break;
-										case Cursor.FIELD_TYPE_INTEGER:
-											columns[i] = cursor.getInt(i);
-											break;
-										case Cursor.FIELD_TYPE_FLOAT:
-											columns[i] = cursor.getFloat(i);
-											break;
-										case Cursor.FIELD_TYPE_STRING:
-											columns[i] = cursor.getString(i);
-											break;
-										case Cursor.FIELD_TYPE_BLOB:
-											columns[i] = cursor.getBlob(i);
-											break;
-										default:
-											Util.log(this, Log.WARN, "Unknown cursor data type=" + type);
-										}
-									}
-									result.addRow(columns);
-								} catch (Throwable ex) {
-									Util.bug(this, ex);
-								}
+								copyColumns(cursor, result);
 						}
 						result.respond(cursor.getExtras());
 						param.setResult(result);
 						cursor.close();
 					}
 
+				} else if (sUri.startsWith("content://applications")) {
+					// Applications provider: allow selected applications
+					if (isRestricted(param)) {
+						MatrixCursor result = new MatrixCursor(cursor.getColumnNames());
+						while (cursor.moveToNext()) {
+							int colPackage = cursor.getColumnIndex("package");
+							String packageName = (colPackage < 0 ? null : cursor.getString(colPackage));
+							if (packageName != null && XApplicationPackageManager.isPackageAllowed(packageName))
+								copyColumns(cursor, result);
+						}
+						result.respond(cursor.getExtras());
+						param.setResult(result);
+						cursor.close();
+					}
 				} else {
 					if (isRestricted(param)) {
 						// Return empty cursor
@@ -260,6 +231,53 @@ public class XContentProvider extends XHook {
 						cursor.close();
 					}
 				}
+		}
+	}
+
+	private void copyColumns(Cursor cursor, MatrixCursor result) {
+		try {
+			Object[] columns = new Object[cursor.getColumnCount()];
+			for (int i = 0; i < cursor.getColumnCount(); i++) {
+				int type = -1;
+				if (Build.VERSION.SDK_INT > Build.VERSION_CODES.GINGERBREAD_MR1) {
+					type = cursor.getType(i);
+				} else if (cursor.isNull(i)) {
+					type = Cursor.FIELD_TYPE_NULL;
+				// SQLiteCursor is subclass of AbstractWindowedCursor
+				} else if (cursor instanceof AbstractWindowedCursor) {
+					if (((AbstractWindowedCursor) cursor).isLong(i)) {
+						type = Cursor.FIELD_TYPE_INTEGER;
+					} else if (((AbstractWindowedCursor) cursor).isFloat(i)) {
+						type = Cursor.FIELD_TYPE_FLOAT;
+					} else if (((AbstractWindowedCursor) cursor).isString(i)) {
+						type = Cursor.FIELD_TYPE_STRING;
+					} else if (((AbstractWindowedCursor) cursor).isBlob(i)) {
+						type = Cursor.FIELD_TYPE_BLOB;
+					}
+				}
+				switch (type) {
+				case Cursor.FIELD_TYPE_NULL:
+					columns[i] = null;
+					break;
+				case Cursor.FIELD_TYPE_INTEGER:
+					columns[i] = cursor.getInt(i);
+					break;
+				case Cursor.FIELD_TYPE_FLOAT:
+					columns[i] = cursor.getFloat(i);
+					break;
+				case Cursor.FIELD_TYPE_STRING:
+					columns[i] = cursor.getString(i);
+					break;
+				case Cursor.FIELD_TYPE_BLOB:
+					columns[i] = cursor.getBlob(i);
+					break;
+				default:
+					Util.log(this, Log.WARN, "Unknown cursor data type=" + type);
+				}
+			}
+			result.addRow(columns);
+		} catch (Throwable ex) {
+			Util.bug(this, ex);
 		}
 	}
 

@@ -5,7 +5,7 @@
     <string name="app_wrongandroid">See rakendus on ainult android 4.0+\'le </string>
     <string name="app_version" formatted="false">XPrivacy versioon: %s (%d)</string>
     <string name="app_xversion" formatted="false">Xposed raamistiku versioon: %d</string>
-    <string name="app_copyright">Autoriõigus \u00A9 2013 by M. Bokhorst (M66B)</string>
+    <string name="app_copyright">Autoriõigus \u00A9 2013-2014 by M. Bokhorst (M66B)</string>
     <string name="menu_usage">Kasutus</string>
     <string name="menu_refresh">Värskenda</string>
     <string name="menu_settings">Seaded</string>
@@ -20,24 +20,37 @@
     <string name="menu_about">Programmist</string>
     <string name="menu_help">Abi</string>
     <string name="menu_all">Kõik</string>
+    <string name="menu_restriction_all">Toggle restrictions</string>
+    <string name="menu_clear_all">Clear all</string>
+    <string name="menu_restrict_all">Restrict all</string>
+    <string name="menu_clear_usage">Clear</string>
+    <string name="menu_usage_all">Toggle filter</string>
     <string name="menu_apply">Apply template</string>
     <string name="menu_clear">Tühjenda</string>
     <string name="menu_app_launch">Käivita</string>
     <string name="menu_app_settings">Rakenduse andmed</string>
     <string name="menu_app_store">Play Pood</string>
+    <string name="menu_app_kill">Kill</string>
     <string name="menu_accounts">Vali kasutajad mida lubada</string>
+    <string name="menu_applications">Select applications to allow</string>
     <string name="menu_contacts">Vali kontaktid mida lubada</string>
+    <string name="menu_tutorial">Tutorial</string>
     <string name="msg_new">New</string>
     <string name="msg_update">Update</string>
-    <string name="msg_restricted" formatted="false">%s on keelatud XPrivacy poolt</string>
     <string name="msg_licensed" formatted="false">Litsentseeritud: %s</string>
     <string name="msg_loading">Laeb</string>
-    <string name="msg_edit">Klõpsa rakenduse ikoonile, et muuta</string>
+    <string name="msg_applying">Applying</string>
+    <string name="msg_applied">Template applied</string>
+    <string name="msg_saved_to" formatted="false">Saved to %s</string>
+    <string name="msg_no_restrictions">No restrictions found</string>
     <string name="msg_sure">Oled sa kindel?</string>
     <string name="msg_done">Valmis</string>
     <string name="msg_reboot">Seadme taaskäivitus on vajalik</string>
-    <string name="msg_random">Juhuslik</string>
+    <string name="msg_random_now">Juhuslik</string>
+    <string name="msg_random_access">Randomize on access</string>
     <string name="msg_random_boot">Juhuslikusta pärast käivitamist</string>
+    <string name="msg_usage">Updating usage data</string>
+    <string name="msg_restart">Application restart required</string>
     <string name="msg_first"><b>Palju vaeva on nähtud Xprivacy arendamisel ja testimisel,
 kuid on võimatu garanteerida, et see töötab igal seadmel ja iga rakendusega.
 \n\nKasuta ainult omal vastutusel.</b>\n\nSee also the license:</string>
@@ -56,16 +69,18 @@ kuid on võimatu garanteerida, et see töötab igal seadmel ja iga rakendusega.
     <string name="restrict_messages">Sõnumid (SMS, MMS)</string>
     <string name="restrict_network">Võrk (aadressid)</string>
     <string name="restrict_notifications">Teated</string>
+    <string name="restrict_overlay">Overlay</string>
     <string name="restrict_phone">Telefon (ID, numbrid, kõned)</string>
+    <string name="restrict_sensors">Sensors</string>
     <string name="restrict_storage">Mälu (Meedia, SD kaart)</string>
     <string name="restrict_shell">Käsurida (käsud, juurkasutaja)</string>
     <string name="restrict_system">Süsteem (installeeritud rakendused)</string>
     <string name="restrict_view">Vaade (brauser)</string>
-    <string name="title_category">Katekooria:</string>
+    <string name="title_categories">Categories</string>
     <string name="title_restrict">Lisa linnuke, et keelata:</string>
-    <string name="title_nofilter">Ühtegi aktiivset filtrit pole</string>
+    <string name="title_filters">Filters</string>
 
-    <plurals name="title_filters">
+    <plurals name="title_active_filters">
         <item quantity="one">1 aktiivne filter</item>
         <item quantity="other">%d aktiivset filtrit</item>
     </plurals>
@@ -76,6 +91,7 @@ kuid on võimatu garanteerida, et see töötab igal seadmel ja iga rakendusega.
     <string name="title_frestricted">Filter on restricted</string>
     <string name="title_fuser">Filter on user applications</string>
     <string name="title_fsystem">Filter on system applications</string>
+    <string name="title_fnot">Negate</string>
     <string name="settings_serial">Seeria#</string>
     <string name="settings_lat">Laiuskraad</string>
     <string name="settings_lon">Pikkuskraad</string>
@@ -83,16 +99,36 @@ kuid on võimatu garanteerida, et see töötab igal seadmel ja iga rakendusega.
     <string name="settings_ip">IP aadress</string>
     <string name="settings_phone">Telefoninumber</string>
     <string name="settings_id">Androidi ID</string>
+    <string name="settings_adid">Advertisement ID</string>
     <string name="settings_country">Riik</string>
     <string name="settings_operator">Opeeraator</string>
     <string name="settings_subscriber">Abonendi ID</string>
     <string name="settings_ua">Kasutaja agent</string>
+    <string name="settings_general">General</string>
+    <string name="settings_fake_data">Fake data</string>
+    <string name="settings_global">Use global fake data</string>
+    <string name="settings_notify">Update notifications</string>
+    <string name="settings_usage">Android usage data (requires restart)</string>
     <string name="settings_log">Silumislogi (nõuab restarti)</string>
+    <string name="settings_expert">Expert mode</string>
+    <string name="settings_dangerous">Restrict dangerous functions</string>
+    <string name="settings_confidence">Maximum fetch confidence interval</string>
+    <string name="settings_experimental">Experimental functions (requires restart)</string>
     <string name="help_application">Rakendus</string>
     <string name="help_internet">on interneti kasutamise luba</string>
     <string name="help_granted">on Android luba</string>
     <string name="help_used">on kasutanud seda andmeside tüüpi</string>
     <string name="help_frozen">on välja lülitatud</string>
     <string name="help_dangerous">On ohtlik</string>
+    <string name="help_half">partly restricted</string>
+    <string name="help_attention">restrictions need attention</string>
+    <string name="help_restricted">restrictions are changed</string>
+    <string name="help_shared">restrictions are submitted</string>
+    <string name="tutorial_mainheader">Select the category to restrict; choose visible apps with the filters</string>
+    <string name="tutorial_mainlist">Tap a check box to restrict the selected category for an app\n
+\nApps will be fed empty or fake data for restricted categories\n
+\nTap the app icon for detailed restrictions and settings</string>
+    <string name="tutorial_detailsheader">Tap the app icon for more actions</string>
+    <string name="tutorial_detailslist">Tap the down arrow to see the function exceptions of a restriction category</string>
 
 </resources>

@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import android.util.Log;
+
 import de.robv.android.xposed.XC_MethodHook.MethodHookParam;
 
 public class XCamera extends XHook {
@@ -45,10 +46,8 @@ public class XCamera extends XHook {
 	protected void before(MethodHookParam param) throws Throwable {
 		if (mMethod == Methods.setPreviewCallback || mMethod == Methods.setPreviewCallbackWithBuffer
 				|| mMethod == Methods.setOneShotPreviewCallback || mMethod == Methods.takePicture) {
-			if (isRestricted(param)) {
+			if (isRestricted(param))
 				param.setResult(null);
-				notifyUser(this.getClass().getSimpleName());
-			}
 		} else
 			Util.log(this, Log.WARN, "Unknown method=" + param.method.getName());
 	}

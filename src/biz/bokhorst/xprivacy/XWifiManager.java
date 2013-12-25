@@ -1,6 +1,7 @@
 package biz.bokhorst.xprivacy;
 
 import java.lang.reflect.Field;
+import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -14,18 +15,20 @@ import android.util.Log;
 
 import de.robv.android.xposed.XC_MethodHook.MethodHookParam;
 import static de.robv.android.xposed.XposedHelpers.findField;
+import static de.robv.android.xposed.XposedHelpers.findMethodExact;
 
-@SuppressWarnings("deprecation")
 public class XWifiManager extends XHook {
 	private Methods mMethod;
+	private String mClassName;
 
-	private XWifiManager(Methods method, String restrictionName) {
+	private XWifiManager(Methods method, String restrictionName, String className) {
 		super(restrictionName, method.name(), null);
 		mMethod = method;
+		mClassName = className;
 	}
 
 	public String getClassName() {
-		return "android.net.wifi.WifiManager";
+		return mClassName;
 	}
 
 	// public List<WifiConfiguration> getConfiguredNetworks()
@@ -42,15 +45,16 @@ public class XWifiManager extends XHook {
 		getConfiguredNetworks, getConnectionInfo, getDhcpInfo, getScanResults, getWifiApConfiguration
 	};
 
-	public static List<XHook> getInstances() {
+	public static List<XHook> getInstances(Object instance) {
+		String className = instance.getClass().getName();
 		List<XHook> listHook = new ArrayList<XHook>();
 		for (Methods wifi : Methods.values())
-			listHook.add(new XWifiManager(wifi, PrivacyManager.cNetwork));
+			listHook.add(new XWifiManager(wifi, PrivacyManager.cNetwork, className));
 
-		listHook.add(new XWifiManager(Methods.getScanResults, PrivacyManager.cLocation));
+		listHook.add(new XWifiManager(Methods.getScanResults, PrivacyManager.cLocation, className));
 
 		// This is to fake "offline", no permission required
-		listHook.add(new XWifiManager(Methods.getConnectionInfo, PrivacyManager.cInternet));
+		listHook.add(new XWifiManager(Methods.getConnectionInfo, PrivacyManager.cInternet, className));
 		return listHook;
 	}
 
@@ -101,17 +105,20 @@ public class XWifiManager extends XHook {
 					}
 
 					// SSID
+					String ssid = (String) PrivacyManager.getDefacedProp(Binder.getCallingUid(), "SSID");
 					try {
 						Field fieldSSID = findField(WifiInfo.class, "mSSID");
-						fieldSSID.set(wInfo, PrivacyManager.getDefacedProp(Binder.getCallingUid(), "SSID"));
+						fieldSSID.set(wInfo, ssid);
 					} catch (Throwable ex) {
 						try {
 							Field fieldWifiSsid = findField(WifiInfo.class, "mWifiSsid");
 							Object mWifiSsid = fieldWifiSsid.get(wInfo);
 							if (mWifiSsid != null) {
-								Field octets = findField(mWifiSsid.getClass(), "octets");
-								octets.set(mWifiSsid,
-										PrivacyManager.getDefacedProp(Binder.getCallingUid(), "WifiSsid.octets"));
+								// public static WifiSsid
+								// createFromAsciiEncoded(String asciiEncoded)
+								Method methodCreateFromAsciiEncoded = findMethodExact(mWifiSsid.getClass(),
+										"createFromAsciiEncoded", String.class);
+								fieldWifiSsid.set(wInfo, methodCreateFromAsciiEncoded.invoke(null, ssid));
 							}
 						} catch (Throwable exex) {
 							Util.bug(this, exex);

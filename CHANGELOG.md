@@ -1,9 +1,410 @@
 Changelog
 =========
 
-**Next release**
+**Release types**
 
+* TEST: new or updated features with a higher risk for bugs
+* BETA: new or updated features with a lower risk for bugs
+* STABLE: all known bugs fixed; low risk for bugs
+
+Stable releases have odd minor version numbers from version 1.11.x.<br /> 
+Test and beta releases have even minor version numbers from version 1.12.x.<br />
+Test and beta releases will have experimental functions enabled by default.
+
+**Next test/beta release**
+
+* Fixed restricting internet and storage for multi-user environments ([issue](https://github.com/M66B/XPrivacy/issues/357))
+* Experimental functions enabled by default
+* Updated German translation
+
+**Next stable release**
+
+* Fixed restricting internet and storage for multi-user environments ([issue](https://github.com/M66B/XPrivacy/issues/357))
+* Updated German translation
+
+[Open issues](https://github.com/M66B/XPrivacy/issues?state=open)
+
+**Version 1.11 STABLE**
+
+* Fixed application notification setting not sticking ([issue](https://github.com/M66B/XPrivacy/issues/1006))
+* Sort applications respecting locale, thanks @[jpeg729](https://github.com/jpeg729)
+* Display if Pro version (only [Pro license](http://www.xprivacy.eu/)) ([issue](https://github.com/M66B/XPrivacy/issues/996))
+* Updated Hindi translation
+* Updated Slovak translation
+* Updated Slovenian translation
+* Updated Ukrainian translation
+
+**Version 1.10.51 BETA**
+
+* Fixed boot loop on some devices/ROMs ([issue](https://github.com/M66B/XPrivacy/issues/995))
+
+**Version 1.10.50 BETA**
+
+* Fixed missing version names
+* Fixed wrong package for application, thanks @[jpeg729](https://github.com/jpeg729)
+* Fixed getting settings for isolated processes
+* Submit if accounts, application, contacts are allowed ([issue](https://github.com/M66B/XPrivacy/issues/986))
+* Proguard to reduce the application size (saves about 200 KB of 650 KB)
+* Experimental: kill applications
+* Experimental: auto flush restriction/settings cache
 * Updated Arabic translation
+* Updated Chinese translation
+* Updated French translation
+* Updated Russian translation
+* Updated Slovak translation
+
+**Version 1.10.49 BETA**
+
+* Make application title scrollable
+
+**Version 1.10.48 BETA**
+
+* Fixed application package list scroll
+
+**Version 1.10.47 BETA**
+
+* Fixed application package list filling screen
+
+**Version 1.10.46 BETA**
+
+* Fixed GitHub links by forcing desktop mode
+* Updated Chinese translation
+
+**Version 1.10.45 BETA**
+
+* Fixed uncaught exception handler ([issue](https://github.com/M66B/XPrivacy/issues/951))
+* Fixed confidence settings (application details view)
+* Fixed always restart required for dangerous functions
+* Moved confidence setting to expert mode
+* Replaced wiki links by links to GitHub
+* Added menu to clear usage data
+* Added refresh menu to application list
+* Handle applications with shared components, also thanks @[jpeg729](https://github.com/jpeg729)
+* Updated Chinese translations
+* Updated Norwegian translation
+* Updated Polish translation
+* Updated Lithuanian translation
+
+**Version 1.10.44 BETA**
+
+* Better progress report while importing, thanks @[jpeg729](https://github.com/jpeg729)
+* Setting to set maximum confidence fetch interval
+* Changed connection time out from 45 to 20 seconds
+* Updated Chinese translations
+* Updated Hungarian translation
+* Updated Slovak translation
+
+**Version 1.10.43 BETA**
+
+* Fixed exporting legacy settings
+* Fixed exporting default template
+* Updated Dutch translation
+* Updated Russian translation
+* Updated Ukrainian translation
+
+**Version 1.10.42 BETA**
+
+* Corrected submit ready message
+* Better error messages for import, export and fetch
+* Workaround for Google file chooser new URI format (KitKat)
+* Made tutorial translatable
+* Updated Chinese translations
+* Updated Lithuanian translation
+* Updated Polish translation
+* Updated Russian translation
+* Updated Ukrainian translation
+* Updated Vietnamese translation
+
+**Version 1.10.41 BETA**
+
+* Delete old restrictions on new application install, thanks @[jpeg729](https://github.com/jpeg729)
+* Delete application specific settings on application uninstall ([issue](https://github.com/M66B/XPrivacy/issues/901))
+* Replaced notification by 'toast' for fetch restrictions
+* Added application state colors to legend
+* Ask if sure when fetching
+* Display *Template applied* for new applications in the notification
+* Changed application state colors, thanks @[danielmmmm](https://github.com/danielmmmm)
+* Updated Android Support Library package
+* Added tutorial ([issue](https://github.com/M66B/XPrivacy/issues/890))
+* Reverted "Updated Italian translation" (update for another language)
+* Added Ukrainian translation
+* Updated Chinese translation
+* Updated German translation
+* Updated Lithuanian translation
+* Updated Norwegian translation
+* Updated Russian translation
+* Updated Vietnamese translation
+
+**Version 1.10.40 TEST**
+
+* Fixed exporting of legacy settings
+
+**Version 1.10.39 TEST**
+
+* Fixed fetching unknown functions
+* Fixed restrictions of isolated processes on KitKat
+* Fixed importing wrong application specific settings
+* Color for state ([issue](https://github.com/M66B/XPrivacy/issues/887))
+* Added context menu to icon in application details view, thanks @[jpeg729](https://github.com/jpeg729)
+* Disabled fast scroll of application list, since it is buggy on KitKat
+* Added new restriction category *Overlay*
+* Less resource intensive export/import (export file format has changed)
+* Small performance improvement
+* Updated Arabic translation
+* Updated Chinese translation
+* Updated French translation
+* Updated Italian translation
+* Updated Polish translation
+* Updated Vietnamese translation
+
+**Version 1.10.38 BETA**
+
+* Fixed toggling all restrictions
+* Fixed template only being partially applied, thanks @[jpeg729](https://github.com/jpeg729)
+* Fixed index out of range in web view hook
+* Updated Italian translation
+* Updated Lithuanian translation
+
+**Version 1.10.37 BETA**
+
+* Fixed setting dangerous restrictions ([issue](https://github.com/M66B/XPrivacy/issues/876))
+* Fixed web view usage data
+* Attempt to fix user agent restriction for KitKat ([issue](https://github.com/M66B/XPrivacy/issues/825))
+* Show relative usage time
+* Filter application details on data usage
+* Notify if application needs restart, thanks @[jpeg729](https://github.com/jpeg729)
+* Chain new uncaught exception handlers
+* Send usage data on service destroy
+* Updated German translation
+* Updated Polish translation
+
+**Version 1.10.36 TEST**
+
+* Better titles for dialogs
+* Fixed error message fetch restrictions
+* Fixed canceling fetch all restrictions
+* Better title for toggle all restrictions, thanks @[jpeg729](https://github.com/jpeg729)
+* Run toggle all restriction in a background task, thanks @[jpeg729](https://github.com/jpeg729)
+* Updated Lithuanian translation
+
+**Version 1.10.35 EXPERIMENTAL**
+
+* Attempt to fix user agent restriction for KitKat ([issue](https://github.com/M66B/XPrivacy/issues/825))
+* Attempt to fix clipboard restriction for some devices ([issue](https://github.com/M66B/XPrivacy/issues/857))
+* Dynamic hooking of service managers for better compatibility
+* Progress reports while filtering, thanks @[jpeg729](https://github.com/jpeg729)
+* Updated Irish translation
+* Updated Russian translation
+* Updated Slovak translation
+* Updated Spanish translation
+
+**Version 1.10.34 TEST**
+
+* Fixed missing usage data
+* Send usage data on application close or force close (FC)
+* Progress reports while export is loading, thanks @[jpeg729](https://github.com/jpeg729)
+* Require Xposed version 2.4
+
+**Version 1.10.33 BETA**
+
+* Fixed missing usage data, thanks @[jpeg729](https://github.com/jpeg729)
+* Updated Chinese translations
+* Updated Japanese translation
+
+**Version 1.10.31 BETA**
+
+* Fixed ongoing notification of fetch restrictions
+* Attempt to fix non-aligned check boxes
+* New check mark images, thanks @[Looki75](http://forum.xda-developers.com/member.php?u=2468642)
+* Updated German translation
+
+**Version 1.10.30 BETA**
+
+* Caching of application information for better response times
+* Restriction of draw over / on top ([issue](https://github.com/M66B/XPrivacy/issues/830))
+* Modified tri-state check box implementation ([issue](https://github.com/M66B/XPrivacy/issues/833))
+* Fixed cancel import file select ([issue](https://github.com/M66B/XPrivacy/issues/837))
+* Updated Arabic translation
+* Updated Dutch translation
+* Updated Polish translation
+* Updated Russian translation
+
+**Version 1.10.29 TEST**
+
+* Fixed Android KitKat message permissions
+* Do not disable Android/extra usage data when not in expert mode
+* Separate setting to enable restricting dangerous functions, thanks @[jpeg729](https://github.com/jpeg729)
+* Show exported file name while sharing, thanks @[jpeg729](https://github.com/jpeg729)
+* Progress indication for export, import and fetch, thanks @[jpeg729](https://github.com/jpeg729)
+* Selected tab (categories, filter) in theme color, thanks @[jpeg729](https://github.com/jpeg729)
+* Added tri-state check box to legend ([issue](https://github.com/M66B/XPrivacy/issues/827))
+* Another method to restrict the browser user agent ([issue](https://github.com/M66B/XPrivacy/issues/825))
+* Updated Lithuanian translation
+* Updated Norwegian translation
+* Updated Slovak translation
+
+**Version 1.10.27 TEST**
+
+* Faster startup
+* Modified tri-state check box implementation
+* Improved application icon image quality
+* Allow Android / extra usage data setting without expert mode
+
+**Version 1.10.26 TEST**
+
+* Increase category selector drop down size
+* Display click effect to prevent unintended restriction changes
+* Added half state check box to application details view
+* Updated Arabic translation
+* Updated Polish translation
+* Updated Vietnamese translations
+
+**Version 1.10.25 TEST**
+
+* Display third state for categories not fully restricted ([issue](https://github.com/M66B/XPrivacy/issues/815))
+* Automatically open and scroll to category in application view
+* Updated Chinese translations
+
+**Version 1.10.23 BETA**
+
+* Allow fetching restrictions for system applications per application
+* Do not restrict the [Pro enabler](https://play.google.com/store/apps/details?id=biz.bokhorst.xprivacy.pro) on new install ([issue](https://github.com/M66B/XPrivacy/issues/812))
+* Samsung multi window support ([issue](https://github.com/M66B/XPrivacy/issues/816))
+* Updated Chinese translation
+* Updated Finnish translation
+* Updated Lithuanian translation
+* Updated Polish translation
+
+**Version 1.10.21 BETA**
+
+* Marked all functions in the system category as dangerous, except one
+* Don't return an empty gids list to prevent exception
+* Require [Pro enabler](http://play.google.com/store/apps/details?id=biz.bokhorst.xprivacy.pro) version 1.12
+* Leave randomize button enabled when randomize on boot is enabled, thanks @[jpeg729](https://github.com/jpeg729)
+* Changed title of usage data view
+* Fixed activity history ([issue](https://github.com/M66B/XPrivacy/issues/804))
+
+**Version 1.10.20 TEST**
+
+* Fixed opening usage data from application details ([issue](https://github.com/M66B/XPrivacy/issues/793))
+* Fixed refreshing application list during fetch restrictions
+* Workaround for PAC boot problem ([issue](https://github.com/M66B/XPrivacy/issues/785))
+* Moved selecting accounts to allow to free version
+* Moved settings Android usage data / extra usage data to expert mode
+* Removed dangerous categories, only functions can be dangerous
+* Made *inet*, *media*, *sdcard* dangerous
+* Always highlight dangerous functions ([issue](https://github.com/M66B/XPrivacy/issues/796))
+* Made Xposed Installer a system application
+* Added application name to title of application details view
+* Removed version warning for KitKat
+* Redesigned filters/categories, thanks @[jpeg729](https://github.com/jpeg729)
+* Redesigned settings dialog, thanks @[jpeg729](https://github.com/jpeg729)
+* Small performance improvements
+* Added Finnish translation
+* Updated German translation
+* Updated Chinese translation
+* Updated Lithuanian translation
+
+**Version 1.10.18 TEST**
+
+* Fixed opening wrong settings from notification (again) ([issue](https://github.com/M66B/XPrivacy/issues/777))
+* Draw border around application icon in application details view
+* Option to enable extra usage data ([issue](https://github.com/M66B/XPrivacy/issues/783)) ([issue](https://github.com/M66B/XPrivacy/issues/785)) ([issue](https://github.com/M66B/XPrivacy/issues/786))
+* Updated Arabic translation
+* Updated Chinese translation
+* Updated Slovak translation
+
+**Version 1.10.16 TEST**
+
+* Compatibility with Android 4.4 KitKat ([issue](https://github.com/M66B/XPrivacy/issues/733))
+* Draw border around application icons in main list
+* Updated Arabic translation
+* Updated Chinese translation
+* Updated German translation
+
+**Version 1.10.15 TEST**
+
+* Fixed empty/crashing template
+* Restrict input device descriptor ([issue](https://github.com/M66B/XPrivacy/issues/768))
+
+**Version 1.10.14 TEST**
+
+* Filter on permissions filters functions too ([issue](https://github.com/M66B/XPrivacy/issues/695))
+* Select applications to allow ([issue](https://github.com/M66B/XPrivacy/issues/686))
+* Require [Pro license](http://www.xprivacy.eu/) to allow individual accounts, applications and contacts
+* Build for Android 4.4 KitKat ([issue](https://github.com/M66B/XPrivacy/issues/733))
+* Added expert mode (disables dangerous restrictions) ([issue](https://github.com/M66B/XPrivacy/issues/716)) ([issue](https://github.com/M66B/XPrivacy/issues/724))
+* Updated Chinese translation
+* Updated French translation
+* Updated Lithuanian translation
+* Updated Polish language
+
+**Version 1.10.13 BETA**
+
+* Fixed crash on empty latitude/longitude ([issue](https://github.com/M66B/XPrivacy/issues/755))
+* Option to negate filter on restrictions ([issue](https://github.com/M66B/XPrivacy/issues/754))
+* Option to make XPrivacy device administrator (to prevent unwanted uninstall)
+* Updated Chinese translation
+* Updated Lithuanian translation
+
+**Version 1.10.12 BETA**
+
+* Fixed *java.lang.NoClassDefFoundError: de.robv.android.xposed.XposedHelpers*
+
+**Version 1.10.11 BETA**
+
+* Fixed rare null pointer exception ([issue](https://github.com/M66B/XPrivacy/issues/739))
+* Fixed flickering with black theme
+* Fixed setting global and randomize on boot settings
+* Fixed width settings dialog
+* Require Android 4.0.3 (minimum for Xposed)
+* Added settings for Advertisement ID (including randomization) ([issue](https://github.com/M66B/XPrivacy/issues/738))
+* Added settings for SSID (including randomization) ([issue](https://github.com/M66B/XPrivacy/issues/652))
+* Added setting to disable update notification (per application) ([issue](https://github.com/M66B/XPrivacy/issues/635))
+* Not filtering on restricted will filter on not restricted ([issue](https://github.com/M66B/XPrivacy/issues/682))
+* Option to randomize subscriber ID (IMSI) ([issue](https://github.com/M66B/XPrivacy/issues/690))
+* Added application icons to usage view ([issue](https://github.com/M66B/XPrivacy/issues/693))
+* Added traditional Chinese translation
+* Updated German translation
+* Updated Vietnamese translation
+
+**Version 1.10.8 TEST**
+
+* Fixed import of filter settings
+* Fixed up navigation (again) ([issue](https://github.com/M66B/XPrivacy/issues/681))
+
+**Version 1.10.7 TEST**
+
+* Mark categories dangerous in template
+* Permanently cache XPrivacy version and Android usage settings
+* Do not display number of packages in progress dialog
+* Show location for license file in about dialog
+* Fixed up navigation (again) ([issue](https://github.com/M66B/XPrivacy/issues/681))
+* Auto import pro license file ([issue](https://github.com/M66B/XPrivacy/issues/703))
+* Allow application specific disable of globally set randomization ([issue](https://github.com/M66B/XPrivacy/issues/706))
+* Compatibility with *MultiSimTelephonyManager* ([issue](https://github.com/M66B/XPrivacy/issues/732))
+* Restrict */sys/block/.../cid* and */sys/class/.../cid* ([issue](https://github.com/M66B/XPrivacy/issues/734))
+* Restrict system properties ending with *cid* ([issue](https://github.com/M66B/XPrivacy/issues/734))
+* Updated Slovak translation
+
+**Version 1.10.5 TEST**
+
+* Restrict access to sensors ([issue](https://github.com/M66B/XPrivacy/issues/723))
+* Restrict Google advertising ID ([issue](https://github.com/M66B/XPrivacy/issues/731))
+* Send more usage data and faster
+
+**Version 1.10.4 BETA**
+
+* Added setting to enable Android usage data (default disabled) ([issue](https://github.com/M66B/XPrivacy/issues/694))
+* Randomize settings at boot in separate thread ([issue](https://github.com/M66B/XPrivacy/issues/700))
+* Added dangerous restrictions to template ([issue](https://github.com/M66B/XPrivacy/issues/716), [issue](https://github.com/M66B/XPrivacy/issues/724))
+* Fixed opening correct application settings from notification ([issue](https://github.com/M66B/XPrivacy/issues/717))
+* Do not use current application context ([issue](https://github.com/M66B/XPrivacy/issues/722))
+* Handle all exceptions while processing package events ([issue](https://github.com/M66B/XPrivacy/issues/722))
+* Require Xposed 2.3.1
+* Updated Arabic translation
+* Updated German translation
+* Updated Italian translation
 
 **Version 1.10 stable**
 
@@ -270,7 +671,7 @@ Contributed by [tonymanou](https://github.com/tonymanou): ([pull request](https:
 
 **Version 1.9.2 BETA!**
 
-* Fix fetching function exceptions ([issue](https://github.com/M66B/XPrivacy/issues/515))
+* Fixed fetching function exceptions ([issue](https://github.com/M66B/XPrivacy/issues/515))
 * Updated Czech translation
 * Updated French translation
 * Updated German translation
@@ -428,7 +829,7 @@ Contributed by [tonymanou](https://github.com/tonymanou): ([pull request](https:
 
 **Version 1.7.28 BETA!**
 
-* Export/import selected accounts/contacts *for the same device only* ([pro version](http://www.faircode.eu/xprivacy/) only)
+* Export/import selected accounts/contacts *for the same device only* ([pro version](http://www.xprivacy.eu/) only)
 * Fixed crash while filtering ([issue](https://github.com/M66B/XPrivacy/issues/402))
 * Updated Simplified Chinese translation
 * Updated Slovenian translation
@@ -512,7 +913,7 @@ Contributed by [tonymanou](https://github.com/tonymanou): ([pull request](https:
 **Version 1.7.18 BETA!**
 
 * Option to show usage data from the application details view
-* Fix usage data ([issue](https://github.com/M66B/XPrivacy/issues/364), [issue](https://github.com/M66B/XPrivacy/issues/365))
+* Fixed usage data ([issue](https://github.com/M66B/XPrivacy/issues/364), [issue](https://github.com/M66B/XPrivacy/issues/365))
 * Revert 1.7.16 change
 
 **Version 1.7.17 BETA!**
@@ -802,7 +1203,7 @@ Contributed by [tonymanou](https://github.com/tonymanou): ([pull request](https:
 
 * Split media/sdcard storage restriction (expert only) ([issue](https://github.com/M66B/XPrivacy/issues/125))
 * Move shell restriction out of expert mode, load/Library by default not restricted
-* Move XPrivacy files to the folder .xprivacy ([pro version](http://www.faircode.eu/xprivacy/) only) ([issue](https://github.com/M66B/XPrivacy/issues/27))
+* Move XPrivacy files to the folder .xprivacy ([pro version](http://www.xprivacy.eu/) only) ([issue](https://github.com/M66B/XPrivacy/issues/27))
 * Fake disconnected state for internet restriction ([issue](https://github.com/M66B/XPrivacy/issues/132))
 * Fake unmounted state for storage restriction (external storage only)
 * Fake Google services framework ID, not restricted by default, thanks @[vipere](https://github.com/vipere) ([issue](https://github.com/M66B/XPrivacy/issues/134))
@@ -886,7 +1287,7 @@ Contributed by [tonymanou](https://github.com/tonymanou): ([pull request](https:
 
 **Version 0.35**
 
-* Speed up import ([pro version](http://www.faircode.eu/xprivacy/) only) ([issue](https://github.com/M66B/XPrivacy/issues/70))
+* Speed up import ([pro version](http://www.xprivacy.eu/) only) ([issue](https://github.com/M66B/XPrivacy/issues/70))
 * Remove pro menu when pro version activated
 * Send support information for detected incompatibilities ([issue](https://github.com/M66B/XPrivacy/issues/82), [issue](https://github.com/M66B/XPrivacy/issues/83))
 * Fixed potential account data leak ([issue](https://github.com/M66B/XPrivacy/issues/75))
@@ -905,7 +1306,7 @@ Contributed by [tonymanou](https://github.com/tonymanou): ([pull request](https:
 **Version 0.32**
 
 * Move *Shell* category to expert mode
-* Export/import function restrictions ([pro version](http://www.faircode.eu/xprivacy/) only)
+* Export/import function restrictions ([pro version](http://www.xprivacy.eu/) only)
 * Ongoing notification while exporting/importing
 * Added link to restrictions in help
 * Prevent application details reached from notification to show up in recent
@@ -991,7 +1392,7 @@ Contributed by [tonymanou](https://github.com/tonymanou): ([pull request](https:
 
 * Renamed category *Actions* to *Calling* again
 * Moved opening links to new category *View*
-* Export/import settings, like expert, location (export/import features [pro version](http://www.faircode.eu/xprivacy/) only)
+* Export/import settings, like expert, location (export/import features [pro version](http://www.xprivacy.eu/) only)
 
 **Version 0.21**
 
@@ -1013,7 +1414,7 @@ Contributed by [tonymanou](https://github.com/tonymanou): ([pull request](https:
 **Version 0.18**
 
 * Basic check for updates (manually)
-* Link to [pro version](http://www.faircode.eu/xprivacy/)
+* Link to [pro version](http://www.xprivacy.eu/)
 * Renamed category *Calling* to *Actions* and moved opening browsers links into this category
 
 **Version 0.17**
@@ -1022,7 +1423,7 @@ Contributed by [tonymanou](https://github.com/tonymanou): ([pull request](https:
 * Display system apps in expert mode only
 * Restrict opening links ([issue](https://github.com/M66B/XPrivacy/issues/15))
 * Restrict serial number (system/build properties)
-* Export/import ([issue](https://github.com/M66B/XPrivacy/issues/18)) ([pro version](http://www.faircode.eu/xprivacy/) only)
+* Export/import ([issue](https://github.com/M66B/XPrivacy/issues/18)) ([pro version](http://www.xprivacy.eu/) only)
 
 **Version 0.16**
 

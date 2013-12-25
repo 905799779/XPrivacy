@@ -5,7 +5,7 @@
     <string name="app_wrongandroid">Kun til Android version 4.0+</string>
     <string name="app_version" formatted="false">XPrivacy version: %s (%d)</string>
     <string name="app_xversion" formatted="false">Xposed framework version: %d</string>
-    <string name="app_copyright">Ophavsret \u00A9 2013 M. Bokhorst (M66B)</string>
+    <string name="app_copyright">Ophavsret \u00A9 2013-2014 M. Bokhorst (M66B)</string>
     <string name="menu_usage">Brug</string>
     <string name="menu_refresh">Opdatér</string>
     <string name="menu_settings">Indstillinger</string>
@@ -20,24 +20,37 @@
     <string name="menu_about">Om</string>
     <string name="menu_help">Hjælp</string>
     <string name="menu_all">Alle</string>
+    <string name="menu_restriction_all">Toggle restrictions</string>
+    <string name="menu_clear_all">Clear all</string>
+    <string name="menu_restrict_all">Restrict all</string>
+    <string name="menu_clear_usage">Clear</string>
+    <string name="menu_usage_all">Toggle filter</string>
     <string name="menu_apply">Apply template</string>
     <string name="menu_clear">Ryd</string>
     <string name="menu_app_launch">Kør</string>
     <string name="menu_app_settings">App-indstillinger</string>
     <string name="menu_app_store">Play Store</string>
+    <string name="menu_app_kill">Kill</string>
     <string name="menu_accounts">Vælg konti som skal tillades</string>
+    <string name="menu_applications">Select applications to allow</string>
     <string name="menu_contacts">Vælg kontakter som skal tillades</string>
+    <string name="menu_tutorial">Tutorial</string>
     <string name="msg_new">Ny</string>
     <string name="msg_update">Opdatér</string>
-    <string name="msg_restricted" formatted="false">%s blokeret af XPrivacy</string>
     <string name="msg_licensed" formatted="false">Givet i licens til: %s</string>
     <string name="msg_loading">Indlæser</string>
-    <string name="msg_edit">Klik på app-ikonet for at redigere alle restriktioner</string>
+    <string name="msg_applying">Applying</string>
+    <string name="msg_applied">Template applied</string>
+    <string name="msg_saved_to" formatted="false">Saved to %s</string>
+    <string name="msg_no_restrictions">No restrictions found</string>
     <string name="msg_sure">Er du sikker?</string>
     <string name="msg_done">Udført</string>
     <string name="msg_reboot">Genstart nødvendig</string>
-    <string name="msg_random">Indlæs tilfældige værdier</string>
+    <string name="msg_random_now">Indlæs tilfældige værdier</string>
+    <string name="msg_random_access">Randomize on access</string>
     <string name="msg_random_boot">Indlæs tilfældige værdier ved boot</string>
+    <string name="msg_usage">Updating usage data</string>
+    <string name="msg_restart">Application restart required</string>
     <string name="msg_first"><b>XPrivacy er grundigt udviklet og testet, dog er det umuligt at garantere, at appen fungerer fejlfrit på alle enheder og for alle apps.\n\nBrug af denne app foregår udelukkende på egen risiko.</b>\n\nSe også licensen:</string>
     <string name="restrict_accounts">Konti (Google, Facebook, osv.)</string>
     <string name="restrict_browser">Browser (bogmærker/historik)</string>
@@ -54,16 +67,18 @@
     <string name="restrict_messages">Beskeder (SMS, MMS)</string>
     <string name="restrict_network">Netværk (adresser)</string>
     <string name="restrict_notifications">Meddelelser</string>
+    <string name="restrict_overlay">Overlay</string>
     <string name="restrict_phone">Telefon (ID, numre, opkald)</string>
+    <string name="restrict_sensors">Sensors</string>
     <string name="restrict_storage">Hukommelse (medier, SD-kort)</string>
     <string name="restrict_shell">Shell (kommandoer, superbruger)</string>
     <string name="restrict_system">System (installerede apps)</string>
     <string name="restrict_view">Vis (browser)</string>
-    <string name="title_category">Kategori:</string>
+    <string name="title_categories">Categories</string>
     <string name="title_restrict">Markér for at blokere:</string>
-    <string name="title_nofilter">Intet aktivt filter</string>
+    <string name="title_filters">Filters</string>
 
-    <plurals name="title_filters">
+    <plurals name="title_active_filters">
         <item quantity="one">1 aktivt filter</item>
         <item quantity="other">%d aktive filtre</item>
     </plurals>
@@ -74,6 +89,7 @@
     <string name="title_frestricted">Filter on restricted</string>
     <string name="title_fsystem">Filter on system applications</string>
     <string name="title_fuser">Filter on user applications</string>
+    <string name="title_fnot">Negate</string>
     <string name="settings_serial">Serienummer</string>
     <string name="settings_lat">Breddegrad</string>
     <string name="settings_lon">Længdegrad</string>
@@ -81,16 +97,36 @@
     <string name="settings_ip">IP-adresse</string>
     <string name="settings_phone">Telefonnummer</string>
     <string name="settings_id">Android-ID</string>
+    <string name="settings_adid">Advertisement ID</string>
     <string name="settings_country">Land</string>
     <string name="settings_operator">Operatør</string>
     <string name="settings_subscriber">Abonnent-ID</string>
     <string name="settings_ua">User agent</string>
+    <string name="settings_general">General</string>
+    <string name="settings_fake_data">Fake data</string>
+    <string name="settings_global">Use global fake data</string>
+    <string name="settings_notify">Update notifications</string>
+    <string name="settings_usage">Android usage data (requires restart)</string>
     <string name="settings_log">Debug-log (kræver genstart)</string>
+    <string name="settings_expert">Expert mode</string>
+    <string name="settings_dangerous">Restrict dangerous functions</string>
+    <string name="settings_confidence">Maximum fetch confidence interval</string>
+    <string name="settings_experimental">Experimental functions (requires restart)</string>
     <string name="help_application">App</string>
     <string name="help_internet">har internettilladelse</string>
     <string name="help_granted">har Android-tilladelse</string>
     <string name="help_used">har benyttet denne type data</string>
     <string name="help_frozen">er deaktiveret</string>
     <string name="help_dangerous">er farlig</string>
+    <string name="help_half">partly restricted</string>
+    <string name="help_attention">restrictions need attention</string>
+    <string name="help_restricted">restrictions are changed</string>
+    <string name="help_shared">restrictions are submitted</string>
+    <string name="tutorial_mainheader">Select the category to restrict; choose visible apps with the filters</string>
+    <string name="tutorial_mainlist">Tap a check box to restrict the selected category for an app\n
+\nApps will be fed empty or fake data for restricted categories\n
+\nTap the app icon for detailed restrictions and settings</string>
+    <string name="tutorial_detailsheader">Tap the app icon for more actions</string>
+    <string name="tutorial_detailslist">Tap the down arrow to see the function exceptions of a restriction category</string>
 
 </resources>

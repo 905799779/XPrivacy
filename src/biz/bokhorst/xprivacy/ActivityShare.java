@@ -37,28 +37,35 @@ import org.xml.sax.XMLReader;
 import org.xml.sax.helpers.DefaultHandler;
 import org.xmlpull.v1.XmlSerializer;
 
-import android.app.Activity;
-import android.app.Notification;
-import android.app.NotificationManager;
-import android.app.PendingIntent;
-import android.content.Context;
 import android.content.Intent;
-import android.content.pm.ApplicationInfo;
 import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager.NameNotFoundException;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Environment;
 import android.provider.Settings.Secure;
-import android.support.v4.app.NotificationCompat;
+import android.support.v4.content.LocalBroadcastManager;
 import android.util.Log;
+import android.util.SparseArray;
 import android.util.Xml;
-import android.widget.Toast;
 
 public class ActivityShare extends Activity {
+	private LocalBroadcastManager mBroadcastManager;
+
 	public static final String cFileName = "FileName";
-	public static final String cPackageName = "PackageName";
-	public static final String BASE_URL = "http://updates.faircode.eu/xprivacy";
+	public static final String cUid = "Uid";
+	public static final String cErrorMessage = "ErrorMessage";
+	public static final String BASE_URL = "http://crowd.xprivacy.eu/";
+	public static final String cProgressReport = "ProgressReport";
+	public static final String cProgressMessage = "ProgressMessage";
+	public static final String cProgressValue = "ProgressValue";
+	public static final String cProgressMax = "ProgressMax";
+
+	public static final String ACTION_EXPORT = "biz.bokhorst.xprivacy.action.EXPORT";
+	public static final String ACTION_IMPORT = "biz.bokhorst.xprivacy.action.IMPORT";
+	public static final String ACTION_FETCH = "biz.bokhorst.xprivacy.action.FETCH";
+
+	public static final int TIMEOUT_MILLISEC = 30000;
 
 	private static ExecutorService mExecutor = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors(),
 			new PriorityThreadFactory());
@@ -79,32 +86,29 @@ public class ActivityShare extends Activity {
 		if (Util.hasProLicense(this) != null) {
 			Bundle extras = getIntent().getExtras();
 
+			mBroadcastManager = LocalBroadcastManager.getInstance(this);
+
 			// Import
-			if (getIntent().getAction().equals("biz.bokhorst.xprivacy.action.IMPORT")) {
+			if (getIntent().getAction().equals(ACTION_IMPORT)) {
 				String fileName = (extras.containsKey(cFileName) ? extras.getString(cFileName) : getFileName(false));
 				ImportTask importTask = new ImportTask();
 				importTask.executeOnExecutor(mExecutor, new File(fileName));
 			}
 
 			// Export
-			if (getIntent().getAction().equals("biz.bokhorst.xprivacy.action.EXPORT")) {
+			if (getIntent().getAction().equals(ACTION_EXPORT)) {
 				String fileName = (extras.containsKey(cFileName) ? extras.getString(cFileName) : getFileName(false));
 				ExportTask exportTask = new ExportTask();
 				exportTask.executeOnExecutor(mExecutor, new File(fileName));
 			}
 
 			// Fetch
-			if (getIntent().getAction().equals("biz.bokhorst.xprivacy.action.FETCH")) {
-				if (extras != null && extras.containsKey(cPackageName)) {
-					FetchTask fetchTask = new FetchTask();
-					fetchTask.executeOnExecutor(mExecutor, extras.getString(cPackageName));
-				} else {
-					for (ApplicationInfo aInfo : getPackageManager().getInstalledApplications(0))
-						if ((aInfo.flags & (ApplicationInfo.FLAG_SYSTEM | ApplicationInfo.FLAG_UPDATED_SYSTEM_APP)) == 0) {
-							FetchTask fetchTask = new FetchTask();
-							fetchTask.executeOnExecutor(mExecutor, aInfo.packageName);
-						}
-				}
+			if (getIntent().getAction().equals(ACTION_FETCH)) {
+				int uid = 0;
+				if (extras != null && extras.containsKey(cUid))
+					uid = extras.getInt(cUid);
+				FetchTask fetchTask = new FetchTask();
+				fetchTask.executeOnExecutor(mExecutor, uid);
 			}
 		}
 	}
@@ -113,7 +117,7 @@ public class ActivityShare extends Activity {
 
 	private class ExportTask extends AsyncTask<File, String, String> {
 		private File mFile;
-		private final static int NOTIFY_ID = 1;
+		private int mProgressCurrent = 0;
 
 		@Override
 		protected String doInBackground(File... params) {
@@ -130,57 +134,80 @@ public class ActivityShare extends Activity {
 					serializer.setFeature("http://xmlpull.org/v1/doc/features.html#indent-output", true);
 					serializer.startTag(null, "XPrivacy");
 
-					// Process settings
-					publishProgress(getString(R.string.menu_settings));
+					// Progress
+					publishProgress(getString(R.string.msg_loading));
 					Util.log(null, Log.INFO, "Exporting settings");
+					Runnable progress = new Runnable() {
+						@Override
+						public void run() {
+							// This should be called exactly 100 times
+							publishProgress(getString(R.string.msg_loading), Integer.toString(++mProgressCurrent),
+									"100");
+						}
+					};
 
+					// Process packages
+					for (PackageInfo pInfo : getPackageManager().getInstalledPackages(0)) {
+						serializer.startTag(null, "PackageInfo");
+						serializer.attribute(null, "Id", Integer.toString(pInfo.applicationInfo.uid));
+						serializer.attribute(null, "Name", pInfo.packageName);
+						serializer.endTag(null, "PackageInfo");
+					}
+
+					// Process settings
 					String android_id = Secure.getString(getContentResolver(), Secure.ANDROID_ID);
-					Map<String, String> mapSetting = PrivacyManager.getSettings(ActivityShare.this);
-					for (String setting : mapSetting.keySet()) {
-						String value = mapSetting.get(setting);
+					Map<String, String> mapSetting = PrivacyManager.getSettings(ActivityShare.this, progress);
+					for (String name : mapSetting.keySet()) {
+						// Decode name
+						String[] component = name.split("\\.");
 
-						// Bound accounts/contacts to same device
-						if (setting.startsWith("Account.") || setting.startsWith("Contact.")
-								|| setting.startsWith("RawContact.")) {
-							setting += "." + android_id;
+						// Template
+						if (component[0].equals(PrivacyManager.cSettingTemplate))
+							component = new String[] { name };
+
+						// Get id
+						int id = -1;
+						try {
+							if (component.length == 2)
+								id = Integer.parseInt(component[1]);
+						} catch (NumberFormatException ex) {
+							Util.bug(null, ex);
 						}
 
-						// Serialize setting
-						serializer.startTag(null, "Setting");
-						serializer.attribute(null, "Name", setting);
-						serializer.attribute(null, "Value", value);
-						serializer.endTag(null, "Setting");
+						if ((component.length == 2 && id < 0) || component.length > 2)
+							Util.log(null, Log.WARN, "Legacy name=" + name + " value=" + mapSetting.get(name));
+						else {
+							// Bind accounts/contacts to same device
+							if (component[0].startsWith("Account.") || component[0].startsWith("Contact.")
+									|| component[0].startsWith("RawContact.")) {
+								component[0] += "." + android_id;
+							}
+
+							// Serialize setting
+							serializer.startTag(null, "Setting");
+							serializer.attribute(null, "Id", id >= 0 ? component[1] : "");
+							serializer.attribute(null, "Name", component[0]);
+							serializer.attribute(null, "Value", mapSetting.get(name));
+							serializer.endTag(null, "Setting");
+						}
 					}
 
 					// Process restrictions
-					List<PrivacyManager.RestrictionDesc> listRestriction = PrivacyManager
-							.getRestricted(ActivityShare.this);
-					Map<String, List<PrivacyManager.RestrictionDesc>> mapRestriction = new HashMap<String, List<PrivacyManager.RestrictionDesc>>();
-					for (PrivacyManager.RestrictionDesc restriction : listRestriction) {
-						String[] packages = getPackageManager().getPackagesForUid(restriction.uid);
-						if (packages == null)
-							Util.log(null, Log.WARN, "No packages for uid=" + restriction.uid);
-						else
-							for (String packageName : packages) {
-								if (!mapRestriction.containsKey(packageName))
-									mapRestriction.put(packageName, new ArrayList<PrivacyManager.RestrictionDesc>());
-								mapRestriction.get(packageName).add(restriction);
-							}
-					}
+					List<PrivacyManager.RestrictionDesc> listRestriction = PrivacyManager.getRestricted(
+							ActivityShare.this, progress);
 
-					// Process result
-					for (String packageName : mapRestriction.keySet()) {
-						publishProgress(packageName);
-						Util.log(null, Log.INFO, "Exporting " + packageName);
-						for (PrivacyManager.RestrictionDesc restrictionDesc : mapRestriction.get(packageName)) {
-							serializer.startTag(null, "Package");
-							serializer.attribute(null, "Name", packageName);
-							serializer.attribute(null, "Restriction", restrictionDesc.restrictionName);
-							if (restrictionDesc.methodName != null)
-								serializer.attribute(null, "Method", restrictionDesc.methodName);
-							serializer.attribute(null, "Restricted", Boolean.toString(restrictionDesc.restricted));
-							serializer.endTag(null, "Package");
-						}
+					mProgressCurrent = 0;
+					for (PrivacyManager.RestrictionDesc restrictionDesc : listRestriction) {
+						if ((++mProgressCurrent % (listRestriction.size() / 10 + 1)) == 0)
+							publishProgress(getString(R.string.menu_export), Integer.toString(mProgressCurrent),
+									Integer.toString(listRestriction.size()));
+						serializer.startTag(null, "Restriction");
+						serializer.attribute(null, "Id", Integer.toString(restrictionDesc.uid));
+						serializer.attribute(null, "Name", restrictionDesc.restrictionName);
+						if (restrictionDesc.methodName != null)
+							serializer.attribute(null, "Method", restrictionDesc.methodName);
+						serializer.attribute(null, "Restricted", Boolean.toString(restrictionDesc.restricted));
+						serializer.endTag(null, "Restriction");
 					}
 
 					// End serialization
@@ -193,63 +220,51 @@ public class ActivityShare extends Activity {
 
 				// Display message
 				Util.log(null, Log.INFO, "Exporting finished");
-				return getString(R.string.msg_done);
+				return null;
 			} catch (Throwable ex) {
 				Util.bug(null, ex);
-				return ex.toString();
+				return ex.getMessage();
 			}
 		}
 
 		@Override
 		protected void onProgressUpdate(String... values) {
-			notify(values[0], true);
+			int progress = 0;
+			int max = 1;
+			if (values.length > 2) {
+				progress = Integer.parseInt(values[1]);
+				max = Integer.parseInt(values[2]);
+			}
+			notify(values[0], true, progress, max);
 			super.onProgressUpdate(values);
 		}
 
 		@Override
 		protected void onPostExecute(String result) {
-			notify(result, false);
+			notify(result == null ? getString(R.string.msg_done) : null, false, 0, 1);
+
 			Intent intent = new Intent();
 			intent.putExtra(cFileName, mFile.getAbsolutePath());
-			setResult(result.equals(getString(R.string.msg_done)) ? 0 : 1, intent);
+			intent.putExtra(cErrorMessage, result);
+			setResult(result == null ? 0 : 1, intent);
 			finish();
-
-			Toast toast = Toast.makeText(ActivityShare.this, mFile.getAbsolutePath(), Toast.LENGTH_LONG);
-			toast.show();
 			super.onPostExecute(result);
 		}
 
-		private void notify(String text, boolean ongoing) {
-			NotificationCompat.Builder notificationBuilder = new NotificationCompat.Builder(ActivityShare.this);
-			notificationBuilder.setSmallIcon(R.drawable.ic_launcher);
-			notificationBuilder.setContentTitle(getString(R.string.menu_export));
-			notificationBuilder.setContentText(text);
-			notificationBuilder.setWhen(System.currentTimeMillis());
-			if (ongoing)
-				notificationBuilder.setOngoing(true);
-			else {
-				// Build result intent
-				Intent resultIntent = new Intent(ActivityShare.this, ActivityMain.class);
-				resultIntent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-
-				// Build pending intent
-				PendingIntent pendingIntent = PendingIntent.getActivity(ActivityShare.this, NOTIFY_ID, resultIntent,
-						PendingIntent.FLAG_UPDATE_CURRENT);
-
-				notificationBuilder.setAutoCancel(true);
-				notificationBuilder.setContentIntent(pendingIntent);
-			}
-			Notification notification = notificationBuilder.build();
-
-			NotificationManager notificationManager = (NotificationManager) ActivityShare.this
-					.getSystemService(Context.NOTIFICATION_SERVICE);
-			notificationManager.notify(NOTIFY_ID, notification);
+		private void notify(String text, boolean ongoing, int progress, int max) {
+			// Send progress info to main activity
+			Intent progressIntent = new Intent(cProgressReport);
+			progressIntent.putExtra(cProgressMessage, String.format("%s: %s", getString(R.string.menu_export), text));
+			progressIntent.putExtra(cProgressMax, max);
+			progressIntent.putExtra(cProgressValue, progress);
+			mBroadcastManager.sendBroadcast(progressIntent);
 		}
 	}
 
 	private class ImportTask extends AsyncTask<File, String, String> {
 		private File mFile;
-		private final static int NOTIFY_ID = 2;
+		private int mProgressMax;
+		private int mProgressCurrent;
 
 		@Override
 		protected String doInBackground(File... params) {
@@ -272,10 +287,15 @@ public class ActivityShare extends Activity {
 						fis.close();
 				}
 
-				// Process result
+				// Progress
+				mProgressMax = mapPackage.size();
+				mProgressCurrent = 0;
+
+				// Process result (legacy)
 				for (String packageName : mapPackage.keySet()) {
+					mProgressCurrent++;
 					try {
-						publishProgress(packageName);
+						publishProgress(packageName, Integer.toString(mProgressCurrent));
 						Util.log(null, Log.INFO, "Importing " + packageName);
 
 						// Get uid
@@ -298,94 +318,144 @@ public class ActivityShare extends Activity {
 
 				// Display message
 				Util.log(null, Log.INFO, "Importing finished");
-				return getString(R.string.msg_done);
+				return null;
 			} catch (Throwable ex) {
 				Util.bug(null, ex);
-				return ex.toString();
+				return ex.getMessage();
 			}
 		}
 
 		@Override
 		protected void onProgressUpdate(String... values) {
-			notify(values[0], true);
+			int progress = 0;
+			if (values.length > 1)
+				progress = Integer.parseInt(values[1]);
+			notify(values[0], true, progress);
 			super.onProgressUpdate(values);
 		}
 
 		@Override
 		protected void onPostExecute(String result) {
-			notify(result, false);
+			notify(result == null ? getString(R.string.msg_done) : result, false, 0);
+
 			Intent intent = new Intent();
 			intent.putExtra(cFileName, mFile.getAbsolutePath());
-			setResult(result.equals(getString(R.string.msg_done)) ? 0 : 1, intent);
+			intent.putExtra(cErrorMessage, result);
+			setResult(result == null ? 0 : 1, intent);
 			finish();
 			super.onPostExecute(result);
 		}
 
-		private void notify(String text, boolean ongoing) {
-			NotificationCompat.Builder notificationBuilder = new NotificationCompat.Builder(ActivityShare.this);
-			notificationBuilder.setSmallIcon(R.drawable.ic_launcher);
-			notificationBuilder.setContentTitle(getString(R.string.menu_import));
-			notificationBuilder.setContentText(text);
-			notificationBuilder.setWhen(System.currentTimeMillis());
-			if (ongoing)
-				notificationBuilder.setOngoing(true);
-			else {
-				// Build result intent
-				Intent resultIntent = new Intent(ActivityShare.this, ActivityMain.class);
-				resultIntent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-
-				// Build pending intent
-				PendingIntent pendingIntent = PendingIntent.getActivity(ActivityShare.this, NOTIFY_ID, resultIntent,
-						PendingIntent.FLAG_UPDATE_CURRENT);
-
-				notificationBuilder.setAutoCancel(true);
-				notificationBuilder.setContentIntent(pendingIntent);
-			}
-			Notification notification = notificationBuilder.build();
-
-			NotificationManager notificationManager = (NotificationManager) ActivityShare.this
-					.getSystemService(Context.NOTIFICATION_SERVICE);
-			notificationManager.notify(NOTIFY_ID, notification);
+		private void notify(String text, boolean ongoing, int progress) {
+			// Send progress info to main activity
+			Intent progressIntent = new Intent(cProgressReport);
+			progressIntent.putExtra(cProgressMessage, String.format("%s: %s", getString(R.string.menu_import), text));
+			progressIntent.putExtra(cProgressMax, mProgressMax);
+			progressIntent.putExtra(cProgressValue, progress);
+			mBroadcastManager.sendBroadcast(progressIntent);
 		}
 	}
 
 	private class ImportHandler extends DefaultHandler {
+		private SparseArray<String> mMapId = new SparseArray<String>();
+		private Map<String, Integer> mMapUid = new HashMap<String, Integer>();
 		private Map<String, Map<String, List<MethodDescription>>> mMapPackage = new HashMap<String, Map<String, List<MethodDescription>>>();
 		private String android_id = Secure.getString(getContentResolver(), Secure.ANDROID_ID);
+		private int mProgress = 0;
+		private int mCurrent = 0;
 
 		@Override
 		public void startElement(String uri, String localName, String qName, Attributes attributes) throws SAXException {
-			if (qName.equals("Setting")) {
-				// Setting
-				String setting = attributes.getValue("Name");
-				String value = attributes.getValue("Value");
+			try {
+				if (qName.equals("XPrivacy")) {
+					// Ignore
+					mProgress = 0;
+				} else if (qName.equals("PackageInfo")) {
+					// Package info
+					int id = Integer.parseInt(attributes.getValue("Id"));
+					String name = attributes.getValue("Name");
+					mMapId.put(id, name);
+				} else if (qName.equals("Setting")) {
+					// Setting
+					String id = attributes.getValue("Id");
+					String name = attributes.getValue("Name");
+					String value = attributes.getValue("Value");
 
-				// Import accounts/contacts only for same device
-				if (setting.startsWith("Account.") || setting.startsWith("Contact.")
-						|| setting.startsWith("RawContact."))
-					if (setting.endsWith("." + android_id))
-						setting = setting.replace("." + android_id, "");
-					else
-						return;
+					// Import accounts/contacts only for same device
+					if (name.startsWith("Account.") || name.startsWith("Contact.") || name.startsWith("RawContact."))
+						if (name.endsWith("." + android_id))
+							name = name.replace("." + android_id, "");
+						else
+							return;
 
-				PrivacyManager.setSetting(null, ActivityShare.this, 0, setting, value);
-			} else if (qName.equals("Package")) {
-				// Restriction
-				String packageName = attributes.getValue("Name");
-				String restrictionName = attributes.getValue("Restriction");
-				String methodName = attributes.getValue("Method");
-				boolean restricted = Boolean.parseBoolean(attributes.getValue("Restricted"));
+					if (id == null) { // Legacy
+						Util.log(null, Log.WARN, "Legacy " + name + "=" + value);
+						PrivacyManager.setSetting(null, ActivityShare.this, 0, name, value);
+					} else if ("".equals(id)) // Global setting
+						PrivacyManager.setSetting(null, ActivityShare.this, 0, name, value);
+					else { // Application setting
+						int uid = getUid(Integer.parseInt(id));
+						if (uid >= 0)
+							PrivacyManager.setSetting(null, ActivityShare.this, uid, name, value);
+					}
+				} else if (qName.equals("Package")) {
+					// Restriction (legacy)
+					String packageName = attributes.getValue("Name");
+					String restrictionName = attributes.getValue("Restriction");
+					String methodName = attributes.getValue("Method");
+					boolean restricted = Boolean.parseBoolean(attributes.getValue("Restricted"));
+					Util.log(null, Log.WARN, "Legacy package=" + packageName + " " + restrictionName + "/" + methodName
+							+ "=" + restricted);
 
-				// Map package restriction
-				if (!mMapPackage.containsKey(packageName))
-					mMapPackage.put(packageName, new HashMap<String, List<MethodDescription>>());
-				if (!mMapPackage.get(packageName).containsKey(restrictionName))
-					mMapPackage.get(packageName).put(restrictionName, new ArrayList<MethodDescription>());
-				if (methodName != null) {
-					MethodDescription md = new MethodDescription(methodName, restricted);
-					mMapPackage.get(packageName).get(restrictionName).add(md);
-				}
+					// Map package restriction
+					if (!mMapPackage.containsKey(packageName))
+						mMapPackage.put(packageName, new HashMap<String, List<MethodDescription>>());
+					if (!mMapPackage.get(packageName).containsKey(restrictionName))
+						mMapPackage.get(packageName).put(restrictionName, new ArrayList<MethodDescription>());
+					if (methodName != null) {
+						MethodDescription md = new MethodDescription(methodName, restricted);
+						mMapPackage.get(packageName).get(restrictionName).add(md);
+					}
+				} else if (qName.equals("Restriction")) {
+					// Restriction (new style)
+					int id = Integer.parseInt(attributes.getValue("Id"));
+					String restrictionName = attributes.getValue("Name");
+					String methodName = attributes.getValue("Method");
+					boolean restricted = Boolean.parseBoolean(attributes.getValue("Restricted"));
+
+					// Progress report
+					if (id != mCurrent) {
+						mCurrent = id;
+						reportProgress();
+					}
+
+					// Get uid
+					int uid = getUid(id);
+					if (uid >= 0)
+						PrivacyManager.setRestricted(null, ActivityShare.this, uid, restrictionName, methodName,
+								restricted);
+				} else
+					Util.log(null, Log.ERROR, "Unknown element name=" + qName);
+			} catch (Throwable ex) {
+				Util.bug(null, ex);
 			}
+		}
+
+		private int getUid(int id) {
+			String packageName = mMapId.get(id);
+			if (packageName == null) {
+				Util.log(null, Log.WARN, "Unknown id=" + id);
+				return -1;
+			} else if (!mMapUid.containsKey(packageName))
+				try {
+					int newuid = ActivityShare.this.getPackageManager().getPackageInfo(packageName, 0).applicationInfo.uid;
+					mMapUid.put(packageName, newuid);
+				} catch (NameNotFoundException ex) {
+					// Do not lookup again
+					mMapUid.put(packageName, -1);
+					Util.log(null, Log.WARN, "Unknown package name=" + packageName);
+				}
+			return (mMapUid.containsKey(packageName) ? mMapUid.get(packageName) : -1);
 		}
 
 		public Map<String, Map<String, List<MethodDescription>>> getPackageMap() {
@@ -409,137 +479,162 @@ public class ActivityShare extends Activity {
 				return mRestricted;
 			}
 		}
+
+		private void reportProgress() {
+			// Send progress info to main activity
+			Intent progressIntent = new Intent(cProgressReport);
+			progressIntent.putExtra(cProgressMessage,
+					String.format("%s: %s", getString(R.string.menu_import), mMapId.get(mCurrent)));
+			progressIntent.putExtra(cProgressMax, mMapId.size());
+			progressIntent.putExtra(cProgressValue, ++mProgress);
+			mBroadcastManager.sendBroadcast(progressIntent);
+		}
 	}
 
-	private class FetchTask extends AsyncTask<String, String, Object> {
-		private ApplicationInfoEx mAppInfo;
-		private final static int NOTIFY_ID = 3;
+	private class FetchTask extends AsyncTask<Integer, String, String> {
+		private int mProgressMax;
+		private int mProgressCurrent;
 
 		@Override
-		protected Object doInBackground(String... params) {
+		protected String doInBackground(Integer... params) {
 			try {
 				// Get data
-				publishProgress(params[0]);
-				mAppInfo = new ApplicationInfoEx(ActivityShare.this, params[0]);
-				PackageInfo pInfo = getPackageManager().getPackageInfo(getPackageName(), 0);
-				String android_id = Secure.getString(ActivityShare.this.getContentResolver(), Secure.ANDROID_ID);
-				String[] license = Util.getLicense();
-
-				// Encode package
-				JSONObject jRoot = new JSONObject();
-				jRoot.put("protocol_version", 3);
-				jRoot.put("android_id", android_id);
-				jRoot.put("android_sdk", Build.VERSION.SDK_INT);
-				jRoot.put("xprivacy_version", pInfo.versionCode);
-				jRoot.put("application_name", mAppInfo.getFirstApplicationName());
-				jRoot.put("package_name", mAppInfo.getPackageName());
-				jRoot.put("package_version", mAppInfo.getVersion());
-				jRoot.put("email", license[1]);
-				jRoot.put("signature", license[2]);
-
-				// Fetch
-				int TIMEOUT_MILLISEC = 45000; // 45 seconds
-				HttpParams httpParams = new BasicHttpParams();
-				HttpConnectionParams.setConnectionTimeout(httpParams, TIMEOUT_MILLISEC);
-				HttpConnectionParams.setSoTimeout(httpParams, TIMEOUT_MILLISEC);
-				HttpClient httpclient = new DefaultHttpClient(httpParams);
-
-				HttpPost httpost = new HttpPost(BASE_URL + "?format=json&action=fetch");
-				httpost.setEntity(new ByteArrayEntity(jRoot.toString().getBytes("UTF-8")));
-				httpost.setHeader("Accept", "application/json");
-				httpost.setHeader("Content-type", "application/json");
-				HttpResponse response = httpclient.execute(httpost);
-				StatusLine statusLine = response.getStatusLine();
-
-				if (statusLine.getStatusCode() == HttpStatus.SC_OK) {
-					// Succeeded
-					ByteArrayOutputStream out = new ByteArrayOutputStream();
-					response.getEntity().writeTo(out);
-					out.close();
-					return new JSONObject(out.toString("UTF-8"));
-				} else {
-					// Failed
-					response.getEntity().getContent().close();
-					throw new IOException(statusLine.getReasonPhrase());
+				List<ApplicationInfoEx> lstApp;
+				if (params[0] == 0)
+					lstApp = ApplicationInfoEx.getXApplicationList(ActivityShare.this, null);
+				else {
+					lstApp = new ArrayList<ApplicationInfoEx>();
+					lstApp.add(new ApplicationInfoEx(ActivityShare.this, params[0]));
 				}
+				String android_id = Secure.getString(ActivityShare.this.getContentResolver(), Secure.ANDROID_ID);
+				String[] license = Util.getProLicense();
+				PackageInfo pXPrivacyInfo = getPackageManager().getPackageInfo(getPackageName(), 0);
+
+				String confidence = PrivacyManager.getSetting(null, ActivityShare.this, 0,
+						PrivacyManager.cSettingConfidence, "", false);
+
+				// Set some numbers for the progress bar
+				mProgressMax = lstApp.size();
+				mProgressCurrent = 0;
+
+				// Process applications
+				for (ApplicationInfoEx appInfo : lstApp) {
+					mProgressCurrent++;
+					if (!appInfo.isSystem() || params[0] != null) {
+						publishProgress(appInfo.getPackageName().get(0), Integer.toString(mProgressCurrent));
+
+						JSONArray appName = new JSONArray();
+						for (String name : appInfo.getApplicationName())
+							appName.put(name);
+
+						JSONArray pkgName = new JSONArray();
+						for (String name : appInfo.getPackageName())
+							pkgName.put(name);
+
+						JSONArray pkgVersion = new JSONArray();
+						for (String version : appInfo.getPackageVersionName(ActivityShare.this))
+							pkgVersion.put(version);
+
+						// Encode package
+						JSONObject jRoot = new JSONObject();
+						jRoot.put("protocol_version", 3);
+						jRoot.put("android_id", android_id);
+						jRoot.put("android_sdk", Build.VERSION.SDK_INT);
+						jRoot.put("xprivacy_version", pXPrivacyInfo.versionCode);
+						jRoot.put("application_name", appName);
+						jRoot.put("package_name", pkgName);
+						jRoot.put("package_version", pkgVersion);
+						jRoot.put("email", license[1]);
+						jRoot.put("signature", license[2]);
+						jRoot.put("confidence", confidence);
+
+						// Fetch
+						HttpParams httpParams = new BasicHttpParams();
+						HttpConnectionParams.setConnectionTimeout(httpParams, TIMEOUT_MILLISEC);
+						HttpConnectionParams.setSoTimeout(httpParams, TIMEOUT_MILLISEC);
+						HttpClient httpclient = new DefaultHttpClient(httpParams);
+
+						HttpPost httpost = new HttpPost(BASE_URL + "?format=json&action=fetch");
+						httpost.setEntity(new ByteArrayEntity(jRoot.toString().getBytes("UTF-8")));
+						httpost.setHeader("Accept", "application/json");
+						httpost.setHeader("Content-type", "application/json");
+						HttpResponse response = httpclient.execute(httpost);
+						StatusLine statusLine = response.getStatusLine();
+
+						if (statusLine.getStatusCode() == HttpStatus.SC_OK) {
+							// Succeeded
+							ByteArrayOutputStream out = new ByteArrayOutputStream();
+							response.getEntity().writeTo(out);
+							out.close();
+
+							// Deserialize
+							JSONObject status = new JSONObject(out.toString("UTF-8"));
+							if (status.getBoolean("ok")) {
+								JSONArray settings = status.getJSONArray("settings");
+								if (settings.length() > 0) {
+									// Delete existing restrictions
+									PrivacyManager.deleteRestrictions(ActivityShare.this, appInfo.getUid());
+
+									// Set fetched restrictions
+									for (int i = 0; i < settings.length(); i++) {
+										JSONObject entry = settings.getJSONObject(i);
+										String restrictionName = entry.getString("restriction");
+										String methodName = entry.has("method") ? entry.getString("method") : null;
+										int voted_restricted = entry.getInt("restricted");
+										int voted_not_restricted = entry.getInt("not_restricted");
+										boolean restricted = (voted_restricted > voted_not_restricted);
+										if (methodName == null || restricted)
+											if (methodName == null
+													|| PrivacyManager.getMethod(restrictionName, methodName) != null)
+												PrivacyManager.setRestricted(null, ActivityShare.this,
+														appInfo.getUid(), restrictionName, methodName, restricted);
+									}
+								} else
+									publishProgress(getString(R.string.msg_no_restrictions),
+											Integer.toString(mProgressCurrent));
+							} else
+								throw new Exception(status.getString("error"));
+						} else {
+							// Failed
+							response.getEntity().getContent().close();
+							throw new IOException(statusLine.getReasonPhrase());
+						}
+					}
+				}
+				return null;
 			} catch (Throwable ex) {
 				Util.bug(null, ex);
-				return ex;
+				return ex.getMessage();
 			}
 		}
 
 		@Override
 		protected void onProgressUpdate(String... values) {
-			notify(values[0], true);
+			int progress = 0;
+			if (values.length > 1)
+				progress = Integer.parseInt(values[1]);
+			notify(values[0], true, progress);
 			super.onProgressUpdate(values);
 		}
 
 		@Override
-		protected void onPostExecute(Object result) {
-			try {
-				if (result.getClass().equals(JSONObject.class)) {
-					JSONObject status = (JSONObject) result;
-					if (status.getBoolean("ok")) {
-						JSONArray settings = status.getJSONArray("settings");
-						if (settings.length() > 0) {
-							// Delete existing restrictions
-							PrivacyManager.deleteRestrictions(ActivityShare.this, mAppInfo.getUid());
-
-							// Set fetched restrictions
-							for (int i = 0; i < settings.length(); i++) {
-								JSONObject entry = settings.getJSONObject(i);
-								String restrictionName = entry.getString("restriction");
-								String methodName = entry.has("method") ? entry.getString("method") : null;
-								int voted_restricted = entry.getInt("restricted");
-								int voted_not_restricted = entry.getInt("not_restricted");
-								boolean restricted = (voted_restricted > voted_not_restricted);
-								if (methodName == null || restricted)
-									PrivacyManager.setRestricted(null, ActivityShare.this, mAppInfo.getUid(),
-											restrictionName, methodName, restricted);
-							}
-						} else
-							Util.log(null, Log.INFO, "No restrictions available");
-						notify(getString(R.string.msg_done), false);
-					} else
-						throw new Exception(status.getString("error"));
-				} else
-					throw (Throwable) result;
-			} catch (Throwable ex) {
-				Util.bug(null, ex);
-				notify(ex.toString(), false);
-			}
+		protected void onPostExecute(String result) {
+			notify(result == null ? getString(R.string.msg_done) : result, false, 0);
 
 			Intent intent = new Intent();
-			setResult(0, intent);
+			intent.putExtra(cErrorMessage, result);
+			setResult(result == null ? 0 : 1, intent);
 			finish();
 			super.onPostExecute(result);
 		}
 
-		private void notify(String text, boolean ongoing) {
-			NotificationCompat.Builder notificationBuilder = new NotificationCompat.Builder(ActivityShare.this);
-			notificationBuilder.setSmallIcon(R.drawable.ic_launcher);
-			notificationBuilder.setContentTitle(getString(R.string.menu_fetch));
-			notificationBuilder.setContentText(text);
-			notificationBuilder.setWhen(System.currentTimeMillis());
-			if (ongoing)
-				notificationBuilder.setOngoing(true);
-			else {
-				// Build result intent
-				Intent resultIntent = new Intent(ActivityShare.this, ActivityMain.class);
-				resultIntent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-
-				// Build pending intent
-				PendingIntent pendingIntent = PendingIntent.getActivity(ActivityShare.this, NOTIFY_ID, resultIntent,
-						PendingIntent.FLAG_UPDATE_CURRENT);
-
-				notificationBuilder.setAutoCancel(true);
-				notificationBuilder.setContentIntent(pendingIntent);
-			}
-			Notification notification = notificationBuilder.build();
-
-			NotificationManager notificationManager = (NotificationManager) ActivityShare.this
-					.getSystemService(Context.NOTIFICATION_SERVICE);
-			notificationManager.notify(NOTIFY_ID, notification);
+		private void notify(String text, boolean ongoing, int progress) {
+			// Send progress info to main activity
+			Intent progressIntent = new Intent(cProgressReport);
+			progressIntent.putExtra(cProgressMessage, String.format("%s: %s", getString(R.string.menu_fetch), text));
+			progressIntent.putExtra(cProgressMax, mProgressMax);
+			progressIntent.putExtra(cProgressValue, progress);
+			mBroadcastManager.sendBroadcast(progressIntent);
 		}
 	}
 
@@ -557,5 +652,4 @@ public class ActivityShare extends Activity {
 			fileName = "XPrivacy.xml";
 		return new File(folder + File.separator + fileName).getAbsolutePath();
 	}
-
 }
