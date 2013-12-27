@@ -36,7 +36,6 @@ import android.database.Cursor;
 import android.location.Location;
 import android.os.Binder;
 import android.os.Build;
-import android.os.Environment;
 import android.os.Process;
 import android.os.SystemClock;
 import android.util.Log;
@@ -140,9 +139,7 @@ public class PrivacyManager {
 	static {
 		// Scan meta data
 		try {
-			String packageName = PrivacyManager.class.getPackage().getName();
-			File in = new File(Environment.getDataDirectory() + File.separator + "data" + File.separator + packageName
-					+ File.separator + "meta.xml");
+			File in = new File(Util.getUserDataDirectory() + File.separator + "meta.xml");
 			Util.log(null, Log.INFO, "Reading meta=" + in.getAbsolutePath());
 			FileInputStream fis = null;
 			try {
@@ -172,7 +169,7 @@ public class PrivacyManager {
 				String dangerous = attributes.getValue("dangerous");
 				String restart = attributes.getValue("restart");
 				String permissions = attributes.getValue("permissions");
-				int sdk = Integer.parseInt(attributes.getValue("sdk"));
+				int sdk = (attributes.getValue("sdk") == null ? 0 : Integer.parseInt(attributes.getValue("sdk")));
 
 				// Add meta data
 				if (Build.VERSION.SDK_INT >= sdk) {
@@ -218,9 +215,12 @@ public class PrivacyManager {
 	}
 
 	public static MethodDescription getMethod(String restrictionName, String methodName) {
-		MethodDescription md = new MethodDescription(restrictionName, methodName);
-		int pos = mMethod.get(restrictionName).indexOf(md);
-		return (pos < 0 ? null : mMethod.get(restrictionName).get(pos));
+		if (mMethod.containsKey(restrictionName)) {
+			MethodDescription md = new MethodDescription(restrictionName, methodName);
+			int pos = mMethod.get(restrictionName).indexOf(md);
+			return (pos < 0 ? null : mMethod.get(restrictionName).get(pos));
+		} else
+			return null;
 	}
 
 	public static String getLocalizedName(Context context, String restrictionName) {
@@ -396,14 +396,17 @@ public class PrivacyManager {
 	public static final int LAST_SHARED_APPLICATION_GID = 59999;
 
 	public static boolean isApplication(int uid) {
+		uid = Util.getAppId(uid);
 		return (uid >= Process.FIRST_APPLICATION_UID && uid <= Process.LAST_APPLICATION_UID);
 	}
 
 	public static boolean isShared(int uid) {
+		uid = Util.getAppId(uid);
 		return (uid >= FIRST_SHARED_APPLICATION_GID && uid <= LAST_SHARED_APPLICATION_GID);
 	}
 
 	public static boolean isIsolated(int uid) {
+		uid = Util.getAppId(uid);
 		return (uid >= FIRST_ISOLATED_UID && uid <= LAST_ISOLATED_UID);
 	}
 
@@ -417,7 +420,7 @@ public class PrivacyManager {
 		if (isIsolated(Process.myUid()))
 			return false;
 
-		if (Process.myUid() == cAndroidUid)
+		if (Util.getAppId(Process.myUid()) == cAndroidUid)
 			if (!PrivacyManager.getSettingBool(null, null, 0, PrivacyManager.cSettingAndroidUsage, false, false))
 				return false;
 

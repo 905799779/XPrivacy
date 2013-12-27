@@ -8,6 +8,7 @@ import java.util.List;
 
 import android.content.Context;
 import android.os.Binder;
+import android.os.Build;
 import android.util.Log;
 
 import de.robv.android.xposed.XC_MethodHook.MethodHookParam;
@@ -23,7 +24,13 @@ public class XClipboardManager extends XHook {
 	}
 
 	public String getClassName() {
-		return (mClassName == null ? "android.content.ClipboardManager" : mClassName);
+		String className;
+		if (Build.VERSION.SDK_INT > Build.VERSION_CODES.GINGERBREAD_MR1) {
+			className = "android.content.ClipboardManager";
+		} else {
+			className = "android.text.ClipboardManager";
+		}
+		return (mClassName == null ? className : mClassName);
 	}
 
 	// @formatter:off
@@ -47,9 +54,6 @@ public class XClipboardManager extends XHook {
 	public static List<XHook> getInstances(Object instance) {
 		String className = (instance == null ? null : instance.getClass().getName());
 		List<XHook> listHook = new ArrayList<XHook>();
-		if (android.os.Build.VERSION.SDK_INT < android.os.Build.VERSION_CODES.HONEYCOMB) {
-			return listHook;
-		}
 		for (Methods clip : Methods.values())
 			listHook.add(new XClipboardManager(clip, PrivacyManager.cClipboard, className));
 		return listHook;

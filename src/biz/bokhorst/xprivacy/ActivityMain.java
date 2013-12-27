@@ -1,6 +1,7 @@
 package biz.bokhorst.xprivacy;
 
 import java.io.File;
+import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
@@ -969,9 +970,8 @@ public class ActivityMain extends Activity implements OnItemSelectedListener, Co
 			mProgressDialog = new ProgressDialog(lvApp.getContext());
 			mProgressDialog.setMessage(getString(R.string.msg_loading));
 			mProgressDialog.setProgressStyle(ProgressDialog.STYLE_HORIZONTAL);
-			if (Build.VERSION.SDK_INT > Build.VERSION_CODES.GINGERBREAD_MR1) {
-				mProgressDialog.setProgressNumberFormat(null);
-			}
+			// this api is hide in gb, so invoke should be ok
+			mProgressDialog.setProgressNumberFormat(null);
 			mProgressDialog.setCancelable(false);
 			mProgressDialog.show();
 		}
