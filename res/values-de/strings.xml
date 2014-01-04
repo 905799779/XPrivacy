@@ -1,9 +1,9 @@
 <resources>
 
     <string name="app_notxposed" formatted="false">Xposed Framework Version %d+ ist nicht installiert</string>
-    <string name="app_notenabled">XPrivacy ist im Xposed Installer nicht aktiviert</string>
+    <string name="app_notenabled">XPrivacyGB ist im Xposed Installer nicht aktiviert</string>
     <string name="app_wrongandroid">Nur für Android-Version 4.0+</string>
-    <string name="app_version" formatted="false">XPrivacy Version: %s (%d)</string>
+    <string name="app_version" formatted="false">XPrivacyGB Version: %s (%d)</string>
     <string name="app_xversion" formatted="false">Xposed Framework Version: %d</string>
     <string name="app_copyright">Copyright \u00A9 2013–2014 by M. Bokhorst (M66B)</string>
     <string name="menu_usage">Aktivitätslog</string>
@@ -17,7 +17,7 @@
     <string name="menu_fetch">Beschränkungen runterladen (Crowd)</string>
     <string name="menu_theme">Theme wechseln</string>
     <string name="menu_pro">Pro-Version</string>
-    <string name="menu_about">Über XPrivacy</string>
+    <string name="menu_about">Über XPrivacyGB</string>
     <string name="menu_help">Hilfe</string>
     <string name="menu_all">Alles (beschränkt)</string>
     <string name="menu_restriction_all">Beschränkungen invertieren</string>
@@ -51,9 +51,9 @@
     <string name="msg_random_boot">Zufallswerte bei Geräteneustart erzeugen</string>
     <string name="msg_usage">Aktualisiere Usage-Data</string>
     <string name="msg_restart">App-Neustart erforderlich</string>
-    <string name="msg_first"><b>XPrivacy wurde unter größter Sorgfalt entwickelt und getestet. Dennoch kann nicht gewährleistet werden, 
+    <string name="msg_first"><b>XPrivacyGB wurde unter größter Sorgfalt entwickelt und getestet. Dennoch kann nicht gewährleistet werden, 
 \ndass es einwandfrei auf wirklich JEDEM einzelnen Gerät und für JEDE einzelne App funktioniert.
-\n\nVerwenden Sie XPrivacy ausschließlich auf Ihr eigenes Risiko.</b>\n\nBitte beachten Sie auch die Lizenz:</string>
+\n\nVerwenden Sie XPrivacyGB ausschließlich auf Ihr eigenes Risiko.</b>\n\nBitte beachten Sie auch die Lizenz:</string>
     <string name="restrict_accounts">Konten (Google, Facebook, etc.)</string>
     <string name="restrict_browser">Browser (Lesezeichen, Verlauf)</string>
     <string name="restrict_calendar">Kalender</string>

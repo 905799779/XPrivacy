@@ -1,9 +1,9 @@
 <resources>
 
     <string name="app_notxposed" formatted="false">Chưa cài Xposed framework phiên bản %d+</string>
-    <string name="app_notenabled">XPrivacy chưa được kích hoạt trong Xposed installer</string>
+    <string name="app_notenabled">XPrivacyGB chưa được kích hoạt trong Xposed installer</string>
     <string name="app_wrongandroid">Chỉ hỗ trợ Android 4.0+</string>
-    <string name="app_version" formatted="false">XPrivacy phiên bản: %s (%d)</string>
+    <string name="app_version" formatted="false">XPrivacyGB phiên bản: %s (%d)</string>
     <string name="app_xversion" formatted="false">Xposed framework phiên bản: %d</string>
     <string name="app_copyright">Bản quyền \u00A9 2013–2014 thuộc về M. Bokhorst (M66B)</string>
     <string name="menu_usage">Sử dụng</string>
@@ -51,7 +51,7 @@
     <string name="msg_random_boot">Tạo thông tin ngẫu nhiên khi khởi động</string>
     <string name="msg_usage">Đang cập nhật mức sử dụng dữ liệu</string>
     <string name="msg_restart">Yêu cầu khởi động lại ứng dụng</string>
-    <string name="msg_first"><b>XPrivacy đã được lập trình và kiểm tra một cách cẩn trọng nhất, tuy nhiên, không thể đảm bảo chắc chắn XPrivacy sẽ hoạt động trơn tru trên mọi thiết bị cũng như với mọi ứng dụng.
+    <string name="msg_first"><b>XPrivacyGB đã được lập trình và kiểm tra một cách cẩn trọng nhất, tuy nhiên, không thể đảm bảo chắc chắn XPrivacyGB sẽ hoạt động trơn tru trên mọi thiết bị cũng như với mọi ứng dụng.
 \n\nBạn tự chịu trách nhiệm khi sử dụng ứng dụng này.</b>\n\nXem thêm về bản quyền:</string>
     <string name="restrict_accounts">Các tài khoản (Google, Facebook, ...)</string>
     <string name="restrict_browser">Trình duyệt (đánh dấu/lịch sử duyệt web)</string>

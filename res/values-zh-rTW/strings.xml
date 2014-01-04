@@ -1,9 +1,9 @@
 <resources>
 
     <string name="app_notxposed" formatted="false">尚未安裝 Xposed framework 版本 %d+ </string>
-    <string name="app_notenabled">尚未於 Xposed installer 啟用 XPrivacy</string>
+    <string name="app_notenabled">尚未於 Xposed installer 啟用 XPrivacyGB</string>
     <string name="app_wrongandroid">僅支援版本 Android 4.0+</string>
-    <string name="app_version" formatted="false">XPrivacy 版本: %s (%d)</string>
+    <string name="app_version" formatted="false">XPrivacyGB 版本: %s (%d)</string>
     <string name="app_xversion" formatted="false">Xposed framework 版本: %d</string>
     <string name="app_copyright">版權所有 \u00A9 2013–2014 by M. Bokhorst (M66B)</string>
     <string name="menu_usage">操作記錄</string>
@@ -51,7 +51,7 @@
     <string name="msg_random_boot">重新啟動後進行亂數</string>
     <string name="msg_usage">正在更新操作記錄</string>
     <string name="msg_restart">需要重新啓動程式</string>
-    <string name="msg_first"><b>儘管 XPrivacy 在開發過程中經過詳細測試，但仍無法保證可以在所有裝置/安卓版本/各app上正常使用\n\n請自行承擔使用XPrivacy的可能風險。</b>\n\n請參閱說明文件：</string>
+    <string name="msg_first"><b>儘管 XPrivacyGB 在開發過程中經過詳細測試，但仍無法保證可以在所有裝置/安卓版本/各app上正常使用\n\n請自行承擔使用XPrivacyGB的可能風險。</b>\n\n請參閱說明文件：</string>
     <string name="restrict_accounts">帳戶 (Google, Facebook, etc)</string>
     <string name="restrict_browser">瀏覽器 (書籤, 記錄)</string>
     <string name="restrict_calendar">行事曆</string>

@@ -1,9 +1,9 @@
 <resources>
 
     <string name="app_notxposed" formatted="false">Xposed 框架版本 %d+ 未安装</string>
-    <string name="app_notenabled">XPrivacy 没有在 Xposed 框架中启用</string>
+    <string name="app_notenabled">XPrivacyGB 没有在 Xposed 框架中启用</string>
     <string name="app_wrongandroid">仅支持 Android 4.0 以上的版本</string>
-    <string name="app_version" formatted="false">XPrivacy 版本: %s (%d)</string>
+    <string name="app_version" formatted="false">XPrivacyGB 版本: %s (%d)</string>
     <string name="app_xversion" formatted="false">Xposed 框架版本: %d</string>
     <string name="app_copyright">版权所有 \u00A9 2013–2014 M. Bokhorst (M66B)</string>
     <string name="menu_usage">权限使用记录</string>
@@ -45,13 +45,13 @@
     <string name="msg_no_restrictions">没有找到权限限制规则</string>
     <string name="msg_sure">是否确定？</string>
     <string name="msg_done">完成</string>
-    <string name="msg_reboot">XPrivacy 需要在重启后才能生效</string>
+    <string name="msg_reboot">XPrivacyGB 需要在重启后才能生效</string>
     <string name="msg_random_now">生成随机数值</string>
     <string name="msg_random_access">访问时随机生成数值</string>
     <string name="msg_random_boot">设备启动时重新生成随机数值</string>
     <string name="msg_usage">正在更新用量统计数据…</string>
     <string name="msg_restart">需要重启应用使规则生效</string>
-    <string name="msg_first"><b>XPrivacy 的开发和测试工作已经非常全面和细致,
+    <string name="msg_first"><b>XPrivacyGB 的开发和测试工作已经非常全面和细致,
 但仍然不可能保证它能完美兼容所有设备及应用。
 \n\n使用者需自行承担风险。</b>\n\n另请参阅使用许可:</string>
     <string name="restrict_accounts">账户（ Google/Facebook 账户）</string>

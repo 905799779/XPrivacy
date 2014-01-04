@@ -1,9 +1,9 @@
 <resources>
 
     <string name="app_notxposed" formatted="false">Xposed framework का वर्शन %d+ इन्सटाल्ड नहीं हैं</string>
-    <string name="app_notenabled">Xposed इनस्टॉलर मैं XPrivacy इनेबल नहीं हैं</string>
+    <string name="app_notenabled">Xposed इनस्टॉलर मैं XPrivacyGB इनेबल नहीं हैं</string>
     <string name="app_wrongandroid">सिर्फ Android वर्शन 4.0+ के लिये</string>
-    <string name="app_version" formatted="false">XPrivacy वर्शन: %s (%d)</string>
+    <string name="app_version" formatted="false">XPrivacyGB वर्शन: %s (%d)</string>
     <string name="app_xversion" formatted="false">Xposed framework वर्शन: %d</string>
     <string name="app_copyright">सर्वाधिकार \u00A9 2013–2014 द्वारा M. Bokhorst (M66B)</string>
     <string name="menu_usage">उपयोग</string>
@@ -51,7 +51,7 @@
     <string name="msg_random_boot">रिबूट के पश्चात अटपटा करे</string>
     <string name="msg_usage">उपयोग डेटा update हो रहा हैं</string>
     <string name="msg_restart">application पुनःप्रारंभ जरुरी</string>
-    <string name="msg_first"><b>XPrivacy बनाने मैं बहुत ख्याल रखा गया है,
+    <string name="msg_first"><b>XPrivacyGB बनाने मैं बहुत ख्याल रखा गया है,
 किन्तु वह सभी साधन और सभी application के लिए बरोबर चलेगा उसकी गारंटी देना असंभव है।
 \n\nइसका उपयोग पूरी तरह से आपके अपने जोखिम पर है।</b>\n\nलाइसेंस को भी पढ़े:</string>
     <string name="restrict_accounts">खाता (गूगल, फेसबुक, इत्यादी)</string>

@@ -1,9 +1,9 @@
 <resources>
 
     <string name="app_notxposed" formatted="false">Není nainstalován Xposed framework verze %d+</string>
-    <string name="app_notenabled">Není povolen modul XPrivacy v Xposed installeru</string>
+    <string name="app_notenabled">Není povolen modul XPrivacyGB v Xposed installeru</string>
     <string name="app_wrongandroid">Pouze pro Android verze 4.0+</string>
-    <string name="app_version" formatted="false">Verze XPrivacy: %s (%d)</string>
+    <string name="app_version" formatted="false">Verze XPrivacyGB: %s (%d)</string>
     <string name="app_xversion" formatted="false">Verze Xposed frameworku: %d</string>
     <string name="app_copyright">Copyright \u00A9 2013–2014 by M. Bokhorst (M66B)</string>
     <string name="menu_usage">Využití</string>
@@ -51,7 +51,7 @@
     <string name="msg_random_boot">Generovat náhodné hodnoty při spuštění zařízení</string>
     <string name="msg_usage">Updating usage data</string>
     <string name="msg_restart">Application restart required</string>
-    <string name="msg_first"><b>Vývoj a testování aplikace XPrivacy probíhaly s maximální možnou péčí,
+    <string name="msg_first"><b>Vývoj a testování aplikace XPrivacyGB probíhaly s maximální možnou péčí,
 nicméně je nemožné zaručit bezchybnou funkčnost na všech zařízeních a se všemi aplikacemi.
 \n\nPoužívejte pouze na vlastní riziko.</b>\n\nLicence aplikace:</string>
     <string name="restrict_accounts">Účty (Google, Facebook, atd.)</string>
