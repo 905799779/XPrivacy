@@ -131,6 +131,7 @@
 \n点击应用图标以查看详细权限限制规则和设置</string>
     <string name="tutorial_detailsheader">点击应用图标以查看更多操作</string>
     <string name="tutorial_detailslist">点击左侧向下的箭头以查看该类别的子权限</string>
+    <string name="xposed_summary">终级隐私管理器</string>
 
 </resources>
 

@@ -42,7 +42,7 @@
             android:value="42+" />
         <meta-data
             android:name="xposeddescription"
-            android:value="The ultimate privacy manager" />
+            android:value="@string/xposed_summary" />
 
         <!-- Google Play services -->
         <meta-data
