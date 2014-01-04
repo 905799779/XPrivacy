@@ -9,16 +9,57 @@ Changelog
 
 Test and beta releases will have experimental functions enabled by default.
 
+**Experimental functions**
+
+* Kill applications
+* Auto flush restriction/settings cache
+
 **Next release**
+
+[Open issues](https://github.com/M66B/XPrivacy/issues?state=open)
+
+**Version 1.11.5 BETA**
+
+* Fixed batch fetching system applications ([issue](https://github.com/M66B/XPrivacy/issues/1048))
+* Added grayed usage data icon to help
+* Updated Chinese translation
+* Updated Tagalog translation
+
+**Version 1.11.4 BETA**
+
+* Fixed scroll lag on slower devices
+* Fixed displaying wrong information in scroll lists sometimes
+* Fixed settings not sticking in first three minutes ([issue](https://github.com/M66B/XPrivacy/issues/1042))
+* Updated Polish translation
+* Updated Spanish translation
+
+**Version 1.11.3 TEST**
+
+* Reverted "Prevent applications from bypassing Android APIs" ([issue](https://github.com/M66B/XPrivacy/issues/1039))
+
+**Version 1.11.2 TEST**
+
+* Fixed disarranged categories ([issue](https://github.com/M66B/XPrivacy/issues/1033))
+* Fixed race conditions in list views (resulting in strange glitches sometimes)
+* Fixed reloading when navigating up ([issue](https://github.com/M66B/XPrivacy/issues/1034))
+* Fixed multiple filters running simultaneously, thanks @[jpeg729](https://github.com/jpeg729) ([issue](https://github.com/M66B/XPrivacy/issues/1036))
+* Notify action for application settings ([issue](https://github.com/M66B/XPrivacy/issues/955))
+* Display grayed usage data icon for methods with no usage data ([issue](https://github.com/M66B/XPrivacy/issues/878))
+* Prevent applications from bypassing Android APIs by directly calling the binder
+
+**Version 1.11.1 TEST**
 
 * Fixed getting restrictions for multi-user environments ([issue](https://github.com/M66B/XPrivacy/issues/357))
 * Fixed restricting internet and storage for multi-user environments ([issue](https://github.com/M66B/XPrivacy/issues/357))
+* Fixed clearing existing restrictions on import, thanks @[jpeg729](https://github.com/jpeg729)
 * Experimental functions enabled by default
-* Added location restriction for Google Play services ([issue](https://github.com/M66B/XPrivacy/issues/1011))
+* Sorted localized restriction categories, thanks @[jpeg729](https://github.com/jpeg729)
+* Themed tri-state check boxes, thanks @[jpeg729](https://github.com/jpeg729)
+* Added location restrictions for Google Play services ([issue](https://github.com/M66B/XPrivacy/issues/1011))
+* Added Tagalog translation
+* Updated Chinese translations
 * Updated German translation
 * Updated Vietnamese translation
-
-[Open issues](https://github.com/M66B/XPrivacy/issues?state=open)
 
 **Version 1.11 STABLE**
 

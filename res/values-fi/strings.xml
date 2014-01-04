@@ -5,7 +5,7 @@
     <string name="app_wrongandroid">Vain Android versiolle 4.0.3+</string>
     <string name="app_version" formatted="false">XPrivacy versio: %s (%d)</string>
     <string name="app_xversion" formatted="false">Xposed framework versio: %d</string>
-    <string name="app_copyright">Tekijänoikeus \u00A9 2013-2014 M. Bokhorst (M66B)</string>
+    <string name="app_copyright">Tekijänoikeus \u00A9 2013–2014 M. Bokhorst (M66B)</string>
     <string name="menu_usage">Käyttötiedot</string>
     <string name="menu_refresh">Päivitä</string>
     <string name="menu_settings">Asetukset</string>
@@ -117,6 +117,7 @@
     <string name="help_internet">on internet käyttöoikeus</string>
     <string name="help_granted">on Android käyttöoikeus</string>
     <string name="help_used">on käyttänyt tätä dataa</string>
+    <string name="help_used_grayed">no usage data available</string>
     <string name="help_frozen">on disabloitu</string>
     <string name="help_dangerous">on vaarallinen, rajoitus voi aiheuttaa ongelmia</string>
     <string name="help_half">partly restricted</string>

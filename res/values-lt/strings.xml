@@ -5,7 +5,7 @@
     <string name="app_wrongandroid">Tik nuo Android 4.0+ versijos</string>
     <string name="app_version" formatted="false">XPrivacy programos versija: %s (%d)</string>
     <string name="app_xversion" formatted="false">Xposed programos versija: %d</string>
-    <string name="app_copyright">Copyright \u00A9 2013-2014 by M. Bokhorst (M66B)</string>
+    <string name="app_copyright">Copyright \u00A9 2013–2014 by M. Bokhorst (M66B)</string>
     
     <string name="menu_usage">Duomenų naudojimas</string>
     <string name="menu_refresh">Atnaujinti</string>
@@ -119,6 +119,7 @@ Tačiau neįmanoma garantuoti, kad dirbs nepriekaištingai su kiekvienu prietais
     <string name="help_internet">Interneto leidimai</string>
     <string name="help_granted">Android leidimai</string>
     <string name="help_used">Privačių duomenų leidimai</string>
+    <string name="help_used_grayed">no usage data available</string>
     <string name="help_frozen">Išjungtų programų leidimai</string>
     <string name="help_dangerous">Pavojingi leidimai, apribojus, gali sukelti problemų</string>
     <string name="help_half">Iš dalies apribota</string>

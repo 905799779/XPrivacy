@@ -23,22 +23,23 @@ import java.util.regex.Pattern;
 import android.annotation.SuppressLint;
 import android.content.Context;
 import android.content.Intent;
-import android.content.pm.ApplicationInfo;
 import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
 import android.content.pm.PackageManager.NameNotFoundException;
+import android.content.res.TypedArray;
 import android.graphics.Bitmap;
-import android.graphics.Bitmap.Config;
+import android.graphics.BitmapFactory;
 import android.graphics.Canvas;
-import android.graphics.Color;
 import android.graphics.Paint;
-import android.graphics.drawable.Drawable;
+import android.graphics.PorterDuff;
+import android.graphics.PorterDuffXfermode;
 import android.os.Build;
 import android.os.Environment;
 import android.os.Process;
 import android.os.UserHandle;
 import android.util.Base64;
 import android.util.Log;
+import android.util.SparseArray;
 import android.util.TypedValue;
 
 public class Util {
@@ -50,7 +51,7 @@ public class Util {
 
 	public static void log(XHook hook, int priority, String msg) {
 		// Check if logging enabled
-		if (Process.myUid() != 0 && !mLogDetermined) {
+		if (Process.myUid() > 0 && !mLogDetermined) {
 			mLog = false;
 			mLogDetermined = true;
 			mLog = PrivacyManager.getSettingBool(null, null, 0, PrivacyManager.cSettingLog, false, false);
@@ -133,7 +134,7 @@ public class Util {
 
 			// Verify license
 			boolean licensed = verifyData(bEmail, bSignature, getPublicKey(context));
-			if (licensed && (isDebuggable(context) || hasValidFingerPrint(context)))
+			if (licensed)
 				Util.log(null, Log.INFO, "Licensing: ok for " + name);
 			else
 				Util.log(null, Log.ERROR, "Licensing: invalid for " + name);
@@ -174,10 +175,10 @@ public class Util {
 		return userId;
 	}
 
-	public static String getUserDataDirectory() {
+	public static String getUserDataDirectory(int uid) {
 		// Build data directory
 		String dataDir = Environment.getDataDirectory() + File.separator;
-		int userId = getUserId(Process.myUid());
+		int userId = getUserId(uid);
 		if (userId == 0)
 			dataDir += "data";
 		else
@@ -194,7 +195,7 @@ public class Util {
 			licenseFile = new File(storageDir + File.separator + ".xprivacy" + File.separator + LICENSE_FILE_NAME);
 
 		// Get imported license file name
-		String importedLicense = getUserDataDirectory() + File.separator + LICENSE_FILE_NAME;
+		String importedLicense = getUserDataDirectory(Process.myUid()) + File.separator + LICENSE_FILE_NAME;
 
 		// Import license file
 		if (licenseFile.exists()) {
@@ -261,8 +262,7 @@ public class Util {
 
 	public static boolean isProEnablerInstalled(Context context) {
 		Version version = getProEnablerVersion(context);
-		if (version != null && isValidProEnablerVersion(version) && hasValidProEnablerSignature(context)
-				&& hasValidFingerPrint(context)) {
+		if (version != null && isValidProEnablerVersion(version) && hasValidProEnablerSignature(context)) {
 			Util.log(null, Log.INFO, "Licensing: enabler installed");
 			return true;
 		}
@@ -341,36 +341,6 @@ public class Util {
 		return sb.toString();
 	}
 
-	@SuppressLint("DefaultLocale")
-	public static boolean hasValidFingerPrint(Context context) {
-		try {
-			PackageManager pm = context.getPackageManager();
-			String packageName = context.getPackageName();
-			PackageInfo packageInfo = pm.getPackageInfo(packageName, PackageManager.GET_SIGNATURES);
-			byte[] cert = packageInfo.signatures[0].toByteArray();
-			MessageDigest digest = MessageDigest.getInstance("SHA1");
-			byte[] bytes = digest.digest(cert);
-			StringBuilder sb = new StringBuilder();
-			for (int i = 0; i < bytes.length; ++i)
-				sb.append((Integer.toHexString((bytes[i] & 0xFF) | 0x100)).substring(1, 3).toLowerCase());
-			String calculated = sb.toString();
-			String expected = context.getString(R.string.fingerprint);
-			boolean valid = calculated.equals(expected);
-			if (valid)
-				log(null, Log.INFO, "Valid fingerprint");
-			else
-				log(null, Log.ERROR, "Invalid fingerprint calculate=" + calculated + " expected=" + expected);
-			return valid;
-		} catch (Throwable ex) {
-			bug(null, ex);
-			return false;
-		}
-	}
-
-	public static boolean isDebuggable(Context context) {
-		return ((context.getApplicationContext().getApplicationInfo().flags & ApplicationInfo.FLAG_DEBUGGABLE) != 0);
-	}
-
 	public static boolean containsIgnoreCase(List<String> strings, String value) {
 		for (String string : strings)
 			if (string.equalsIgnoreCase(value))
@@ -394,39 +364,81 @@ public class Util {
 		out.close();
 	}
 
+	private static SparseArray<String> mPidPkg = new SparseArray<String>();
+
+	public static String getPackageNameByPid(int pid) {
+		// This doesn't work for all processes!
+
+		synchronized (mPidPkg) {
+			String pkg = mPidPkg.get(pid);
+			if (pkg != null)
+				return pkg;
+		}
+
+		String pkg = null;
+		try {
+			byte[] buffer = new byte[256];
+			File cmdLineFile = new File(String.format("/proc/%d/cmdline", pid));
+			FileInputStream is = new FileInputStream(cmdLineFile);
+			int len = is.read(buffer);
+			is.close();
+
+			int i = 0;
+			while (i < len && buffer[i] != 0)
+				i++;
+			pkg = new String(buffer, 0, i);
+		} catch (Throwable ex) {
+			pkg = ex.getMessage();
+		}
+
+		synchronized (mPidPkg) {
+			if (mPidPkg.indexOfKey(pid) < 0)
+				mPidPkg.put(pid, pkg);
+		}
+
+		return pkg;
+	}
+
 	public static Bitmap[] getTriStateCheckBox(Context context) {
 		Bitmap[] bitmap = new Bitmap[3];
 
-		int size = 24;
-		int border0 = 4;
-		int border1 = border0 * 2;
-		int border2 = border0;
+		// Get highlight color
+		TypedArray arrayColor = context.getTheme().obtainStyledAttributes(
+				new int[] { R.attr.colorActivatedHighlight });
+		int highlightColor = arrayColor.getColor(0, 0xFF00FF);
+		arrayColor.recycle();
 
 		// Create off check box
-		bitmap[0] = Bitmap.createBitmap(size, size, Config.ARGB_8888);
-		Canvas canvas0 = new Canvas(bitmap[0]);
-		Paint paint0 = new Paint();
-		paint0.setStyle(Paint.Style.STROKE);
-		paint0.setColor(Color.GRAY);
-		paint0.setStrokeWidth(2);
-		canvas0.drawRect(border0, border0, bitmap[0].getWidth() - border0, bitmap[0].getHeight() - border0, paint0);
+		// TODO: do we need btn_check_off_holo_light&dark ?
+		bitmap[0] = BitmapFactory.decodeResource(context.getResources(), getThemed(context, R.attr.icon_check_off));
 
 		// Create half check box
 		bitmap[1] = Bitmap.createBitmap(bitmap[0].getWidth(), bitmap[0].getHeight(), bitmap[0].getConfig());
-		Canvas canvas1 = new Canvas(bitmap[1]);
-		Paint paint1 = new Paint();
-		paint1.setStyle(Paint.Style.FILL);
-		paint1.setColor(Color.GRAY);
-		canvas1.drawBitmap(bitmap[0], 0, 0, paint1);
-		canvas1.drawRect(border1, border1, bitmap[1].getWidth() - border1, bitmap[1].getHeight() - border1, paint1);
+		Canvas canvas = new Canvas(bitmap[1]);
+		Paint paint = new Paint();
+		paint.setStyle(Paint.Style.FILL);
+		paint.setColor(highlightColor);
+		int border = bitmap[1].getWidth() / 3;
+		canvas.drawBitmap(bitmap[0], 0, 0, paint);
+		canvas.drawRect(border, border, bitmap[1].getWidth() - border, bitmap[1].getHeight() - border, paint);
 
 		// Create full check box
+		// square of highlight color
 		bitmap[2] = Bitmap.createBitmap(bitmap[0].getWidth(), bitmap[0].getHeight(), bitmap[0].getConfig());
 		Canvas canvas2 = new Canvas(bitmap[2]);
-		canvas2.drawBitmap(bitmap[0], 0, 0, new Paint());
-		Drawable checkmark = context.getResources().getDrawable(getThemed(context, R.attr.icon_checked));
-		checkmark.setBounds(border2, border2, bitmap[2].getWidth() - border2, bitmap[2].getHeight() - border2);
-		checkmark.draw(canvas2);
+		canvas2.drawRect(0, 0, bitmap[2].getWidth(), bitmap[2].getHeight(), paint);
+
+		// draw checkmark with porter-duff mode DstIn which keeps the highlight
+		// color where the checkmark goes
+		Bitmap checkmark = BitmapFactory.decodeResource(context.getResources(), R.drawable.checkmark);
+		paint.setXfermode(new PorterDuffXfermode(PorterDuff.Mode.DST_IN));
+		canvas2.drawBitmap(checkmark, 0, 0, paint);
+
+		// add border
+		Bitmap checked_box = BitmapFactory.decodeResource(context.getResources(),
+				getThemed(context, R.attr.icon_checked_box));
+		paint.setXfermode(new PorterDuffXfermode(PorterDuff.Mode.SRC_OVER));
+		canvas2.drawBitmap(checked_box, 0, 0, paint);
 
 		return bitmap;
 	}

@@ -2,10 +2,13 @@ package biz.bokhorst.xprivacy;
 
 import java.io.File;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
+import java.util.TreeMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadFactory;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import android.annotation.SuppressLint;
 import android.app.AlertDialog;
@@ -136,17 +139,14 @@ public class ActivityMain extends Activity implements OnItemSelectedListener, Co
 			setTitle(String.format("%s - %s", getString(R.string.app_name), getString(R.string.menu_pro)));
 
 		// Get localized restriction name
-		List<String> listRestriction = PrivacyManager.getRestrictions();
-		List<String> listLocalizedRestriction = new ArrayList<String>();
-		for (String restrictionName : listRestriction)
-			listLocalizedRestriction.add(PrivacyManager.getLocalizedName(this, restrictionName));
-		listLocalizedRestriction.add(0, getString(R.string.menu_all));
+		List<String> listRestrictionName = new ArrayList<String>(PrivacyManager.getRestrictions(this).navigableKeySet());
+		listRestrictionName.add(0, getString(R.string.menu_all));
 
 		// Build spinner adapter
 		SpinnerAdapter spAdapter = new SpinnerAdapter(this, android.R.layout.simple_spinner_item);
 		spAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
-		for (String item: listLocalizedRestriction) {
-		    spAdapter.add(item);
+		for (String restrictionName: listRestrictionName) {
+			spAdapter.add(restrictionName);
 		}
 
 		// Handle info
@@ -156,7 +156,8 @@ public class ActivityMain extends Activity implements OnItemSelectedListener, Co
 			public void onClick(View view) {
 				int position = spRestriction.getSelectedItemPosition();
 				if (position != AdapterView.INVALID_POSITION) {
-					String query = (position == 0 ? "restrictions" : PrivacyManager.getRestrictions().get(position - 1));
+					String query = (position == 0 ? "restrictions" : (String) PrivacyManager
+							.getRestrictions(ActivityMain.this).values().toArray()[position - 1]);
 					Intent infoIntent = new Intent(Intent.ACTION_VIEW);
 					infoIntent.setData(Uri.parse(cXUrl + "#" + query));
 					startActivity(infoIntent);
@@ -358,6 +359,11 @@ public class ActivityMain extends Activity implements OnItemSelectedListener, Co
 		super.onResume();
 		if (mAppAdapter != null)
 			mAppAdapter.notifyDataSetChanged();
+	}
+
+	@Override
+	protected void onNewIntent(Intent intent) {
+		// Do nothing
 	}
 
 	@Override
@@ -577,7 +583,8 @@ public class ActivityMain extends Activity implements OnItemSelectedListener, Co
 
 	private void selectRestriction(int pos) {
 		if (mAppAdapter != null) {
-			String restrictionName = (pos == 0 ? null : PrivacyManager.getRestrictions().get(pos - 1));
+			String restrictionName = (pos == 0 ? null : (String) PrivacyManager.getRestrictions(this).values()
+					.toArray()[pos - 1]);
 			mAppAdapter.setRestrictionName(restrictionName);
 			applyFilter();
 		}
@@ -699,12 +706,15 @@ public class ActivityMain extends Activity implements OnItemSelectedListener, Co
 
 	private void optionTemplate() {
 		// Get restriction categories
-		final List<String> listRestriction = PrivacyManager.getRestrictions();
-		CharSequence[] options = new CharSequence[listRestriction.size()];
-		boolean[] selection = new boolean[listRestriction.size()];
-		for (int i = 0; i < listRestriction.size(); i++) {
-			String templateName = PrivacyManager.cSettingTemplate + "." + listRestriction.get(i);
-			options[i] = PrivacyManager.getLocalizedName(this, listRestriction.get(i));
+		TreeMap<String, String> tmRestriction = PrivacyManager.getRestrictions(this);
+		List<String> listRestrictionName = new ArrayList<String>(tmRestriction.navigableKeySet());
+		final List<String> listLocalizedTitle = new ArrayList<String>(tmRestriction.values());
+
+		CharSequence[] options = new CharSequence[listLocalizedTitle.size()];
+		listRestrictionName.toArray(options);
+		boolean[] selection = new boolean[listLocalizedTitle.size()];
+		for (int i = 0; i < listLocalizedTitle.size(); i++) {
+			String templateName = PrivacyManager.cSettingTemplate + "." + listLocalizedTitle.get(i);
 			selection[i] = PrivacyManager.getSettingBool(null, this, 0, templateName, true, false);
 			PrivacyManager.setSetting(null, this, 0, templateName, Boolean.toString(selection[i]));
 		}
@@ -715,7 +725,7 @@ public class ActivityMain extends Activity implements OnItemSelectedListener, Co
 		alertDialogBuilder.setIcon(Util.getThemed(this, R.attr.icon_launcher));
 		alertDialogBuilder.setMultiChoiceItems(options, selection, new DialogInterface.OnMultiChoiceClickListener() {
 			public void onClick(DialogInterface dialog, int whichButton, boolean isChecked) {
-				String templateName = PrivacyManager.cSettingTemplate + "." + listRestriction.get(whichButton);
+				String templateName = PrivacyManager.cSettingTemplate + "." + listLocalizedTitle.get(whichButton);
 				PrivacyManager.setSetting(null, ActivityMain.this, 0, templateName, Boolean.toString(isChecked));
 			}
 		});
@@ -1059,6 +1069,7 @@ public class ActivityMain extends Activity implements OnItemSelectedListener, Co
 		private List<ApplicationInfoEx> mListApp;
 		private String mRestrictionName;
 		private LayoutInflater mInflater = (LayoutInflater) getSystemService(Context.LAYOUT_INFLATER_SERVICE);
+		private AtomicInteger mFiltersRunning = new AtomicInteger(0);
 
 		public AppListAdapter(Context context, int resource, List<ApplicationInfoEx> objects,
 				String initialRestrictionName) {
@@ -1082,12 +1093,19 @@ public class ActivityMain extends Activity implements OnItemSelectedListener, Co
 			return new AppFilter();
 		}
 
+		public void addAll(Collection<? extends ApplicationInfoEx> values) {
+			for (ApplicationInfoEx value : values) {
+				add(value);
+			}
+		}
+
 		private class AppFilter extends Filter {
 			public AppFilter() {
 			}
 
 			@Override
 			protected FilterResults performFiltering(CharSequence constraint) {
+				int filtersRunning = mFiltersRunning.addAndGet(1);
 				FilterResults results = new FilterResults();
 
 				// Get arguments
@@ -1106,15 +1124,20 @@ public class ActivityMain extends Activity implements OnItemSelectedListener, Co
 				int max = AppListAdapter.this.mListApp.size();
 				List<ApplicationInfoEx> lstApp = new ArrayList<ApplicationInfoEx>();
 				for (ApplicationInfoEx xAppInfo : AppListAdapter.this.mListApp) {
+					// Check if another filter has been started
+					if (filtersRunning != mFiltersRunning.get())
+						return null;
+
+					// Send progress info to main activity
 					current++;
 					if (!mBatchOpRunning && current % 5 == 0) {
-						// Send progress info to main activity
 						Intent progressIntent = new Intent(ActivityShare.cProgressReport);
 						progressIntent.putExtra(ActivityShare.cProgressMessage, getString(R.string.msg_applying));
 						progressIntent.putExtra(ActivityShare.cProgressMax, max);
 						progressIntent.putExtra(ActivityShare.cProgressValue, current);
 						LocalBroadcastManager.getInstance(ActivityMain.this).sendBroadcast(progressIntent);
 					}
+
 					// Get if name contains
 					boolean contains = false;
 					if (!fName.equals(""))
@@ -1177,31 +1200,31 @@ public class ActivityMain extends Activity implements OnItemSelectedListener, Co
 			@Override
 			@SuppressWarnings("unchecked")
 			protected void publishResults(CharSequence constraint, FilterResults results) {
-				clear();
-				TextView tvStats = (TextView) findViewById(R.id.tvStats);
-				TextView tvState = (TextView) findViewById(R.id.tvState);
-				ProgressBar pbFilter = (ProgressBar) findViewById(R.id.pbFilter);
-				pbFilter.setVisibility(ProgressBar.GONE);
-				tvStats.setVisibility(TextView.VISIBLE);
-				tvStats.setText(results.count + "/" + AppListAdapter.this.mListApp.size());
+				if (results != null) {
+					clear();
+					TextView tvStats = (TextView) findViewById(R.id.tvStats);
+					TextView tvState = (TextView) findViewById(R.id.tvState);
+					ProgressBar pbFilter = (ProgressBar) findViewById(R.id.pbFilter);
+					pbFilter.setVisibility(ProgressBar.GONE);
+					tvStats.setVisibility(TextView.VISIBLE);
+					tvStats.setText(results.count + "/" + AppListAdapter.this.mListApp.size());
 
-				Intent progressIntent = new Intent(ActivityShare.cProgressReport);
-				progressIntent.putExtra(ActivityShare.cProgressMessage, getString(R.string.title_restrict));
-				progressIntent.putExtra(ActivityShare.cProgressMax, 1);
-				progressIntent.putExtra(ActivityShare.cProgressValue, 0);
-				LocalBroadcastManager.getInstance(ActivityMain.this).sendBroadcast(progressIntent);
+					Intent progressIntent = new Intent(ActivityShare.cProgressReport);
+					progressIntent.putExtra(ActivityShare.cProgressMessage, getString(R.string.title_restrict));
+					progressIntent.putExtra(ActivityShare.cProgressMax, 1);
+					progressIntent.putExtra(ActivityShare.cProgressValue, 0);
+					LocalBroadcastManager.getInstance(ActivityMain.this).sendBroadcast(progressIntent);
 
-				// Adjust progress state width
-				RelativeLayout.LayoutParams tvStateLayout = (RelativeLayout.LayoutParams) tvState.getLayoutParams();
-				tvStateLayout.addRule(RelativeLayout.LEFT_OF, R.id.tvStats);
+					// Adjust progress state width
+					RelativeLayout.LayoutParams tvStateLayout = (RelativeLayout.LayoutParams) tvState.getLayoutParams();
+					tvStateLayout.addRule(RelativeLayout.LEFT_OF, R.id.tvStats);
 
-				if (results.values == null)
-					notifyDataSetInvalidated();
-				else {
-					for (ApplicationInfoEx info : (ArrayList<ApplicationInfoEx>) results.values) {
-						add(info);
+					if (results.values == null)
+						notifyDataSetInvalidated();
+					else {
+						addAll((ArrayList<ApplicationInfoEx>) results.values);
+						notifyDataSetChanged();
 					}
-					notifyDataSetChanged();
 				}
 			}
 		}
@@ -1209,6 +1232,7 @@ public class ActivityMain extends Activity implements OnItemSelectedListener, Co
 		private class ViewHolder {
 			private View row;
 			private int position;
+			private boolean busy;
 			public View vwState;
 			public ImageView imgIcon;
 			public ImageView imgUsed;
@@ -1222,6 +1246,7 @@ public class ActivityMain extends Activity implements OnItemSelectedListener, Co
 			public ViewHolder(View theRow, int thePosition) {
 				row = theRow;
 				position = thePosition;
+				busy = false;
 				vwState = (View) row.findViewById(R.id.vwState);
 				imgIcon = (ImageView) row.findViewById(R.id.imgIcon);
 				imgUsed = (ImageView) row.findViewById(R.id.imgUsed);
@@ -1281,13 +1306,15 @@ public class ActivityMain extends Activity implements OnItemSelectedListener, Co
 						allRestricted = (allRestricted && restricted);
 						someRestricted = (someRestricted || restricted);
 					}
+
+					return holder;
 				}
 				return null;
 			}
 
 			@Override
 			protected void onPostExecute(Object result) {
-				if (holder.position == position && xAppInfo != null) {
+				if (result != null) {
 					// Display state
 					if (state == STATE_ATTENTION)
 						holder.vwState.setBackgroundColor(getResources().getColor(
@@ -1298,6 +1325,10 @@ public class ActivityMain extends Activity implements OnItemSelectedListener, Co
 					else
 						holder.vwState.setBackgroundColor(getResources().getColor(
 								Util.getThemed(ActivityMain.this, R.attr.color_state_restricted)));
+
+					// Display icon
+					holder.imgIcon.setImageDrawable(xAppInfo.getIcon(ActivityMain.this));
+					holder.imgIcon.setVisibility(View.VISIBLE);
 
 					// Display usage
 					holder.tvName.setTypeface(null, used ? Typeface.BOLD_ITALIC : Typeface.NORMAL);
@@ -1416,24 +1447,34 @@ public class ActivityMain extends Activity implements OnItemSelectedListener, Co
 						}
 					});
 				}
+				holder.busy = false;
 			}
 		}
 
 		@Override
 		public View getView(int position, View convertView, ViewGroup parent) {
-			ViewHolder holder;
+			ViewHolder holder = null;
+
+			if (convertView != null) {
+				holder = (ViewHolder) convertView.getTag();
+				if (holder.busy) {
+					convertView = null;
+					Util.log(null, Log.WARN, "View holder busy @" + holder.position);
+				} else {
+					holder.busy = true;
+					holder.position = position;
+				}
+			}
+
 			if (convertView == null) {
 				convertView = mInflater.inflate(R.layout.mainentry, null);
 				holder = new ViewHolder(convertView, position);
 				convertView.setTag(holder);
-			} else {
-				holder = (ViewHolder) convertView.getTag();
-				holder.position = position;
 			}
 
 			// Get info
 			final ApplicationInfoEx xAppInfo = getItem(holder.position);
-			holder.imgIcon.setImageDrawable(xAppInfo.getIcon(convertView.getContext()));
+			holder.imgIcon.setVisibility(View.INVISIBLE);
 
 			// Set background color
 			if (xAppInfo.isSystem())

@@ -5,6 +5,7 @@ import java.io.FileInputStream;
 import java.lang.reflect.Field;
 import java.net.Inet4Address;
 import java.net.InetAddress;
+import java.text.Collator;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -12,8 +13,10 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Random;
+import java.util.TreeMap;
 import java.util.UUID;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -139,7 +142,7 @@ public class PrivacyManager {
 	static {
 		// Scan meta data
 		try {
-			File in = new File(Util.getUserDataDirectory() + File.separator + "meta.xml");
+			File in = new File(Util.getUserDataDirectory(Process.myUid()) + File.separator + "meta.xml");
 			Util.log(null, Log.INFO, "Reading meta=" + in.getAbsolutePath());
 			FileInputStream fis = null;
 			try {
@@ -214,6 +217,18 @@ public class PrivacyManager {
 		return new ArrayList<String>(Arrays.asList(cRestrictionNames));
 	}
 
+	// Map of restrictions sorted by localized name
+	public static TreeMap<String, String> getRestrictions(Context context) {
+		Collator collator = Collator.getInstance(Locale.getDefault());
+		TreeMap<String, String> tmRestriction = new TreeMap<String, String>(collator);
+		String packageName = PrivacyManager.class.getPackage().getName();
+		for (String restrictionName : getRestrictions()) {
+			int stringId = context.getResources().getIdentifier("restrict_" + restrictionName, "string", packageName);
+			tmRestriction.put(stringId == 0 ? restrictionName : context.getString(stringId), restrictionName);
+		}
+		return tmRestriction;
+	}
+
 	public static MethodDescription getMethod(String restrictionName, String methodName) {
 		if (mMethod.containsKey(restrictionName)) {
 			MethodDescription md = new MethodDescription(restrictionName, methodName);
@@ -221,12 +236,6 @@ public class PrivacyManager {
 			return (pos < 0 ? null : mMethod.get(restrictionName).get(pos));
 		} else
 			return null;
-	}
-
-	public static String getLocalizedName(Context context, String restrictionName) {
-		String packageName = PrivacyManager.class.getPackage().getName();
-		int stringId = context.getResources().getIdentifier("restrict_" + restrictionName, "string", packageName);
-		return (stringId == 0 ? null : context.getString(stringId));
 	}
 
 	public static List<MethodDescription> getMethods(String restrictionName) {
@@ -413,6 +422,10 @@ public class PrivacyManager {
 	private static boolean isProviderUsable(Context context) {
 		if (context == null)
 			return false;
+
+		String self = PrivacyManager.class.getPackage().getName();
+		if (self.equals(context.getPackageName()))
+			return true;
 
 		if (SystemClock.elapsedRealtime() < cUseProviderAfterMs)
 			return false;
@@ -1277,6 +1290,10 @@ public class PrivacyManager {
 
 		public boolean isRestartRequired() {
 			return mRestart;
+		}
+
+		public boolean hasNoUsageData() {
+			return isRestartRequired();
 		}
 
 		public String[] getPermissions() {

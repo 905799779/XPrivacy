@@ -5,7 +5,7 @@
     <string name="app_wrongandroid">Kun til Android version 4.0+</string>
     <string name="app_version" formatted="false">XPrivacy version: %s (%d)</string>
     <string name="app_xversion" formatted="false">Xposed framework version: %d</string>
-    <string name="app_copyright">Ophavsret \u00A9 2013-2014 M. Bokhorst (M66B)</string>
+    <string name="app_copyright">Ophavsret \u00A9 2013–2014 M. Bokhorst (M66B)</string>
     <string name="menu_usage">Brug</string>
     <string name="menu_refresh">Opdatér</string>
     <string name="menu_settings">Indstillinger</string>
@@ -116,6 +116,7 @@
     <string name="help_internet">har internettilladelse</string>
     <string name="help_granted">har Android-tilladelse</string>
     <string name="help_used">har benyttet denne type data</string>
+    <string name="help_used_grayed">no usage data available</string>
     <string name="help_frozen">er deaktiveret</string>
     <string name="help_dangerous">er farlig</string>
     <string name="help_half">partly restricted</string>

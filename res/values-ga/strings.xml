@@ -5,7 +5,7 @@
     <string name="app_wrongandroid">Ach amháin le haghaidh Android version 4.0+</string>
     <string name="app_version" formatted="false">XPrivacy leagan: %s (%d)</string>
     <string name="app_xversion" formatted="false">Xposed framework leagan: %d</string>
-    <string name="app_copyright">Cóipcheart \ u00A9 2013-2014 le M. Bokhorst (M66B)</string>
+    <string name="app_copyright">Cóipcheart \ u00A9 2013–2014 le M. Bokhorst (M66B)</string>
     <string name="menu_usage">Úsáid</string>
     <string name="menu_refresh">Athnuaigh</string>
     <string name="menu_settings">Socruithe</string>
@@ -118,6 +118,7 @@
     <string name="help_internet">Tá cead idirlín</string>
     <string name="help_granted">Tá cead Android</string>
     <string name="help_used">Tá úsáid na sonraí seo</string>
+    <string name="help_used_grayed">no usage data available</string>
     <string name="help_frozen">faoi mhíchumas</string>
     <string name="help_dangerous">contúirteacha</string>
     <string name="help_half">partly restricted</string>

@@ -65,7 +65,7 @@ public class ActivityShare extends Activity {
 	public static final String ACTION_IMPORT = "biz.bokhorst.xprivacy.action.IMPORT";
 	public static final String ACTION_FETCH = "biz.bokhorst.xprivacy.action.FETCH";
 
-	public static final int TIMEOUT_MILLISEC = 30000;
+	public static final int TIMEOUT_MILLISEC = 45000;
 
 	private static ExecutorService mExecutor = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors(),
 			new PriorityThreadFactory());
@@ -362,7 +362,7 @@ public class ActivityShare extends Activity {
 		private Map<String, Map<String, List<MethodDescription>>> mMapPackage = new HashMap<String, Map<String, List<MethodDescription>>>();
 		private String android_id = Secure.getString(getContentResolver(), Secure.ANDROID_ID);
 		private int mProgress = 0;
-		private int mCurrent = 0;
+		private List<Integer> mImportedIds = new ArrayList<Integer>();
 
 		@Override
 		public void startElement(String uri, String localName, String qName, Attributes attributes) throws SAXException {
@@ -423,14 +423,17 @@ public class ActivityShare extends Activity {
 					String methodName = attributes.getValue("Method");
 					boolean restricted = Boolean.parseBoolean(attributes.getValue("Restricted"));
 
-					// Progress report
-					if (id != mCurrent) {
-						mCurrent = id;
-						reportProgress();
-					}
-
 					// Get uid
 					int uid = getUid(id);
+
+					// Progress report and pre-import cleanup
+					if (!mImportedIds.contains(id)) {
+						mImportedIds.add(id);
+						reportProgress(id);
+						if (uid >= 0)
+							PrivacyManager.deleteRestrictions(ActivityShare.this, uid);
+					}
+
 					if (uid >= 0)
 						PrivacyManager.setRestricted(null, ActivityShare.this, uid, restrictionName, methodName,
 								restricted);
@@ -480,11 +483,11 @@ public class ActivityShare extends Activity {
 			}
 		}
 
-		private void reportProgress() {
+		private void reportProgress(int id) {
 			// Send progress info to main activity
 			Intent progressIntent = new Intent(cProgressReport);
 			progressIntent.putExtra(cProgressMessage,
-					String.format("%s: %s", getString(R.string.menu_import), mMapId.get(mCurrent)));
+					String.format("%s: %s", getString(R.string.menu_import), mMapId.get(id)));
 			progressIntent.putExtra(cProgressMax, mMapId.size());
 			progressIntent.putExtra(cProgressValue, ++mProgress);
 			mBroadcastManager.sendBroadcast(progressIntent);
@@ -520,7 +523,7 @@ public class ActivityShare extends Activity {
 				// Process applications
 				for (ApplicationInfoEx appInfo : lstApp) {
 					mProgressCurrent++;
-					if (!appInfo.isSystem() || params[0] != null) {
+					if (!appInfo.isSystem() || params[0] != 0) {
 						publishProgress(appInfo.getPackageName().get(0), Integer.toString(mProgressCurrent));
 
 						JSONArray appName = new JSONArray();

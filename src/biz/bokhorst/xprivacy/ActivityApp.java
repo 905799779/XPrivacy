@@ -7,6 +7,7 @@ import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.TreeMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadFactory;
@@ -50,6 +51,7 @@ import android.support.v4.app.NavUtils;
 import android.support.v4.app.TaskStackBuilder;
 import android.text.TextUtils;
 import android.text.format.DateUtils;
+import android.util.Log;
 import android.view.ContextMenu;
 import android.view.ContextMenu.ContextMenuInfo;
 import android.view.LayoutInflater;
@@ -80,7 +82,9 @@ public class ActivityApp extends Activity {
 	public static final String cUid = "Uid";
 	public static final String cRestrictionName = "RestrictionName";
 	public static final String cMethodName = "MethodName";
+	public static final String cAction = "Action";
 	public static final String cActionClear = "Clear";
+	public static final String cActionSettings = "Settings";
 
 	private static final int ACTIVITY_FETCH = 1;
 
@@ -194,7 +198,8 @@ public class ActivityApp extends Activity {
 		mPrivacyListAdapter = new RestrictionAdapter(R.layout.restrictionentry, mAppInfo, restrictionName, methodName);
 		lvRestriction.setAdapter(mPrivacyListAdapter);
 		if (restrictionName != null) {
-			int groupPosition = PrivacyManager.getRestrictions().indexOf(restrictionName);
+			int groupPosition = new ArrayList<String>(PrivacyManager.getRestrictions(this).values())
+					.indexOf(restrictionName);
 			lvRestriction.expandGroup(groupPosition);
 			lvRestriction.setSelectedGroup(groupPosition);
 			if (methodName != null) {
@@ -228,17 +233,15 @@ public class ActivityApp extends Activity {
 		((Button) findViewById(R.id.btnTutorialHeader)).setOnClickListener(listener);
 		((Button) findViewById(R.id.btnTutorialDetails)).setOnClickListener(listener);
 
-		// Clear
-		if (extras.containsKey(cActionClear)) {
+		// Process actions
+		if (extras.containsKey(cAction)) {
 			NotificationManager notificationManager = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
 			notificationManager.cancel(mAppInfo.getUid());
-			optionClear();
+			if (extras.getString(cAction).equals(cActionClear))
+				optionClear();
+			else if (extras.getString(cAction).equals(cActionSettings))
+				optionSettings();
 		}
-	}
-
-	@Override
-	protected void onNewIntent(Intent intent) {
-		super.onNewIntent(intent);
 	}
 
 	@Override
@@ -346,7 +349,7 @@ public class ActivityApp extends Activity {
 			optionContacts();
 			return true;
 		case R.id.menu_settings:
-			SettingsDialog.edit(ActivityApp.this, mAppInfo);
+			optionSettings();
 			return true;
 		default:
 			return super.onOptionsItemSelected(item);
@@ -360,7 +363,7 @@ public class ActivityApp extends Activity {
 			optionLaunch(item.getGroupId());
 			return true;
 		case MENU_SETTINGS:
-			optionSettings(item.getGroupId());
+			optionAppSettings(item.getGroupId());
 			return true;
 		case MENU_KILL:
 			optionKill(item.getGroupId());
@@ -573,12 +576,16 @@ public class ActivityApp extends Activity {
 		}
 	}
 
+	private void optionSettings() {
+		SettingsDialog.edit(ActivityApp.this, mAppInfo);
+	}
+
 	private void optionLaunch(int which) {
 		Intent intentLaunch = getPackageManager().getLaunchIntentForPackage(mAppInfo.getPackageName().get(which));
 		startActivity(intentLaunch);
 	}
 
-	private void optionSettings(int which) {
+	private void optionAppSettings(int which) {
 		Intent intentSettings = new Intent(android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
 				Uri.parse("package:" + mAppInfo.getPackageName().get(which)));
 		startActivity(intentSettings);
@@ -1012,7 +1019,7 @@ public class ActivityApp extends Activity {
 			boolean fPermission = PrivacyManager.getSettingBool(null, ActivityApp.this, 0,
 					PrivacyManager.cSettingFPermission, false, false);
 
-			for (String rRestrictionName : PrivacyManager.getRestrictions()) {
+			for (String rRestrictionName : PrivacyManager.getRestrictions(ActivityApp.this).values()) {
 				boolean isUsed = (PrivacyManager.getUsed(ActivityApp.this, mAppInfo.getUid(), rRestrictionName, null) > 0);
 				boolean hasPermission = PrivacyManager.hasPermission(ActivityApp.this, mAppInfo.getPackageName(),
 						rRestrictionName);
@@ -1040,6 +1047,7 @@ public class ActivityApp extends Activity {
 		private class GroupViewHolder {
 			private View row;
 			private int position;
+			private boolean busy;
 			public ImageView imgIndicator;
 			public ImageView imgUsed;
 			public ImageView imgGranted;
@@ -1051,6 +1059,7 @@ public class ActivityApp extends Activity {
 			public GroupViewHolder(View theRow, int thePosition) {
 				row = theRow;
 				position = thePosition;
+				busy = false;
 				imgIndicator = (ImageView) row.findViewById(R.id.imgIndicator);
 				imgUsed = (ImageView) row.findViewById(R.id.imgUsed);
 				imgGranted = (ImageView) row.findViewById(R.id.imgGranted);
@@ -1089,13 +1098,15 @@ public class ActivityApp extends Activity {
 						allRestricted = (allRestricted && restricted);
 						someRestricted = (someRestricted || restricted);
 					}
+
+					return holder;
 				}
 				return null;
 			}
 
 			@Override
 			protected void onPostExecute(Object result) {
-				if (holder.position == position && restrictionName != null) {
+				if (result != null) {
 					// Set data
 					holder.tvName.setTypeface(null, used ? Typeface.BOLD_ITALIC : Typeface.NORMAL);
 					holder.imgUsed.setVisibility(used ? View.VISIBLE : View.INVISIBLE);
@@ -1152,19 +1163,29 @@ public class ActivityApp extends Activity {
 						}
 					});
 				}
+				holder.busy = false;
 			}
 		}
 
 		@Override
 		public View getGroupView(int groupPosition, boolean isExpanded, View convertView, ViewGroup parent) {
-			GroupViewHolder holder;
+			GroupViewHolder holder = null;
+
+			if (convertView != null) {
+				holder = (GroupViewHolder) convertView.getTag();
+				if (holder.busy) {
+					convertView = null;
+					Util.log(null, Log.WARN, "View holder busy @" + holder.position);
+				} else {
+					holder.busy = true;
+					holder.position = groupPosition;
+				}
+			}
+
 			if (convertView == null) {
 				convertView = mInflater.inflate(R.layout.restrictionentry, null);
 				holder = new GroupViewHolder(convertView, groupPosition);
 				convertView.setTag(holder);
-			} else {
-				holder = (GroupViewHolder) convertView.getTag();
-				holder.position = groupPosition;
 			}
 
 			// Get entry
@@ -1198,7 +1219,10 @@ public class ActivityApp extends Activity {
 			});
 
 			// Display localized name
-			holder.tvName.setText(PrivacyManager.getLocalizedName(holder.row.getContext(), restrictionName));
+			TreeMap<String, String> tmRestriction = PrivacyManager.getRestrictions(ActivityApp.this);
+			int index = new ArrayList<String>(tmRestriction.values()).indexOf(restrictionName);
+			String title = (String) tmRestriction.navigableKeySet().toArray()[index];
+			holder.tvName.setText(title);
 
 			// Display restriction
 			holder.imgCBName.setVisibility(View.INVISIBLE);
@@ -1253,6 +1277,7 @@ public class ActivityApp extends Activity {
 
 		private class ChildViewHolder {
 			private View row;
+			private boolean busy;
 			private int groupPosition;
 			private int childPosition;
 			public ImageView imgUsed;
@@ -1263,6 +1288,7 @@ public class ActivityApp extends Activity {
 				row = theRow;
 				groupPosition = gPosition;
 				childPosition = cPosition;
+				busy = true;
 				imgUsed = (ImageView) row.findViewById(R.id.imgUsed);
 				imgGranted = (ImageView) row.findViewById(R.id.imgGranted);
 				ctvMethodName = (CheckedTextView) row.findViewById(R.id.ctvMethodName);
@@ -1300,14 +1326,15 @@ public class ActivityApp extends Activity {
 					permission = PrivacyManager.hasPermission(holder.row.getContext(), mAppInfo.getPackageName(), md);
 					restricted = PrivacyManager.getRestricted(null, holder.row.getContext(), mAppInfo.getUid(),
 							restrictionName, md.getName(), false, false);
+
+					return holder;
 				}
 				return null;
 			}
 
 			@Override
 			protected void onPostExecute(Object result) {
-				if (holder.groupPosition == groupPosition && holder.childPosition == childPosition
-						&& restrictionName != null) {
+				if (result != null) {
 					// Set data
 					if (lastUsage > 0) {
 						CharSequence sLastUsage = DateUtils.getRelativeTimeSpanString(lastUsage, new Date().getTime(),
@@ -1315,7 +1342,10 @@ public class ActivityApp extends Activity {
 						holder.ctvMethodName.setText(String.format("%s (%s)", md.getName(), sLastUsage));
 					}
 					holder.ctvMethodName.setEnabled(parentRestricted);
-					holder.imgUsed.setVisibility(lastUsage == 0 ? View.INVISIBLE : View.VISIBLE);
+					holder.imgUsed.setImageResource(Util.getThemed(ActivityApp.this,
+							md.hasNoUsageData() ? R.attr.icon_used_grayed : R.attr.icon_used));
+					holder.imgUsed
+							.setVisibility(lastUsage == 0 && !md.hasNoUsageData() ? View.INVISIBLE : View.VISIBLE);
 					holder.ctvMethodName.setTypeface(null, lastUsage == 0 ? Typeface.NORMAL : Typeface.BOLD_ITALIC);
 					holder.imgGranted.setVisibility(permission ? View.VISIBLE : View.INVISIBLE);
 					holder.ctvMethodName.setChecked(restricted);
@@ -1332,7 +1362,8 @@ public class ActivityApp extends Activity {
 									restrictionName, md.getName(), restricted);
 
 							// Refresh display
-							notifyDataSetChanged(); // Needed to update parent
+							notifyDataSetChanged(); // Needed to update
+													// parent
 
 							// Notify restart
 							if (restart)
@@ -1341,21 +1372,31 @@ public class ActivityApp extends Activity {
 						}
 					});
 				}
+				holder.busy = false;
 			}
 		}
 
 		@Override
 		public View getChildView(int groupPosition, int childPosition, boolean isLastChild, View convertView,
 				ViewGroup parent) {
-			ChildViewHolder holder;
+			ChildViewHolder holder = null;
+
+			if (convertView != null) {
+				holder = (ChildViewHolder) convertView.getTag();
+				if (holder.busy) {
+					convertView = null;
+					Util.log(null, Log.WARN, "View holder busy @" + holder.groupPosition + "/" + holder.childPosition);
+				} else {
+					holder.busy = true;
+					holder.groupPosition = groupPosition;
+					holder.childPosition = childPosition;
+				}
+			}
+
 			if (convertView == null) {
 				convertView = mInflater.inflate(R.layout.restrictionchild, null);
 				holder = new ChildViewHolder(convertView, groupPosition, childPosition);
 				convertView.setTag(holder);
-			} else {
-				holder = (ChildViewHolder) convertView.getTag();
-				holder.groupPosition = groupPosition;
-				holder.childPosition = childPosition;
 			}
 
 			// Get entry

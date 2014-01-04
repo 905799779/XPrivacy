@@ -5,7 +5,7 @@
     <string name="app_wrongandroid">Only for Android version 4.0+</string>
     <string name="app_version" formatted="false">Έκδοση XPrivacy: %s (%d)</string>
     <string name="app_xversion" formatted="false">Έκδοση Xposed framework: %d</string>
-    <string name="app_copyright">Copyright \u00A9 2013-2014 M. Bokhorst (M66B)</string>
+    <string name="app_copyright">Copyright \u00A9 2013–2014 M. Bokhorst (M66B)</string>
     <string name="menu_usage">Χρήση</string>
     <string name="menu_refresh">Ανανέωση</string>
     <string name="menu_settings">Ρυθμίσεις</string>
@@ -118,6 +118,7 @@
     <string name="help_internet">έχει άδεια internet</string>
     <string name="help_granted">έχει άδεια Android</string>
     <string name="help_used">έχει χρησιμοποιήσει αυτά τα δεδομένα</string>
+    <string name="help_used_grayed">no usage data available</string>
     <string name="help_frozen">είναι απενεργοποιημένη</string>
     <string name="help_dangerous">είναι επικίνδυνη</string>
     <string name="help_half">partly restricted</string>
