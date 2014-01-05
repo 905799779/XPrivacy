@@ -1232,7 +1232,6 @@ public class ActivityMain extends Activity implements OnItemSelectedListener, Co
 		private class ViewHolder {
 			private View row;
 			private int position;
-			private boolean busy;
 			public View vwState;
 			public ImageView imgIcon;
 			public ImageView imgUsed;
@@ -1246,7 +1245,6 @@ public class ActivityMain extends Activity implements OnItemSelectedListener, Co
 			public ViewHolder(View theRow, int thePosition) {
 				row = theRow;
 				position = thePosition;
-				busy = false;
 				vwState = (View) row.findViewById(R.id.vwState);
 				imgIcon = (ImageView) row.findViewById(R.id.imgIcon);
 				imgUsed = (ImageView) row.findViewById(R.id.imgUsed);
@@ -1278,7 +1276,7 @@ public class ActivityMain extends Activity implements OnItemSelectedListener, Co
 
 			@Override
 			protected Object doInBackground(Object... params) {
-				if (holder.position == position && xAppInfo != null) {
+				if (xAppInfo != null) {
 					// Get state
 					state = Integer.parseInt(PrivacyManager.getSetting(null, holder.row.getContext(),
 							xAppInfo.getUid(), PrivacyManager.cSettingState, "1", false));
@@ -1314,7 +1312,7 @@ public class ActivityMain extends Activity implements OnItemSelectedListener, Co
 
 			@Override
 			protected void onPostExecute(Object result) {
-				if (result != null) {
+				if (holder.position == position && result != null) {
 					// Display state
 					if (state == STATE_ATTENTION)
 						holder.vwState.setBackgroundColor(getResources().getColor(
@@ -1447,29 +1445,19 @@ public class ActivityMain extends Activity implements OnItemSelectedListener, Co
 						}
 					});
 				}
-				holder.busy = false;
 			}
 		}
 
 		@Override
 		public View getView(int position, View convertView, ViewGroup parent) {
-			ViewHolder holder = null;
-
-			if (convertView != null) {
-				holder = (ViewHolder) convertView.getTag();
-				if (holder.busy) {
-					convertView = null;
-					Util.log(null, Log.WARN, "View holder busy @" + holder.position);
-				} else {
-					holder.busy = true;
-					holder.position = position;
-				}
-			}
-
+			ViewHolder holder;
 			if (convertView == null) {
 				convertView = mInflater.inflate(R.layout.mainentry, null);
 				holder = new ViewHolder(convertView, position);
 				convertView.setTag(holder);
+			} else {
+				holder = (ViewHolder) convertView.getTag();
+				holder.position = position;
 			}
 
 			// Get info

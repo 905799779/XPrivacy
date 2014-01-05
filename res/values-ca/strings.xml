@@ -1,9 +1,10 @@
 <resources>
 
     <string name="app_notxposed" formatted="false">La versió %d+ d\'Xposed framework no està instal·lada</string>
-    <string name="app_notenabled">XPrivacyGB no està habilitat a l\'instal·lador d\'Xposed</string>
+    <string name="app_notenabled">XPrivacy no està habilitat a l\'instal·lador d\'Xposed</string>
     <string name="app_wrongandroid">Només per a Android versió 4.0+</string>
-    <string name="app_version" formatted="false">Versió d\'XPrivacyGB: %s (%d)</string>
+    <string name="app_version" formatted="false">Versió d\'XPrivacy: %s (%d)</string>
+    <string name="app_description">The ultimate privacy manager</string>
     <string name="app_xversion" formatted="false">Versió d\'Xposed framework: %d</string>
     <string name="app_copyright">Copyright \u00A9 2013–2014 per M. Bokhorst (M66B)</string>
     <string name="menu_usage">Usos</string>
@@ -51,7 +52,7 @@
     <string name="msg_random_boot">Genera aleatòriament després d\'arrencar</string>
     <string name="msg_usage">Updating usage data</string>
     <string name="msg_restart">Application restart required</string>
-    <string name="msg_first"><b>S\'ha tingut molta cura desenvolupant i provant XPrivacyGB, però és impossible garantir que funcionarà perfectament a tots els dispositius i per a totes les aplicacions.\n\nUtilitzeu-lo sota el vostre propi risc.</b>\n\nVegeu també la llicència:</string>
+    <string name="msg_first"><b>S\'ha tingut molta cura desenvolupant i provant XPrivacy, però és impossible garantir que funcionarà perfectament a tots els dispositius i per a totes les aplicacions.\n\nUtilitzeu-lo sota el vostre propi risc.</b>\n\nVegeu també la llicència:</string>
     <string name="restrict_accounts">Comptes (Google, Facebook, etc.)</string>
     <string name="restrict_browser">Navegador (marcadors/historial)</string>
     <string name="restrict_calendar">Calendari</string>
@@ -129,5 +130,6 @@
 \nTap the app icon for detailed restrictions and settings</string>
     <string name="tutorial_detailsheader">Tap the app icon for more actions</string>
     <string name="tutorial_detailslist">Tap the down arrow to see the function exceptions of a restriction category</string>
+    <string name="permission_manage">Manage applications, including killing</string>
 
 </resources>

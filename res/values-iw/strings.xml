@@ -1,9 +1,10 @@
 <resources>
 
     <string name="app_notxposed" formatted="false">Xposed מסגרת גרסה &amp;d+ אינו מותקן</string>
-    <string name="app_notenabled">XPrivacyGB אינו מאופשר במתקין Xposed</string>
+    <string name="app_notenabled">XPrivacy אינו מאופשר במתקין Xposed</string>
     <string name="app_wrongandroid">Only for Android version 4.0+</string>
-    <string name="app_version" formatted="false">XPrivacyGB גירסא: %s (%d)</string>
+    <string name="app_version" formatted="false">XPrivacy גירסא: %s (%d)</string>
+    <string name="app_description">The ultimate privacy manager</string>
     <string name="app_xversion" formatted="false">גרסת מסגרת Xposed: %d</string>
     <string name="app_copyright">כל הזכויות שמורות \ u00A9 2013–2014 על ידי מ \'Bokhorst (M66B)</string>
     <string name="menu_usage">Usage</string>
@@ -51,7 +52,7 @@
     <string name="msg_random_boot">Randomize after boot</string>
     <string name="msg_usage">Updating usage data</string>
     <string name="msg_restart">Application restart required</string>
-    <string name="msg_first"><b>Great care has been taken to develop and test XPrivacyGB,
+    <string name="msg_first"><b>Great care has been taken to develop and test XPrivacy,
 however it is impossible to guarantee it will work flawless on each and every device and for each and every application.
 \n\nUse is entirely at your own risk.</b>\n\nSee also the license:</string>
     <string name="restrict_accounts">חשבונות (גוגל, פייסבוק, וכו\')</string>
@@ -131,5 +132,6 @@ however it is impossible to guarantee it will work flawless on each and every de
 \nTap the app icon for detailed restrictions and settings</string>
     <string name="tutorial_detailsheader">Tap the app icon for more actions</string>
     <string name="tutorial_detailslist">Tap the down arrow to see the function exceptions of a restriction category</string>
+    <string name="permission_manage">Manage applications, including killing</string>
 
 </resources>

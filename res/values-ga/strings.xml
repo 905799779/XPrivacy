@@ -1,9 +1,10 @@
 ﻿<resources>
 
     <string name="app_notxposed" formatted="false">Ní Xposed framework leagan %d+ suiteáilte</string>
-    <string name="app_notenabled">Ní XPrivacyGB chumasú i an suiteálaí Xposed</string>
+    <string name="app_notenabled">Ní XPrivacy chumasú i an suiteálaí Xposed</string>
     <string name="app_wrongandroid">Ach amháin le haghaidh Android version 4.0+</string>
-    <string name="app_version" formatted="false">XPrivacyGB leagan: %s (%d)</string>
+    <string name="app_version" formatted="false">XPrivacy leagan: %s (%d)</string>
+    <string name="app_description">The ultimate privacy manager</string>
     <string name="app_xversion" formatted="false">Xposed framework leagan: %d</string>
     <string name="app_copyright">Cóipcheart \ u00A9 2013–2014 le M. Bokhorst (M66B)</string>
     <string name="menu_usage">Úsáid</string>
@@ -51,7 +52,7 @@
     <string name="msg_random_boot">Randamaigh tar éis tosaithe</string>
     <string name="msg_usage">Updating usage data</string>
     <string name="msg_restart">Application restart required</string>
-    <string name="msg_first"><b>cúram mór aire do a fhorbairt agus a thástáil XPrivacyGB,
+    <string name="msg_first"><b>cúram mór aire do a fhorbairt agus a thástáil XPrivacy,
 áfach, go bhfuil sé dodhéanta a ráthú go mbeidh sé obair flawless ar gach gléas agus do gach agus gach iarratas.
 \n\nBain úsáid as ar do phriacal féin.</b>\n\nFéach freisin an ceadúnas:</string>
     <string name="restrict_accounts">Cuntais (Google, Facebook, etc)</string>
@@ -131,5 +132,6 @@
 \nTap the app icon for detailed restrictions and settings</string>
     <string name="tutorial_detailsheader">Tap the app icon for more actions</string>
     <string name="tutorial_detailslist">Tap the down arrow to see the function exceptions of a restriction category</string>
+    <string name="permission_manage">Manage applications, including killing</string>
 
 </resources>

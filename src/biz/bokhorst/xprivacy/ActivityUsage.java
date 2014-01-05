@@ -18,7 +18,6 @@ import android.graphics.drawable.Drawable;
 import android.os.Bundle;
 import android.support.v4.app.NavUtils;
 import android.support.v4.app.TaskStackBuilder;
-import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuInflater;
@@ -230,7 +229,6 @@ public class ActivityUsage extends Activity {
 		private class ViewHolder {
 			private View row;
 			private int position;
-			private boolean busy;
 			public TextView tvTime;
 			public ImageView imgIcon;
 			public ImageView imgRestricted;
@@ -240,7 +238,6 @@ public class ActivityUsage extends Activity {
 			public ViewHolder(View theRow, int thePosition) {
 				row = theRow;
 				position = thePosition;
-				busy = false;
 				tvTime = (TextView) row.findViewById(R.id.tvTime);
 				imgIcon = (ImageView) row.findViewById(R.id.imgIcon);
 				imgRestricted = (ImageView) row.findViewById(R.id.imgRestricted);
@@ -263,7 +260,7 @@ public class ActivityUsage extends Activity {
 
 			@Override
 			protected Object doInBackground(Object... params) {
-				if (holder.position == position && usageData != null) {
+				if (usageData != null) {
 					try {
 						PackageManager pm = holder.row.getContext().getPackageManager();
 						String[] packages = pm.getPackagesForUid(usageData.getUid());
@@ -281,33 +278,23 @@ public class ActivityUsage extends Activity {
 
 			@Override
 			protected void onPostExecute(Object result) {
-				if (result != null) {
+				if (holder.position == position && result != null) {
 					holder.imgIcon.setImageDrawable(icon);
 					holder.imgIcon.setVisibility(View.VISIBLE);
 				}
-				holder.busy = false;
 			}
 		}
 
 		@Override
 		public View getView(int position, View convertView, ViewGroup parent) {
-			ViewHolder holder = null;
-
-			if (convertView != null) {
-				holder = (ViewHolder) convertView.getTag();
-				if (holder.busy) {
-					convertView = null;
-					Util.log(null, Log.WARN, "View holder busy @" + holder.position);
-				} else {
-					holder.busy = true;
-					holder.position = position;
-				}
-			}
-
+			ViewHolder holder;
 			if (convertView == null) {
 				convertView = mInflater.inflate(R.layout.usageentry, null);
 				holder = new ViewHolder(convertView, position);
 				convertView.setTag(holder);
+			} else {
+				holder = (ViewHolder) convertView.getTag();
+				holder.position = position;
 			}
 
 			// Get data

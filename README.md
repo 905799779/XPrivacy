@@ -284,6 +284,7 @@ Limitations
 * You cannot restrict the Android ID used for submitting restrictions (only [pro version](http://www.xprivacy.eu/))
 * There is no usage data for isolated processes (a new concept in Android 4.4)
 * Native libraries can bypass the Android APIs and thus circumvent XPrivacy. You can prevent native libraries from loading in the category *Shell*, functions *load* and *loadLibrary*.
+* It is not possible to restrict hardware MAC addresses or the external IP address
 
 Compatibility
 -------------
@@ -478,7 +479,7 @@ because the uid's of these applications might have been changed.
 For export/importing XPrivacy data you need [pro version](http://www.xprivacy.eu/).
 
 <a name="FAQ16"></a>
-**(16) Can I restrict an application with root access?**
+**(16) Can I restrict root access?**
 
 Yes, you can by restricting su shell access.
 
@@ -700,7 +701,22 @@ Since XPrivacy mostly runs before the function is run, this will be registered.
 If you filter on permissions and an application tried to use a function without having these permissions,
 the application will still be shown.
 
-If you think a function should have permissions, while XPrivacy shows not, please report this.
+If you think a function requires permissions, while XPrivacy shows not, please report this.
+
+<a name="FAQ45"></a>
+**(45) How can I restrict the hardware/external MAC/IP/IMEI address/number?**
+
+You can restrict the IP and MAC addresses and IMEI number for any application.
+
+The external IP is assigned by your provider and can thus not be changed.
+You could use a [VPN](http://en.wikipedia.org/wiki/Virtual_private_network)
+or [TOR](http://en.wikipedia.org/wiki/Tor_\(anonymity_network\)) to hide your external IP to a certain extend.
+
+The hardware MAC address can be changed on some devices,
+but this is device dependent and can only be done on driver or kernel level.
+XPrivacy works only on Android level and device independent.
+
+The same applies to the IMEI number, with as additional problem legal issues in most countries.
 
 Support
 -------

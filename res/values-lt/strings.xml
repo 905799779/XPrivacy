@@ -1,9 +1,10 @@
 <resources>
 
     <string name="app_notxposed" formatted="false">Xposed programos versija %d+ neįdiegta</string>
-    <string name="app_notenabled">XPrivacyGB neaktyvuota Xposed programoje</string>
+    <string name="app_notenabled">XPrivacy neaktyvuota Xposed programoje</string>
     <string name="app_wrongandroid">Tik nuo Android 4.0+ versijos</string>
-    <string name="app_version" formatted="false">XPrivacyGB programos versija: %s (%d)</string>
+    <string name="app_version" formatted="false">XPrivacy programos versija: %s (%d)</string>
+    <string name="app_description">The ultimate privacy manager</string>
     <string name="app_xversion" formatted="false">Xposed programos versija: %d</string>
     <string name="app_copyright">Copyright \u00A9 2013–2014 by M. Bokhorst (M66B)</string>
     
@@ -52,7 +53,7 @@
     <string name="msg_random_boot">Atsitiktiniai duomenys po perkrovimo</string>
     <string name="msg_usage">Atnaujinamas duomenų naudojimas</string>
     <string name="msg_restart">Programą reikia perkrauti</string>
-    <string name="msg_first"><b>Puiku, kad sutikote išbandyti XPrivacyGB.
+    <string name="msg_first"><b>Puiku, kad sutikote išbandyti XPrivacy.
 Tačiau neįmanoma garantuoti, kad dirbs nepriekaištingai su kiekvienu prietaisu.
 \n\nTodėl naudokite visiškai savo pačių rizika.</b>\n\nTaip pat žiūrėkite licenciją:</string>
     <string name="restrict_accounts">Paskyra (Google, Facebook, kita)</string>
@@ -132,5 +133,6 @@ Tačiau neįmanoma garantuoti, kad dirbs nepriekaištingai su kiekvienu prietais
 \nTap the app icon for detailed restrictions and settings</string>
     <string name="tutorial_detailsheader">Tap the app icon for more actions</string>
     <string name="tutorial_detailslist">Tap the down arrow to see the function exceptions of a restriction category</string>
+    <string name="permission_manage">Manage applications, including killing</string>
 
 </resources>

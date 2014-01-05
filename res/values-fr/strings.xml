@@ -1,9 +1,10 @@
 <resources>
 
     <string name="app_notxposed" formatted="false">La version %d+ de l\'environnement Xposed n\'est pas installée</string>
-    <string name="app_notenabled">XPrivacyGB n\'est pas activé dans l\'installateur Xposed</string>
+    <string name="app_notenabled">XPrivacy n\'est pas activé dans l\'installateur Xposed</string>
     <string name="app_wrongandroid">Uniquement pour Android 4.0 et ultérieur</string>
-    <string name="app_version" formatted="false">Version XPrivacyGB : %s (%d)</string>
+    <string name="app_version" formatted="false">Version XPrivacy : %s (%d)</string>
+    <string name="app_description">The ultimate privacy manager</string>
     <string name="app_xversion" formatted="false">Version de l\'environnement Xposed : %d</string>
     <string name="app_copyright">Droits d\'auteur : M. Bokhorst (M66B) \u00A9 2013–2014 </string>
     <string name="menu_usage">Usage</string>
@@ -51,7 +52,7 @@
     <string name="msg_random_boot">Randomiser après le démarrage</string>
     <string name="msg_usage">Usage log en rafraîchissement</string>
     <string name="msg_restart">Redémarrage de l\'application nécessaire</string>
-    <string name="msg_first"><b>Un grand soin est apporté au développement et aux tests de XPrivacyGB. Toutefois,
+    <string name="msg_first"><b>Un grand soin est apporté au développement et aux tests de XPrivacy. Toutefois,
 il est impossible de garantir un fonctionnement parfait sur chaque appareil et pour chaque application.
 \n\nSon utilisation est à vos risques et périls !</b>\n\nVeuillez prendre connaissance de la licence :</string>
     <string name="restrict_accounts">Comptes (Google, Facebook, etc)</string>
@@ -131,5 +132,6 @@ il est impossible de garantir un fonctionnement parfait sur chaque appareil et p
 \nAppuyer sur l’icône de l’appli pour les restrictions détaillées et les paramètres</string>
     <string name="tutorial_detailsheader">Appuyer sur l’icône pour plus d’actions</string>
     <string name="tutorial_detailslist">Appuyer sur la flèche vers les bas pour voir les exceptions d’une catégorie de restrictions</string>
+    <string name="permission_manage">Manage applications, including killing</string>
 
 </resources>

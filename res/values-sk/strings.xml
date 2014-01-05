@@ -1,9 +1,10 @@
 <resources>
 
     <string name="app_notxposed" formatted="false">Verzia frameworku Xposed %d+ nie je nainštalovaná</string>
-    <string name="app_notenabled">Modul XPrivacyGB nie je aktivovaný v Inštalátori Xposed</string>
+    <string name="app_notenabled">Modul XPrivacy nie je aktivovaný v Inštalátori Xposed</string>
     <string name="app_wrongandroid">Len pre Android 4.0+</string>
-    <string name="app_version" formatted="false">Verzia XPrivacyGB: %s (%d)</string>
+    <string name="app_version" formatted="false">Verzia XPrivacy: %s (%d)</string>
+    <string name="app_description">Správca súkromia</string>
     <string name="app_xversion" formatted="false">Verzia frameworku Xposed: %d</string>
     <string name="app_copyright">Autorské práva \u00A9 2013–2014 od M. Bokhorst (M66B)</string>
     <string name="menu_usage">Využitie dát</string>
@@ -51,7 +52,7 @@
     <string name="msg_random_boot">Náhodné hodnoty pri štarte zariadenia</string>
     <string name="msg_usage">Aktualizácia dát využitia</string>
     <string name="msg_restart">Vyžadovaný reštart aplikácie</string>
-    <string name="msg_first"><b>Veľká starostlivosť bola venovaná vývoju a testovaniu XPrivacyGB,
+    <string name="msg_first"><b>Veľká starostlivosť bola venovaná vývoju a testovaniu XPrivacy,
 avšak nie je nemožné zaručiť, že bude fungovať bezchybne na každom zariadení a na každú aplikáciu.
 \n\nPoužitie je plne na vlastné riziko.</b>\n\nPozrite tiež licenciu:</string>
     <string name="restrict_accounts">Účty (Google, Facebook, atď.)</string>
@@ -119,7 +120,7 @@ avšak nie je nemožné zaručiť, že bude fungovať bezchybne na každom zaria
     <string name="help_internet">má internetové povolenie</string>
     <string name="help_granted">má Android povolenie</string>
     <string name="help_used">používala tieto dáta</string>
-    <string name="help_used_grayed">no usage data available</string>
+    <string name="help_used_grayed">nedostupné využitie dát</string>
     <string name="help_frozen">je zakázaná</string>
     <string name="help_dangerous">je nebezpečná</string>
     <string name="help_half">čiastočne obmedzené</string>
@@ -132,5 +133,6 @@ avšak nie je nemožné zaručiť, že bude fungovať bezchybne na každom zaria
 \nKliknite na ikonu aplikácie pre podrobné obmedzenia a nastavenia</string>
     <string name="tutorial_detailsheader">Kliknite na ikonu aplikácie pre viac akcií</string>
     <string name="tutorial_detailslist">Kliknite na šípku nadol pre zobrazenie funkčných výnimiek pre kategóriu obmedzení</string>
+    <string name="permission_manage">Spravovať aplikácie, vrátane ich ukončenia</string>
 
 </resources>

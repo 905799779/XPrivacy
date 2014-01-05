@@ -1,9 +1,10 @@
 <resources>
 
     <string name="app_notxposed" formatted="false">لم يتم تثبيت إطار xposed نسخة %d+</string>
-    <string name="app_notenabled">لم يتم تفعيل XPrivacyGB</string>
+    <string name="app_notenabled">لم يتم تفعيل XPrivacy</string>
     <string name="app_wrongandroid">فقط لأندرويد نسخة 4.0+</string>
-    <string name="app_version" formatted="false">نسخة XPrivacyGB : %s (%d)</string>
+    <string name="app_version" formatted="false">نسخة XPrivacy : %s (%d)</string>
+    <string name="app_description">The ultimate privacy manager</string>
     <string name="app_xversion" formatted="false">إطار  Xposed نسخة : %d</string>
     <string name="app_copyright">حقوق الطبع \u00A9 2013–2014 ل M. Bokhorst (M66B)</string>
     <string name="menu_usage">الإستخدام</string>
@@ -51,7 +52,7 @@
     <string name="msg_random_boot">عشوائي بعد الإقلاع</string>
     <string name="msg_usage">تحديث بيانات المستخدم</string>
     <string name="msg_restart">التطبيق يتطلب إعادة التشغيل</string>
-    <string name="msg_first"><b>بُذلت عناية كبيرة لتطوير وإختبار XPrivacyGB,
+    <string name="msg_first"><b>بُذلت عناية كبيرة لتطوير وإختبار XPrivacy,
 ومع ذلك فإنه من المستحيل ضمان أنه سيعمل خالياً من العيوب على كل جهاز ولكل تطبيق.
 \n\nالإستخدام على مسئوليتك الخاصة.</b>\n\nراجع أيضاً الترخيص:</string>
     <string name="restrict_accounts">الحسابات (قوقل , فيسبوك , الخ)</string>
@@ -131,5 +132,6 @@
 \nإلمس ايقونة التطبيق لتفاصيل القيود والإعدادات</string>
     <string name="tutorial_detailsheader">انقر على أيقونة التطبيق لمزيد من الإجراءات</string>
     <string name="tutorial_detailslist">انقر على السهم المتجه لأسفل لرؤية الوظائف الإستثنائية في الفئة المُقيدة</string>
+    <string name="permission_manage">Manage applications, including killing</string>
 
 </resources>
