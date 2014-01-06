@@ -108,7 +108,6 @@
 			}
 
 			// Check restrictions
-			$empty = true;
 			if (!empty($data->settings)) {
 				$xml = file_get_contents ('meta.xml');
 				$parser = xml_parser_create();
@@ -116,9 +115,6 @@
 				xml_parser_free($parser);
 
 				foreach ($data->settings as $restriction) {
-					if ($restriction->restricted)
-						$empty = false;
-
 					$found = false;
 
 					// Legacy
@@ -148,11 +144,6 @@
 						//exit();
 					}
 				}
-			}
-			if ($empty) {
-				// log_error('submit: restrictions missing', $my_email, $data);
-				echo json_encode(array('ok' => false, 'error' => 'Restrictions missing'));
-				exit();
 			}
 
 			// Process application
@@ -490,7 +481,7 @@
 							<a class="action" href="#" id="details">Show details</a>
 							<span class="glyphicon glyphicon-comment"></span>
 							<a class="action" href="http://forum.faircode.eu/forums/forum/xprivacy/?package_name=<?php echo urlencode($package_name); ?>" target="_blank">Discussion</a>
-							<a class="action" href="https://play.google.com/store/apps/details?id=<?php echo urlencode($package_name); ?>" target="_blank"><img src="https://www.gstatic.com/android/market_images/web/play_logo_x2.png" style="width:142px; height:30px" alt="Play store" /></a>
+							<a class="action" href="https://play.google.com/store/apps/details?id=<?php echo urlencode($package_name); ?>" target="_blank"><img src="play_logo_x2.png" style="width:95px; height:20px" alt="Play store" /></a>
 						</p>
 					</div>
 					<p style="font-size: smaller;">Rows marked with a <span style="background: lightgray;">grey background</span> will be restricted when fetched;

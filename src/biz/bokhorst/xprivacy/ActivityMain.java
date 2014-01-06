@@ -20,9 +20,11 @@ import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.pm.PackageInfo;
+import android.content.res.TypedArray;
 import android.graphics.Bitmap;
 import android.graphics.Color;
 import android.graphics.Typeface;
+import android.graphics.drawable.Drawable;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
@@ -1067,9 +1069,11 @@ public class ActivityMain extends Activity implements OnItemSelectedListener, Co
 	private class AppListAdapter extends ArrayAdapter<ApplicationInfoEx> {
 		private Context mContext;
 		private List<ApplicationInfoEx> mListApp;
+		private List<ApplicationInfoEx> mListAppSelected = new ArrayList<ApplicationInfoEx>();
 		private String mRestrictionName;
 		private LayoutInflater mInflater = (LayoutInflater) getSystemService(Context.LAYOUT_INFLATER_SERVICE);
 		private AtomicInteger mFiltersRunning = new AtomicInteger(0);
+		private int mHighlightColor;
 
 		public AppListAdapter(Context context, int resource, List<ApplicationInfoEx> objects,
 				String initialRestrictionName) {
@@ -1078,6 +1082,11 @@ public class ActivityMain extends Activity implements OnItemSelectedListener, Co
 			mListApp = new ArrayList<ApplicationInfoEx>();
 			mListApp.addAll(objects);
 			mRestrictionName = initialRestrictionName;
+
+			TypedArray ta1 = context.getTheme().obtainStyledAttributes(
+					new int[] { android.R.attr.colorLongPressedHighlight });
+			mHighlightColor = ta1.getColor(0, 0xFF00FF);
+			ta1.recycle();
 		}
 
 		public void setRestrictionName(String restrictionName) {
@@ -1352,6 +1361,29 @@ public class ActivityMain extends Activity implements OnItemSelectedListener, Co
 						holder.imgCBName.setImageBitmap(mCheck[0]); // Off
 					holder.imgCBName.setVisibility(View.VISIBLE);
 
+					// Display selection
+					if (mListAppSelected.contains(xAppInfo))
+						holder.row.setBackgroundColor(mHighlightColor);
+					else
+						holder.row.setBackgroundColor(Color.TRANSPARENT);
+
+					holder.rlName.setOnLongClickListener(new View.OnLongClickListener() {
+						@Override
+						public boolean onLongClick(View view) {
+							if (mListAppSelected.contains(xAppInfo))
+								mListAppSelected.remove(xAppInfo);
+							else
+								mListAppSelected.add(xAppInfo);
+
+							if (mListAppSelected.contains(xAppInfo))
+								holder.row.setBackgroundColor(mHighlightColor);
+							else
+								holder.row.setBackgroundColor(Color.TRANSPARENT);
+
+							return true;
+						}
+					});
+
 					// Listen for restriction changes
 					holder.rlName.setOnClickListener(new View.OnClickListener() {
 						@Override
@@ -1466,10 +1498,10 @@ public class ActivityMain extends Activity implements OnItemSelectedListener, Co
 
 			// Set background color
 			if (xAppInfo.isSystem())
-				holder.row.setBackgroundColor(getResources().getColor(
+				holder.rlName.setBackgroundColor(getResources().getColor(
 						Util.getThemed(ActivityMain.this, R.attr.color_dangerous)));
 			else
-				holder.row.setBackgroundColor(Color.TRANSPARENT);
+				holder.rlName.setBackgroundColor(Color.TRANSPARENT);
 
 			// Handle details click
 			holder.imgIcon.setOnClickListener(new View.OnClickListener() {
