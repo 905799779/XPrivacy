@@ -23,6 +23,7 @@
         <item name="color_state_shared">@color/color_state_shared_dark</item>
         <item name="background_tutorial">@drawable/tutorial_background_dark</item>
         <item name="colorActivatedHighlight">@color/holo_blue_dark</item>
+        <item name="colorLongPressedHighlight">@color/legacy_long_pressed_highlight</item>
     </style>
 
     <style name="CustomTheme.Light" parent="Theme.AppCompat.Light.DarkActionBar">
@@ -48,6 +49,7 @@
         <item name="color_state_shared">@color/color_state_shared_light</item>
         <item name="background_tutorial">@drawable/tutorial_background_light</item>
         <item name="colorActivatedHighlight">@color/holo_blue_dark</item>
+        <item name="colorLongPressedHighlight">@color/legacy_long_pressed_highlight</item>
     </style>
 
     <style name="CustomTheme.Light.Dialog" parent="Theme.AppCompat.Light">

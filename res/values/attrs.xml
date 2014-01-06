@@ -24,5 +24,6 @@
     <attr name="color_state_shared" format="reference" />
     <attr name="background_tutorial" format="reference" />
     <attr name="colorActivatedHighlight" format="reference" />
+    <attr name="colorLongPressedHighlight" format="reference" />
 
 </resources>

@@ -1084,7 +1084,7 @@ public class ActivityMain extends Activity implements OnItemSelectedListener, Co
 			mRestrictionName = initialRestrictionName;
 
 			TypedArray ta1 = context.getTheme().obtainStyledAttributes(
-					new int[] { android.R.attr.colorLongPressedHighlight });
+					new int[] { R.attr.colorLongPressedHighlight });
 			mHighlightColor = ta1.getColor(0, 0xFF00FF);
 			ta1.recycle();
 		}
