@@ -105,12 +105,12 @@ public class ActivityApp extends Activity {
 	}
 
 	public void onCreate(Bundle savedInstanceState) {
-		super.onCreate(savedInstanceState);
-
 		// Set theme
 		String themeName = PrivacyManager.getSetting(null, this, 0, PrivacyManager.cSettingTheme, "", false);
 		mThemeId = (themeName.equals("Dark") ? R.style.CustomTheme : R.style.CustomTheme_Light);
 		setTheme(mThemeId);
+
+		super.onCreate(savedInstanceState);
 
 		// Set layout
 		setContentView(R.layout.restrictionlist);
