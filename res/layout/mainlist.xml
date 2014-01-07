@@ -397,7 +397,6 @@
             android:layout_marginRight="@dimen/activity_horizontal_margin_list"
             android:layout_marginTop="6dip"
             android:choiceMode="none"
-            android:cacheColorHint="@null"
             android:paddingRight="12dip"
             android:scrollbarStyle="insideInset" />
 

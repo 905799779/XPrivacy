@@ -183,7 +183,6 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="6dip"
             android:choiceMode="none"
-            android:cacheColorHint="@null"
             android:paddingRight="6dip"
             android:scrollbarStyle="insideInset" />
 
