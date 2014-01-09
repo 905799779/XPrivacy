@@ -24,7 +24,6 @@ import android.content.res.TypedArray;
 import android.graphics.Bitmap;
 import android.graphics.Color;
 import android.graphics.Typeface;
-import android.graphics.drawable.Drawable;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
@@ -83,7 +82,8 @@ public class ActivityMain extends Activity implements OnItemSelectedListener, Co
 	private static final int ACTIVITY_EXPORT = 1;
 	private static final int ACTIVITY_IMPORT = 2;
 	private static final int ACTIVITY_IMPORT_SELECT = 3;
-	private static final int ACTIVITY_FETCH = 4;
+	private static final int ACTIVITY_SUBMIT = 4;
+	private static final int ACTIVITY_FETCH = 5;
 
 	private static final int LICENSED = 0x0100;
 	private static final int NOT_LICENSED = 0x0231;
@@ -471,12 +471,25 @@ public class ActivityMain extends Activity implements OnItemSelectedListener, Co
 					String fileName = dataIntent.getData().getPath();
 					fileName = fileName.replace("/document/primary:", Environment.getExternalStorageDirectory()
 							.getAbsolutePath() + File.separatorChar);
-					Intent intent = new Intent(ActivityShare.ACTION_IMPORT);
-					intent.putExtra(ActivityShare.cFileName, fileName);
-					startActivityForResult(intent, ACTIVITY_IMPORT);
+					startImport(fileName);
 				} catch (Throwable ex) {
 					Util.bug(null, ex);
 				}
+
+		} else if (requestCode == ACTIVITY_SUBMIT) {
+			// Fetch
+			sharingDone();
+			if (mAppAdapter != null)
+				mAppAdapter.notifyDataSetChanged(); // Update state
+
+			String errorMessage = null;
+			if (dataIntent != null && dataIntent.hasExtra(ActivityShare.cErrorMessage))
+				errorMessage = dataIntent.getStringExtra(ActivityShare.cErrorMessage);
+
+			String text = String.format("%s: %s", getString(R.string.menu_submit),
+					errorMessage == null ? getString(R.string.msg_done) : errorMessage);
+			Toast toast = Toast.makeText(this, text, Toast.LENGTH_LONG);
+			toast.show();
 
 		} else if (requestCode == ACTIVITY_FETCH) {
 			// Fetch
@@ -493,6 +506,7 @@ public class ActivityMain extends Activity implements OnItemSelectedListener, Co
 			Toast toast = Toast.makeText(this, text, Toast.LENGTH_LONG);
 			toast.show();
 		}
+
 	}
 
 	@Override
@@ -510,6 +524,8 @@ public class ActivityMain extends Activity implements OnItemSelectedListener, Co
 		menu.findItem(R.id.menu_all).setEnabled(!mBatchOpRunning);
 		menu.findItem(R.id.menu_export).setEnabled(pro && mounted && !mBatchOpRunning);
 		menu.findItem(R.id.menu_import).setEnabled(pro && mounted && !mBatchOpRunning);
+		menu.findItem(R.id.menu_submit).setEnabled(
+				!mBatchOpRunning && mAppAdapter != null && mAppAdapter.getSelected(true).size() > 0);
 		menu.findItem(R.id.menu_fetch).setEnabled(!mBatchOpRunning);
 		menu.findItem(R.id.menu_pro).setVisible(!pro);
 
@@ -546,6 +562,9 @@ public class ActivityMain extends Activity implements OnItemSelectedListener, Co
 				return true;
 			case R.id.menu_import:
 				optionImport();
+				return true;
+			case R.id.menu_submit:
+				optionSubmit();
 				return true;
 			case R.id.menu_fetch:
 				optionFetch();
@@ -661,43 +680,46 @@ public class ActivityMain extends Activity implements OnItemSelectedListener, Co
 	// Options
 
 	private void optionAll() {
-		// Check if some restricted
-		boolean some = false;
-		for (int pos = 0; pos < mAppAdapter.getCount(); pos++) {
-			ApplicationInfoEx xAppInfo = mAppAdapter.getItem(pos);
-			for (boolean restricted : PrivacyManager.getRestricted(ActivityMain.this, xAppInfo.getUid(),
-					mAppAdapter.getRestrictionName()))
-				if (restricted) {
-					some = true;
+		if (mAppAdapter != null) {
+			// Check if some restricted
+			boolean some = false;
+			for (ApplicationInfoEx xAppInfo : mAppAdapter.getSelected(false)) {
+				for (boolean restricted : PrivacyManager.getRestricted(ActivityMain.this, xAppInfo.getUid(),
+						mAppAdapter.getRestrictionName()))
+					if (restricted) {
+						some = true;
+						break;
+					}
+				if (some)
 					break;
-				}
-			if (some)
-				break;
-		}
-		final boolean someRestricted = some;
+			}
+			final boolean someRestricted = some;
 
-		// Are you sure?
-		AlertDialog.Builder alertDialogBuilder = new AlertDialog.Builder(this);
-		alertDialogBuilder.setTitle(getString(someRestricted ? R.string.menu_clear_all : R.string.menu_restrict_all));
-		alertDialogBuilder.setMessage(getString(R.string.msg_sure));
-		alertDialogBuilder.setIcon(Util.getThemed(this, R.attr.icon_launcher));
-		alertDialogBuilder.setPositiveButton(getString(android.R.string.ok), new DialogInterface.OnClickListener() {
-			@Override
-			public void onClick(DialogInterface dialog, int which) {
-				if (mAppAdapter != null) {
-					mBatchOpRunning = true;
-					invalidateOptionsMenu();
-					new ToggleTask().executeOnExecutor(mExecutor, someRestricted);
+			// Are you sure?
+			AlertDialog.Builder alertDialogBuilder = new AlertDialog.Builder(this);
+			alertDialogBuilder
+					.setTitle(getString(someRestricted ? R.string.menu_clear_all : R.string.menu_restrict_all));
+			alertDialogBuilder.setMessage(getString(R.string.msg_sure));
+			alertDialogBuilder.setIcon(Util.getThemed(this, R.attr.icon_launcher));
+			alertDialogBuilder.setPositiveButton(getString(android.R.string.ok), new DialogInterface.OnClickListener() {
+				@Override
+				public void onClick(DialogInterface dialog, int which) {
+					if (mAppAdapter != null) {
+						mBatchOpRunning = true;
+						invalidateOptionsMenu();
+						new ToggleTask().executeOnExecutor(mExecutor, someRestricted);
+					}
 				}
-			}
-		});
-		alertDialogBuilder.setNegativeButton(getString(android.R.string.cancel), new DialogInterface.OnClickListener() {
-			@Override
-			public void onClick(DialogInterface dialog, int which) {
-			}
-		});
-		AlertDialog alertDialog = alertDialogBuilder.create();
-		alertDialog.show();
+			});
+			alertDialogBuilder.setNegativeButton(getString(android.R.string.cancel),
+					new DialogInterface.OnClickListener() {
+						@Override
+						public void onClick(DialogInterface dialog, int which) {
+						}
+					});
+			AlertDialog alertDialog = alertDialogBuilder.create();
+			alertDialog.show();
+		}
 	}
 
 	private void optionUsage() {
@@ -771,11 +793,53 @@ public class ActivityMain extends Activity implements OnItemSelectedListener, Co
 			chooseFile.setDataAndType(uri, "text/xml");
 			Intent intent = Intent.createChooser(chooseFile, getString(R.string.app_name));
 			startActivityForResult(intent, ACTIVITY_IMPORT_SELECT);
-		} else {
-			Intent intent = new Intent(ActivityShare.ACTION_IMPORT);
-			intent.putExtra(ActivityShare.cFileName, ActivityShare.getFileName(false));
-			startActivityForResult(intent, ACTIVITY_IMPORT);
+		} else
+			startImport(ActivityShare.getFileName(false));
+	}
+
+	private void startImport(String fileName) {
+		Intent intent = new Intent(ActivityShare.ACTION_IMPORT);
+		intent.putExtra(ActivityShare.cFileName, fileName);
+		int[] uid;
+		if (mAppAdapter == null)
+			uid = new int[0];
+		else {
+			List<ApplicationInfoEx> listAppInfo = mAppAdapter.getSelected(true);
+			uid = new int[listAppInfo.size()];
+			for (int pos = 0; pos < listAppInfo.size(); pos++)
+				uid[pos] = listAppInfo.get(pos).getUid();
+			intent.putExtra(ActivityShare.cUidList, uid);
 		}
+		startActivityForResult(intent, ACTIVITY_IMPORT);
+	}
+
+	private void optionSubmit() {
+		AlertDialog.Builder alertDialogBuilder = new AlertDialog.Builder(this);
+		alertDialogBuilder.setTitle(getString(R.string.menu_submit));
+		alertDialogBuilder.setMessage(getString(R.string.msg_sure));
+		alertDialogBuilder.setIcon(Util.getThemed(this, R.attr.icon_launcher));
+		alertDialogBuilder.setPositiveButton(getString(android.R.string.ok), new DialogInterface.OnClickListener() {
+			@Override
+			public void onClick(DialogInterface dialog, int which) {
+				sharingStart();
+				if (mAppAdapter != null) {
+					List<ApplicationInfoEx> listAppInfo = mAppAdapter.getSelected(true);
+					int[] uid = new int[listAppInfo.size()];
+					for (int pos = 0; pos < listAppInfo.size(); pos++)
+						uid[pos] = listAppInfo.get(pos).getUid();
+					Intent intent = new Intent(ActivityShare.ACTION_SUBMIT);
+					intent.putExtra(ActivityShare.cUidList, uid);
+					startActivityForResult(intent, ACTIVITY_SUBMIT);
+				}
+			}
+		});
+		alertDialogBuilder.setNegativeButton(getString(android.R.string.cancel), new DialogInterface.OnClickListener() {
+			@Override
+			public void onClick(DialogInterface dialog, int which) {
+			}
+		});
+		AlertDialog alertDialog = alertDialogBuilder.create();
+		alertDialog.show();
 	}
 
 	private void optionFetch() {
@@ -792,8 +856,15 @@ public class ActivityMain extends Activity implements OnItemSelectedListener, Co
 				@Override
 				public void onClick(DialogInterface dialog, int which) {
 					sharingStart();
-					Intent intent = new Intent(ActivityShare.ACTION_FETCH);
-					startActivityForResult(intent, ACTIVITY_FETCH);
+					if (mAppAdapter != null) {
+						List<ApplicationInfoEx> listAppInfo = mAppAdapter.getSelected(false);
+						int[] uid = new int[listAppInfo.size()];
+						for (int pos = 0; pos < listAppInfo.size(); pos++)
+							uid[pos] = listAppInfo.get(pos).getUid();
+						Intent intent = new Intent(ActivityShare.ACTION_FETCH);
+						intent.putExtra(ActivityShare.cUidList, uid);
+						startActivityForResult(intent, ACTIVITY_FETCH);
+					}
 				}
 			});
 			alertDialogBuilder.setNegativeButton(getString(android.R.string.cancel),
@@ -1015,19 +1086,22 @@ public class ActivityMain extends Activity implements OnItemSelectedListener, Co
 
 			// Apply action
 			boolean restart = false;
-			for (int pos = 0; pos < mAppAdapter.getCount(); pos++) {
-				publishProgress(pos, mAppAdapter.getCount());
-				ApplicationInfoEx xAppInfo = mAppAdapter.getItem(pos);
-				if (mAppAdapter.getRestrictionName() == null && someRestricted)
-					restart = PrivacyManager.deleteRestrictions(ActivityMain.this, xAppInfo.getUid()) || restart;
-				else if (mAppAdapter.getRestrictionName() == null) {
-					for (String restrictionName : PrivacyManager.getRestrictions())
+			if (mAppAdapter != null) {
+				int pos = 0;
+				List<ApplicationInfoEx> listAppInfo = mAppAdapter.getSelected(false);
+				for (ApplicationInfoEx xAppInfo : listAppInfo) {
+					publishProgress(pos++, listAppInfo.size());
+					if (mAppAdapter.getRestrictionName() == null && someRestricted)
+						restart = PrivacyManager.deleteRestrictions(ActivityMain.this, xAppInfo.getUid()) || restart;
+					else if (mAppAdapter.getRestrictionName() == null) {
+						for (String restrictionName : PrivacyManager.getRestrictions())
+							restart = PrivacyManager.setRestricted(null, ActivityMain.this, xAppInfo.getUid(),
+									restrictionName, null, !someRestricted) || restart;
+					} else
 						restart = PrivacyManager.setRestricted(null, ActivityMain.this, xAppInfo.getUid(),
-								restrictionName, null, !someRestricted) || restart;
-				} else
-					restart = PrivacyManager.setRestricted(null, ActivityMain.this, xAppInfo.getUid(),
-							mAppAdapter.getRestrictionName(), null, !someRestricted)
-							|| restart;
+								mAppAdapter.getRestrictionName(), null, !someRestricted)
+								|| restart;
+				}
 			}
 
 			return restart;
@@ -1068,7 +1142,7 @@ public class ActivityMain extends Activity implements OnItemSelectedListener, Co
 	@SuppressLint("DefaultLocale")
 	private class AppListAdapter extends ArrayAdapter<ApplicationInfoEx> {
 		private Context mContext;
-		private List<ApplicationInfoEx> mListApp;
+		private List<ApplicationInfoEx> mListAppAll;
 		private List<ApplicationInfoEx> mListAppSelected = new ArrayList<ApplicationInfoEx>();
 		private String mRestrictionName;
 		private LayoutInflater mInflater = (LayoutInflater) getSystemService(Context.LAYOUT_INFLATER_SERVICE);
@@ -1079,8 +1153,8 @@ public class ActivityMain extends Activity implements OnItemSelectedListener, Co
 				String initialRestrictionName) {
 			super(context, resource, objects);
 			mContext = context;
-			mListApp = new ArrayList<ApplicationInfoEx>();
-			mListApp.addAll(objects);
+			mListAppAll = new ArrayList<ApplicationInfoEx>();
+			mListAppAll.addAll(objects);
 			mRestrictionName = initialRestrictionName;
 
 			TypedArray ta1 = context.getTheme().obtainStyledAttributes(
@@ -1095,6 +1169,13 @@ public class ActivityMain extends Activity implements OnItemSelectedListener, Co
 
 		public String getRestrictionName() {
 			return mRestrictionName;
+		}
+
+		public List<ApplicationInfoEx> getSelected(boolean selectedOnly) {
+			if (mListAppSelected.size() == 0)
+				return (selectedOnly ? new ArrayList<ApplicationInfoEx>() : mListAppAll);
+			else
+				return mListAppSelected;
 		}
 
 		@Override
@@ -1130,9 +1211,9 @@ public class ActivityMain extends Activity implements OnItemSelectedListener, Co
 
 				// Match applications
 				int current = 0;
-				int max = AppListAdapter.this.mListApp.size();
+				int max = AppListAdapter.this.mListAppAll.size();
 				List<ApplicationInfoEx> lstApp = new ArrayList<ApplicationInfoEx>();
-				for (ApplicationInfoEx xAppInfo : AppListAdapter.this.mListApp) {
+				for (ApplicationInfoEx xAppInfo : AppListAdapter.this.mListAppAll) {
 					// Check if another filter has been started
 					if (filtersRunning != mFiltersRunning.get())
 						return null;
@@ -1216,7 +1297,7 @@ public class ActivityMain extends Activity implements OnItemSelectedListener, Co
 					ProgressBar pbFilter = (ProgressBar) findViewById(R.id.pbFilter);
 					pbFilter.setVisibility(ProgressBar.GONE);
 					tvStats.setVisibility(TextView.VISIBLE);
-					tvStats.setText(results.count + "/" + AppListAdapter.this.mListApp.size());
+					tvStats.setText(results.count + "/" + AppListAdapter.this.mListAppAll.size());
 
 					Intent progressIntent = new Intent(ActivityShare.cProgressReport);
 					progressIntent.putExtra(ActivityShare.cProgressMessage, getString(R.string.title_restrict));
@@ -1242,6 +1323,7 @@ public class ActivityMain extends Activity implements OnItemSelectedListener, Co
 			private View row;
 			private int position;
 			public View vwState;
+			public LinearLayout llAppType;
 			public ImageView imgIcon;
 			public ImageView imgUsed;
 			public ImageView imgGranted;
@@ -1255,6 +1337,7 @@ public class ActivityMain extends Activity implements OnItemSelectedListener, Co
 				row = theRow;
 				position = thePosition;
 				vwState = (View) row.findViewById(R.id.vwState);
+				llAppType = (LinearLayout) row.findViewById(R.id.llAppType);
 				imgIcon = (ImageView) row.findViewById(R.id.imgIcon);
 				imgUsed = (ImageView) row.findViewById(R.id.imgUsed);
 				imgGranted = (ImageView) row.findViewById(R.id.imgGranted);
@@ -1322,6 +1405,13 @@ public class ActivityMain extends Activity implements OnItemSelectedListener, Co
 			@Override
 			protected void onPostExecute(Object result) {
 				if (holder.position == position && result != null) {
+					// Set background color
+					if (xAppInfo.isSystem())
+						holder.llAppType.setBackgroundColor(getResources().getColor(
+								Util.getThemed(ActivityMain.this, R.attr.color_dangerous)));
+					else
+						holder.llAppType.setBackgroundColor(Color.TRANSPARENT);
+
 					// Display state
 					if (state == STATE_ATTENTION)
 						holder.vwState.setBackgroundColor(getResources().getColor(
@@ -1494,14 +1584,6 @@ public class ActivityMain extends Activity implements OnItemSelectedListener, Co
 
 			// Get info
 			final ApplicationInfoEx xAppInfo = getItem(holder.position);
-			holder.imgIcon.setVisibility(View.INVISIBLE);
-
-			// Set background color
-			if (xAppInfo.isSystem())
-				holder.rlName.setBackgroundColor(getResources().getColor(
-						Util.getThemed(ActivityMain.this, R.attr.color_dangerous)));
-			else
-				holder.rlName.setBackgroundColor(Color.TRANSPARENT);
 
 			// Handle details click
 			holder.imgIcon.setOnClickListener(new View.OnClickListener() {
@@ -1516,7 +1598,10 @@ public class ActivityMain extends Activity implements OnItemSelectedListener, Co
 			});
 
 			// Set data
+			holder.row.setBackgroundColor(Color.TRANSPARENT);
 			holder.vwState.setBackgroundColor(Color.TRANSPARENT);
+			holder.llAppType.setBackgroundColor(Color.TRANSPARENT);
+			holder.imgIcon.setVisibility(View.INVISIBLE);
 			holder.tvName.setText(xAppInfo.toString());
 			holder.tvName.setTypeface(null, Typeface.NORMAL);
 			holder.imgUsed.setVisibility(View.INVISIBLE);

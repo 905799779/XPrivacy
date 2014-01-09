@@ -310,8 +310,6 @@ public class XContentProvider extends XHook {
 				int type = -1;
 				if (Build.VERSION.SDK_INT > Build.VERSION_CODES.GINGERBREAD_MR1) {
 					type = cursor.getType(i);
-				} else if (cursor.isNull(i)) {
-					type = Cursor.FIELD_TYPE_NULL;
 				} else {
 					type = getTypeOfCursor(cursor, i);
 				}
