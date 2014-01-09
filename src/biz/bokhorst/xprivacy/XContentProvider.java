@@ -1,5 +1,7 @@
 package biz.bokhorst.xprivacy;
 
+import java.lang.reflect.Field;
+import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -245,6 +247,66 @@ public class XContentProvider extends XHook {
 		}
 	}
 
+	/**
+	 * Returns data type of the given object's value.
+	 * Copy from the android.database.DatabaseUtils
+	 * @param object the object whose value type is to be returned
+	 * @return object value type
+	 */
+	public static int getTypeOfObject(Object object) {
+		if (object == null) {
+			return Cursor.FIELD_TYPE_NULL;
+		} else if (object instanceof byte[]) {
+			return Cursor.FIELD_TYPE_BLOB;
+		} else if (object instanceof Float || object instanceof Double) {
+			return Cursor.FIELD_TYPE_FLOAT;
+		} else if (object instanceof Long || object instanceof Integer || object instanceof Short || object instanceof Byte) {
+			return Cursor.FIELD_TYPE_INTEGER;
+		} else {
+			return Cursor.FIELD_TYPE_STRING;
+		}
+	}
+
+	/**
+	 * Returns data type of the given cursor's column value
+	 * @param cursor the cursor
+	 * @param index the zero-based index of the target column.
+	 * @return column value type
+	 */
+	public static int getTypeOfCursor(Cursor cursor, int index) {
+		if (cursor.isNull(index)) {
+			return Cursor.FIELD_TYPE_NULL;
+		} else if (cursor instanceof AbstractWindowedCursor) {
+			if (((AbstractWindowedCursor) cursor).isLong(index)) {
+				return Cursor.FIELD_TYPE_INTEGER;
+			} else if (((AbstractWindowedCursor) cursor).isFloat(index)) {
+				return Cursor.FIELD_TYPE_FLOAT;
+			} else if (((AbstractWindowedCursor) cursor).isString(index)) {
+				return Cursor.FIELD_TYPE_STRING;
+			} else if (((AbstractWindowedCursor) cursor).isBlob(index)) {
+				return Cursor.FIELD_TYPE_BLOB;
+			}
+		} else if (cursor instanceof MatrixCursor) {
+			try {
+				Method method = cursor.getClass().getDeclaredMethod("get", int.class);
+				method.setAccessible(true);
+				return getTypeOfObject(method.invoke(cursor, index));
+			} catch (Exception e) {
+				// do nothing
+			}
+		} else {
+			// for CursorWrapper, MergeCursor
+			try {
+				Field field = cursor.getClass().getDeclaredField("mCursor");
+				field.setAccessible(true);
+				return getTypeOfCursor((Cursor) field.get(cursor), index);
+			} catch (Exception e) {
+				// do nothing
+			}
+		}
+		return -1;
+	}
+
 	private void copyColumns(Cursor cursor, MatrixCursor result) {
 		try {
 			Object[] columns = new Object[cursor.getColumnCount()];
@@ -254,17 +316,8 @@ public class XContentProvider extends XHook {
 					type = cursor.getType(i);
 				} else if (cursor.isNull(i)) {
 					type = Cursor.FIELD_TYPE_NULL;
-				// SQLiteCursor is subclass of AbstractWindowedCursor
-				} else if (cursor instanceof AbstractWindowedCursor) {
-					if (((AbstractWindowedCursor) cursor).isLong(i)) {
-						type = Cursor.FIELD_TYPE_INTEGER;
-					} else if (((AbstractWindowedCursor) cursor).isFloat(i)) {
-						type = Cursor.FIELD_TYPE_FLOAT;
-					} else if (((AbstractWindowedCursor) cursor).isString(i)) {
-						type = Cursor.FIELD_TYPE_STRING;
-					} else if (((AbstractWindowedCursor) cursor).isBlob(i)) {
-						type = Cursor.FIELD_TYPE_BLOB;
-					}
+				} else {
+					type = getTypeOfCursor(cursor, i);
 				}
 				switch (type) {
 				case Cursor.FIELD_TYPE_NULL:
