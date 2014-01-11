@@ -199,10 +199,10 @@
     <Hook restriction="system" method="android.intent.action.PACKAGE_REMOVED" dangerous="true" permissions="" sdk="10" />
     <Hook restriction="system" method="android.intent.action.PACKAGE_CHANGED" dangerous="true" permissions="" sdk="10" />
     <Hook restriction="system" method="android.intent.action.PACKAGE_DATA_CLEARED" dangerous="true" permissions="" sdk="10" />
-    <Hook restriction="system" method="android.intent.action.PACKAGE_FIRST_LAUNCH" dangerous="true" permissions="" sdk="10" />
-    <Hook restriction="system" method="android.intent.action.PACKAGE_FULLY_REMOVED" dangerous="true" permissions="" sdk="10" />
-    <Hook restriction="system" method="android.intent.action.PACKAGE_NEEDS_VERIFICATION" dangerous="true" permissions="" sdk="10" />
-    <Hook restriction="system" method="android.intent.action.PACKAGE_VERIFIED" dangerous="true" permissions="" sdk="10" />
+    <Hook restriction="system" method="android.intent.action.PACKAGE_FIRST_LAUNCH" dangerous="true" permissions="" sdk="12" />
+    <Hook restriction="system" method="android.intent.action.PACKAGE_FULLY_REMOVED" dangerous="true" permissions="" sdk="14" />
+    <Hook restriction="system" method="android.intent.action.PACKAGE_NEEDS_VERIFICATION" dangerous="true" permissions="" sdk="14" />
+    <Hook restriction="system" method="android.intent.action.PACKAGE_VERIFIED" dangerous="true" permissions="" sdk="17" />
     <Hook restriction="system" method="android.intent.action.EXTERNAL_APPLICATIONS_AVAILABLE" dangerous="true" permissions="" sdk="10" />
     <Hook restriction="system" method="android.intent.action.EXTERNAL_APPLICATIONS_UNAVAILABLE" dangerous="true" permissions="" sdk="10" />
     <Hook restriction="system" method="ApplicationsProvider" permissions="" sdk="10" />
