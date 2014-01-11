@@ -430,12 +430,11 @@ public class PrivacyManager {
 		if (SystemClock.elapsedRealtime() < cUseProviderAfterMs)
 			return false;
 
-		if (!PrivacyManager.cTestVersion)
-			if (isIsolated(Process.myUid()))
-				return false;
+		if (isIsolated(Process.myUid()))
+			return false;
 
 		if (Util.getAppId(Process.myUid()) == cAndroidUid)
-			if (!PrivacyManager.getSettingBool(null, null, 0, PrivacyManager.cSettingAndroidUsage, false, false))
+			if (!PrivacyManager.getSettingBool(null, null, 0, PrivacyManager.cSettingAndroidUsage, true, false))
 				return false;
 
 		return true;
@@ -490,7 +489,7 @@ public class PrivacyManager {
 	}
 
 	public static boolean setRestricted(XHook hook, Context context, int uid, String restrictionName,
-			String methodName, boolean restricted) {
+			String methodName, boolean restricted, boolean changeState) {
 		// Check context
 		if (context == null) {
 			Util.log(hook, Log.WARN, "context is null");
@@ -522,7 +521,7 @@ public class PrivacyManager {
 		logRestriction(hook, context, uid, "set", restrictionName, methodName, restricted, false, 0);
 
 		// Mark as restricted
-		if (restricted)
+		if (restricted && changeState)
 			PrivacyManager.setSetting(null, context, uid, PrivacyManager.cSettingState,
 					Integer.toString(ActivityMain.STATE_RESTRICTED));
 
@@ -533,7 +532,8 @@ public class PrivacyManager {
 			if (restricted && !dangerous) {
 				for (MethodDescription md : getMethods(restrictionName))
 					if (md.isDangerous())
-						PrivacyManager.setRestricted(null, context, uid, restrictionName, md.getName(), dangerous);
+						PrivacyManager.setRestricted(null, context, uid, restrictionName, md.getName(), dangerous,
+								changeState);
 			}
 
 		// Flush caches
@@ -617,7 +617,7 @@ public class PrivacyManager {
 		return result;
 	}
 
-	public static boolean deleteRestrictions(Context context, int uid) {
+	public static boolean deleteRestrictions(Context context, int uid, boolean changeState) {
 		// Check if restart required
 		boolean restart = false;
 		for (String restrictionName : getRestrictions()) {
@@ -637,8 +637,9 @@ public class PrivacyManager {
 		Util.log(null, Log.INFO, "Deleted restrictions uid=" + uid);
 
 		// Mark as new/changed
-		PrivacyManager.setSetting(null, context, uid, PrivacyManager.cSettingState,
-				Integer.toString(ActivityMain.STATE_ATTENTION));
+		if (changeState)
+			PrivacyManager.setSetting(null, context, uid, PrivacyManager.cSettingState,
+					Integer.toString(ActivityMain.STATE_ATTENTION));
 
 		return restart;
 	}
