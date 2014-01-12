@@ -1,5 +1,6 @@
 package biz.bokhorst.xprivacy;
 
+import java.io.File;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
@@ -27,6 +28,7 @@ import android.graphics.Color;
 import android.graphics.Typeface;
 import android.net.Uri;
 import android.os.Bundle;
+import android.os.Environment;
 import android.provider.ContactsContract;
 import android.provider.ContactsContract.CommonDataKinds.Phone;
 import android.support.v4.app.NavUtils;
@@ -66,8 +68,10 @@ public class ActivityApp extends Activity {
 	public static final String cActionClear = "Clear";
 	public static final String cActionSettings = "Settings";
 
-	private static final int ACTIVITY_FETCH = 1;
-	private static final int ACTIVITY_SUBMIT = 2;
+	private static final int ACTIVITY_IMPORT = 1;
+	private static final int ACTIVITY_IMPORT_SELECT = 2;
+	private static final int ACTIVITY_FETCH = 3;
+	private static final int ACTIVITY_SUBMIT = 4;
 
 	private static final int MENU_LAUNCH = 1;
 	private static final int MENU_SETTINGS = 2;
@@ -121,10 +125,8 @@ public class ActivityApp extends Activity {
 			@Override
 			public void onClick(View view) {
 				// Packages can be selected on the web site
-				Intent infoIntent = new Intent(Intent.ACTION_VIEW);
-				infoIntent.setData(Uri.parse(String.format(ActivityShare.BASE_URL + "?package_name=%s", mAppInfo
-						.getPackageName().get(0))));
-				startActivity(infoIntent);
+				Util.viewUri(ActivityApp.this, Uri.parse(String.format(ActivityShare.BASE_URL + "?package_name=%s",
+						mAppInfo.getPackageName().get(0))));
 			}
 		});
 
@@ -314,6 +316,9 @@ public class ActivityApp extends Activity {
 		case R.id.menu_usage:
 			optionUsage();
 			return true;
+		case R.id.menu_import:
+			optionImport();
+			return true;
 		case R.id.menu_submit:
 			optionSubmit();
 			return true;
@@ -360,7 +365,30 @@ public class ActivityApp extends Activity {
 	@Override
 	protected void onActivityResult(int requestCode, int resultCode, Intent dataIntent) {
 		super.onActivityResult(requestCode, resultCode, dataIntent);
-		if (requestCode == ACTIVITY_FETCH) {
+		if (requestCode == ACTIVITY_IMPORT) {
+			// Import
+			ActivityApp.this.recreate();
+
+			String errorMessage = null;
+			if (dataIntent != null && dataIntent.hasExtra(ActivityShare.cErrorMessage))
+				errorMessage = dataIntent.getStringExtra(ActivityShare.cErrorMessage);
+
+			String text = String.format("%s: %s", getString(R.string.menu_import),
+					errorMessage == null ? getString(R.string.msg_done) : errorMessage);
+			Toast toast = Toast.makeText(this, text, Toast.LENGTH_LONG);
+			toast.show();
+
+		} else if (requestCode == ACTIVITY_IMPORT_SELECT) {
+			// Import select
+			if (resultCode != RESULT_CANCELED && dataIntent != null)
+				try {
+					startImport(dataIntent.getData().getPath());
+				} catch (Throwable ex) {
+					Util.bug(null, ex);
+				}
+
+		} else if (requestCode == ACTIVITY_FETCH) {
+			// Fetch
 			if (mPrivacyListAdapter != null)
 				mPrivacyListAdapter.notifyDataSetChanged();
 
@@ -372,7 +400,9 @@ public class ActivityApp extends Activity {
 					errorMessage == null ? getString(R.string.msg_done) : errorMessage);
 			Toast toast = Toast.makeText(this, text, Toast.LENGTH_LONG);
 			toast.show();
+
 		} else if (requestCode == ACTIVITY_SUBMIT) {
+			// Submit
 			String errorMessage = null;
 			if (dataIntent != null && dataIntent.hasExtra(ActivityShare.cErrorMessage))
 				errorMessage = dataIntent.getStringExtra(ActivityShare.cErrorMessage);
@@ -489,6 +519,30 @@ public class ActivityApp extends Activity {
 		startActivity(intent);
 	}
 
+	private void optionImport() {
+		Intent file = new Intent(Intent.ACTION_GET_CONTENT);
+		file.setType("file/*");
+		if (Util.isIntentAvailable(ActivityApp.this, file)) {
+			Intent chooseFile = new Intent(Intent.ACTION_GET_CONTENT);
+			Uri uri = Uri.parse(Environment.getExternalStorageDirectory().getPath() + "/.xprivacy/");
+			chooseFile.setDataAndType(uri, "text/xml");
+			Intent intent = Intent.createChooser(chooseFile, getString(R.string.app_name));
+			startActivityForResult(intent, ACTIVITY_IMPORT_SELECT);
+		} else
+			startImport(ActivityShare.getFileName(false));
+	}
+
+	private void startImport(String fileName) {
+		fileName = fileName.replace("/document/primary:", Environment.getExternalStorageDirectory().getAbsolutePath()
+				+ File.separatorChar);
+
+		Intent intent = new Intent(ActivityShare.ACTION_IMPORT);
+		intent.putExtra(ActivityShare.cFileName, fileName);
+		int[] uid = new int[] { mAppInfo.getUid() };
+		intent.putExtra(ActivityShare.cUidList, uid);
+		startActivityForResult(intent, ACTIVITY_IMPORT);
+	}
+
 	private void optionSubmit() {
 		AlertDialog.Builder alertDialogBuilder = new AlertDialog.Builder(this);
 		alertDialogBuilder.setTitle(getString(R.string.menu_submit));
@@ -515,8 +569,7 @@ public class ActivityApp extends Activity {
 	private void optionFetch() {
 		if (Util.getProLicense() == null) {
 			// Redirect to pro page
-			Intent browserIntent = new Intent(Intent.ACTION_VIEW, ActivityMain.cProUri);
-			startActivity(browserIntent);
+			Util.viewUri(this, ActivityMain.cProUri);
 		} else {
 			AlertDialog.Builder alertDialogBuilder = new AlertDialog.Builder(this);
 			alertDialogBuilder.setTitle(getString(R.string.menu_fetch));
@@ -550,8 +603,7 @@ public class ActivityApp extends Activity {
 	private void optionApplications() {
 		if (Util.getProLicense() == null) {
 			// Redirect to pro page
-			Intent browserIntent = new Intent(Intent.ACTION_VIEW, ActivityMain.cProUri);
-			startActivity(browserIntent);
+			Util.viewUri(this, ActivityMain.cProUri);
 		} else {
 			ApplicationsTask appsTask = new ApplicationsTask();
 			appsTask.executeOnExecutor(mExecutor, (Object) null);
@@ -561,8 +613,7 @@ public class ActivityApp extends Activity {
 	private void optionContacts() {
 		if (Util.getProLicense() == null) {
 			// Redirect to pro page
-			Intent browserIntent = new Intent(Intent.ACTION_VIEW, ActivityMain.cProUri);
-			startActivity(browserIntent);
+			Util.viewUri(this, ActivityMain.cProUri);
 		} else {
 			ContactsTask contactsTask = new ContactsTask();
 			contactsTask.executeOnExecutor(mExecutor, (Object) null);
@@ -606,9 +657,7 @@ public class ActivityApp extends Activity {
 	}
 
 	private void optionStore(int which) {
-		Intent intentStore = new Intent(Intent.ACTION_VIEW, Uri.parse("market://details?id="
-				+ mAppInfo.getPackageName().get(which)));
-		startActivity(intentStore);
+		Util.viewUri(this, Uri.parse("market://details?id=" + mAppInfo.getPackageName().get(which)));
 	}
 
 	// Tasks
@@ -1031,9 +1080,7 @@ public class ActivityApp extends Activity {
 			holder.imgInfo.setOnClickListener(new View.OnClickListener() {
 				@Override
 				public void onClick(View view) {
-					Intent infoIntent = new Intent(Intent.ACTION_VIEW);
-					infoIntent.setData(Uri.parse(ActivityMain.cXUrl + "#" + restrictionName));
-					startActivity(infoIntent);
+					Util.viewUri(ActivityApp.this, Uri.parse(ActivityMain.cXUrl + "#" + restrictionName));
 				}
 			});
 

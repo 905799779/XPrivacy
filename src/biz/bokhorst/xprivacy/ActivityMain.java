@@ -160,9 +160,7 @@ public class ActivityMain extends Activity implements OnItemSelectedListener, Co
 				if (position != AdapterView.INVALID_POSITION) {
 					String query = (position == 0 ? "restrictions" : (String) PrivacyManager
 							.getRestrictions(ActivityMain.this).values().toArray()[position - 1]);
-					Intent infoIntent = new Intent(Intent.ACTION_VIEW);
-					infoIntent.setData(Uri.parse(cXUrl + "#" + query));
-					startActivity(infoIntent);
+					Util.viewUri(ActivityMain.this, Uri.parse(cXUrl + "#" + query));
 				}
 			}
 		});
@@ -468,10 +466,7 @@ public class ActivityMain extends Activity implements OnItemSelectedListener, Co
 				sharingDone();
 			else if (dataIntent != null)
 				try {
-					String fileName = dataIntent.getData().getPath();
-					fileName = fileName.replace("/document/primary:", Environment.getExternalStorageDirectory()
-							.getAbsolutePath() + File.separatorChar);
-					startImport(fileName);
+					startImport(dataIntent.getData().getPath());
 				} catch (Throwable ex) {
 					Util.bug(null, ex);
 				}
@@ -788,8 +783,7 @@ public class ActivityMain extends Activity implements OnItemSelectedListener, Co
 
 	private void optionReportIssue() {
 		// Report issue
-		Intent browserIntent = new Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com/M66B/XPrivacy/issues"));
-		startActivity(browserIntent);
+		Util.viewUri(this, Uri.parse("https://github.com/M66B/XPrivacy/issues"));
 	}
 
 	private void optionExport() {
@@ -819,6 +813,9 @@ public class ActivityMain extends Activity implements OnItemSelectedListener, Co
 	}
 
 	private void startImport(String fileName) {
+		fileName = fileName.replace("/document/primary:", Environment.getExternalStorageDirectory().getAbsolutePath()
+				+ File.separatorChar);
+
 		Intent intent = new Intent(ActivityShare.ACTION_IMPORT);
 		intent.putExtra(ActivityShare.cFileName, fileName);
 		int[] uid;
@@ -881,8 +878,7 @@ public class ActivityMain extends Activity implements OnItemSelectedListener, Co
 	private void optionFetch() {
 		if (Util.getProLicense() == null) {
 			// Redirect to pro page
-			Intent browserIntent = new Intent(Intent.ACTION_VIEW, cProUri);
-			startActivity(browserIntent);
+			Util.viewUri(this, cProUri);
 		} else {
 			AlertDialog.Builder alertDialogBuilder = new AlertDialog.Builder(this);
 			alertDialogBuilder.setTitle(getString(R.string.menu_fetch));
@@ -927,8 +923,7 @@ public class ActivityMain extends Activity implements OnItemSelectedListener, Co
 
 	private void optionPro() {
 		// Redirect to pro page
-		Intent browserIntent = new Intent(Intent.ACTION_VIEW, cProUri);
-		startActivity(browserIntent);
+		Util.viewUri(this, cProUri);
 	}
 
 	private void optionAbout() {
