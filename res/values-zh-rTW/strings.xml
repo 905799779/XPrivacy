@@ -20,7 +20,7 @@
     <string name="menu_pro">專業版</string>
     <string name="menu_about">關於</string>
     <string name="menu_help">說明</string>
-    <string name="menu_select_all">Select all</string>
+    <string name="menu_select_all">全選</string>
     <string name="menu_all">所有程式</string>
     <string name="menu_restriction_all">套用預設規則</string>
     <string name="menu_clear_all">清除全部</string>
@@ -46,8 +46,8 @@
     <string name="msg_saved_to" formatted="false">已儲存至 %s</string>
     <string name="msg_no_restrictions">找不到限制規則</string>
     <string name="msg_sure">確定執行操作?</string>
-    <string name="msg_select">Please select some applications</string>
-    <string name="msg_limit">Please select fewer than %d applications</string>
+    <string name="msg_select">請選擇應用程式</string>
+    <string name="msg_limit">請選擇少於 %d 個應用程式</string>
     <string name="msg_done">完成</string>
     <string name="msg_reboot">需要重新啟動</string>
     <string name="msg_random_now">亂數</string>
@@ -116,6 +116,7 @@
     <string name="settings_dangerous">關閉高風險功能</string>
     <string name="settings_confidence">最大擷取信賴區間</string>
     <string name="settings_experimental">實驗性功能 (需重新啟動)</string>
+    <string name="settings_https">Use secure connections</string>
     <string name="help_application">程式</string>
     <string name="help_internet">表示有網際網路權限</string>
     <string name="help_granted">表示有手機權限</string>

@@ -9,6 +9,9 @@ import de.robv.android.xposed.XC_MethodHook.MethodHookParam;
 
 public abstract class XHook {
 
+	// TODO: make parcelable
+	// http://developer.android.com/reference/android/os/Parcelable.html
+
 	private String mRestrictionName;
 	private String mMethodName;
 	private String mSpecifier;
@@ -44,7 +47,7 @@ public abstract class XHook {
 		return mMethodName;
 	}
 
-	private String getSpecifier() {
+	public String getSpecifier() {
 		return (mSpecifier == null ? mMethodName : mSpecifier);
 	}
 

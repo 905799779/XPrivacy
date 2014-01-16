@@ -4,7 +4,7 @@
 
 	$min_diff = 0.50;
 	$max_confidence = 0.35;
-	$max_packages = 64;
+	$max_packages = 72;
 
 	function confidence($restricted, $not_restricted) {
 		// Agresti-Coull Interval
@@ -116,62 +116,71 @@
 
 			// Check restrictions
 			if (!empty($data->settings)) {
-				$xml = file_get_contents ('meta.xml');
-				$parser = xml_parser_create();
-				xml_parse_into_struct($parser, $xml, $vals, $index);
-				xml_parser_free($parser);
+				//$xml = file_get_contents ('meta.xml');
+				//$parser = xml_parser_create();
+				//xml_parse_into_struct($parser, $xml, $vals, $index);
+				//xml_parser_free($parser);
 
 				foreach ($data->settings as $restriction) {
 					$found = false;
 
-					// Legacy
-					if (!empty($restriction->method))
-						if ($restriction->restriction == 'location' && $restriction->method == 'connect')
-							$found = true;
-						else if ($restriction->restriction == 'location' && $restriction->method == 'addNmeaListener')
-							$found = true;
-						else if ($restriction->restriction == 'location' && $restriction->method == 'addProximityAlert')
-							$found = true;
-						else if ($restriction->restriction == 'location' && $restriction->method == 'getLastKnownLocation')
-							$found = true;
-						else if ($restriction->restriction == 'location' && $restriction->method == 'getProviders')
-							$found = true;
-						else if ($restriction->restriction == 'location' && $restriction->method == 'isProviderEnabled')
-							$found = true;
-						else if ($restriction->restriction == 'location' && $restriction->method == 'removeUpdates')
-							$found = true;
-						else if ($restriction->restriction == 'location' && $restriction->method == 'requestLocationUpdates')
-							$found = true;
-						else if ($restriction->restriction == 'location' && $restriction->method == 'requestSingleUpdate')
-							$found = true;
-						else if ($restriction->restriction == 'location' && $restriction->method == 'sendExtraCommand')
-							$found = true;
-						else if ($restriction->restriction == 'location' && $restriction->method == 'addGeofence')
-							$found = true;
-						else if ($restriction->restriction == 'location' && $restriction->method == 'getLastLocation')
-							$found = true;
+					if ($restriction->restriction == 'accounts')
+						$found = true;
+					else if ($restriction->restriction == 'browser')
+						$found = true;
+					else if ($restriction->restriction == 'calendar')
+						$found = true;
+					else if ($restriction->restriction == 'calling')
+						$found = true;
+					else if ($restriction->restriction == 'clipboard')
+						$found = true;
+					else if ($restriction->restriction == 'contacts')
+						$found = true;
+					else if ($restriction->restriction == 'dictionary')
+						$found = true;
+					else if ($restriction->restriction == 'email')
+						$found = true;
+					else if ($restriction->restriction == 'identification')
+						$found = true;
+					else if ($restriction->restriction == 'internet')
+						$found = true;
+					else if ($restriction->restriction == 'location')
+						$found = true;
+					else if ($restriction->restriction == 'media')
+						$found = true;
+					else if ($restriction->restriction == 'messages')
+						$found = true;
+					else if ($restriction->restriction == 'network')
+						$found = true;
+					else if ($restriction->restriction == 'nfc')
+						$found = true;
+					else if ($restriction->restriction == 'notifications')
+						$found = true;
+					else if ($restriction->restriction == 'overlay')
+						$found = true;
+					else if ($restriction->restriction == 'phone')
+						$found = true;
+					else if ($restriction->restriction == 'sensors')
+						$found = true;
+					else if ($restriction->restriction == 'shell')
+						$found = true;
+					else if ($restriction->restriction == 'storage')
+						$found = true;
+					else if ($restriction->restriction == 'system')
+						$found = true;
+					else if ($restriction->restriction == 'view')
+						$found = true;
 
-						else if ($restriction->restriction == 'view' && $restriction->method == 'getDefaultUserAgentForLocale')
-							$found = true;
-						else if ($restriction->restriction == 'view' && $restriction->method == 'WebView.constructor')
-							$found = true;
-						else if ($restriction->restriction == 'view' && $restriction->method == 'addView')
-							$found = true;
-						else if ($restriction->restriction == 'view' && $restriction->method == 'removeView')
-							$found = true;
-						else if ($restriction->restriction == 'view' && $restriction->method == 'updateViewLayout')
-							$found = true;
-
-					if (!$found)
-						foreach ($index['HOOK'] as $hookidx) {
-							$category = $vals[$hookidx]['attributes']['RESTRICTION'];
-							$method = $vals[$hookidx]['attributes']['METHOD'];
-							if ($restriction->restriction == $category &&
-								(empty($restriction->method) || $restriction->method == $method)) {
-								$found = true;
-								break;
-							}
-						}
+					//if (!$found)
+					//	foreach ($index['HOOK'] as $hookidx) {
+					//		$category = $vals[$hookidx]['attributes']['RESTRICTION'];
+					//		$method = $vals[$hookidx]['attributes']['METHOD'];
+					//		if ($restriction->restriction == $category &&
+					//			(empty($restriction->method) || $restriction->method == $method)) {
+					//			$found = true;
+					//			break;
+					//		}
+					//	}
 
 					if (!$found) {
 						$name = $restriction->restriction . '/' . $restriction->method;
@@ -339,7 +348,7 @@
 		<meta name="viewport" content="width=device-width, initial-scale=1.0">
 		<meta name="description" content="XPrivacy">
 		<meta name="author" content="M66B">
-		<link href="http://netdna.bootstrapcdn.com/bootstrap/3.0.2/css/bootstrap.min.css" rel="stylesheet" media="screen">
+		<link href="//netdna.bootstrapcdn.com/bootstrap/3.0.2/css/bootstrap.min.css" rel="stylesheet" media="screen">
 		<style type="text/css">
 			body { padding-left: 5px; padding-right: 5px; }
 			th, tr, td { padding: 0px !important; }
@@ -686,8 +695,8 @@
 ?>
 		</div>
 
-		<script src="http://code.jquery.com/jquery.js"></script>
-		<script src="http://netdna.bootstrapcdn.com/bootstrap/3.0.2/js/bootstrap.min.js"></script>
+		<script src="//code.jquery.com/jquery.js"></script>
+		<script src="//netdna.bootstrapcdn.com/bootstrap/3.0.2/js/bootstrap.min.js"></script>
 		<script>
 			jQuery(document).ready(function($) {
 				$('#details').click(function() {
@@ -700,20 +709,5 @@
 				});
 			});
 		</script>
-		<!-- Piwik -->
-		<script type="text/javascript">
-		  var _paq = _paq || [];
-		  _paq.push(["trackPageView"]);
-		  _paq.push(["enableLinkTracking"]);
-
-		  (function() {
-			var u=(("https:" == document.location.protocol) ? "https" : "http") + "://piwik.bokhorst.biz/";
-			_paq.push(["setTrackerUrl", u+"piwik.php"]);
-			_paq.push(["setSiteId", "15"]);
-			var d=document, g=d.createElement("script"), s=d.getElementsByTagName("script")[0]; g.type="text/javascript";
-			g.defer=true; g.async=true; g.src=u+"piwik.js"; s.parentNode.insertBefore(g,s);
-		  })();
-		</script>
-		<!-- End Piwik Code -->
 	</body>
 </html>

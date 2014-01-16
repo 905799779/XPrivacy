@@ -114,6 +114,7 @@ public class PrivacyManager {
 	public final static String cSettingRandom = "Random@boot";
 	public final static String cSettingState = "State";
 	public final static String cSettingConfidence = "Confidence";
+	public final static String cSettingHttps = "Https";
 	public final static String cSettingTemplate = "Template";
 
 	// Special value names
@@ -173,6 +174,7 @@ public class PrivacyManager {
 				String restart = attributes.getValue("restart");
 				String permissions = attributes.getValue("permissions");
 				int sdk = (attributes.getValue("sdk") == null ? 0 : Integer.parseInt(attributes.getValue("sdk")));
+				String from = attributes.getValue("from");
 
 				// Add meta data
 				if (Build.VERSION.SDK_INT >= sdk) {
@@ -180,7 +182,7 @@ public class PrivacyManager {
 					boolean restartRequired = (restart == null ? false : Boolean.parseBoolean(restart));
 					String[] permission = (permissions == null ? null : permissions.split(","));
 					MethodDescription md = new MethodDescription(restrictionName, methodName, danger, restartRequired,
-							permission, sdk);
+							permission, sdk, from == null ? null : new Version(from));
 
 					if (!mMethod.containsKey(restrictionName))
 						mMethod.put(restrictionName, new ArrayList<MethodDescription>());
@@ -282,10 +284,10 @@ public class PrivacyManager {
 
 			if (usage)
 				if (methodName == null || methodName.equals("")) {
-					Util.log(hook, Log.WARN, "method empty");
+					Util.log(hook, Log.WARN, "Method empty");
 					Util.logStack(hook);
 				} else if (getMethods(restrictionName).indexOf(new MethodDescription(restrictionName, methodName)) < 0)
-					Util.log(hook, Log.WARN, "unknown method=" + methodName);
+					Util.log(hook, Log.WARN, "Unknown method=" + methodName);
 
 			// Check cache
 			String keyCache = String.format("%d.%s.%s", uid, restrictionName, methodName);
@@ -298,7 +300,7 @@ public class PrivacyManager {
 						else {
 							long ms = System.currentTimeMillis() - start;
 							logRestriction(hook, context, uid, "get", restrictionName, methodName,
-									entry.isRestricted(), true, ms);
+									entry.isRestricted(), true, false, ms);
 							return entry.isRestricted();
 						}
 					}
@@ -351,9 +353,21 @@ public class PrivacyManager {
 				}
 
 			// Use fallback
+			boolean service = false;
 			if (fallback) {
+				// Use privacy service
+				try {
+					String hookName = (hook == null ? null : hook.getClass().getSimpleName());
+					restricted = PrivacyService.getClient().getRestricted(hookName, uid, restrictionName, methodName,
+							usage);
+					service = true;
+				} catch (Throwable ex) {
+					Util.bug(hook, ex);
+				}
+
 				// Fallback
-				restricted = PrivacyProvider.getRestrictedFallback(hook, uid, restrictionName, methodName);
+				if (!service)
+					restricted = PrivacyProvider.getRestrictedFallback(hook, uid, restrictionName, methodName);
 
 				// Queue usage data
 				if (usage) {
@@ -376,7 +390,7 @@ public class PrivacyManager {
 
 			// Result
 			long ms = System.currentTimeMillis() - start;
-			logRestriction(hook, context, uid, "get", restrictionName, methodName, restricted, false, ms);
+			logRestriction(hook, context, uid, "get", restrictionName, methodName, restricted, false, service, ms);
 			return restricted;
 		} catch (Throwable ex) {
 			// Failsafe
@@ -425,9 +439,9 @@ public class PrivacyManager {
 
 		String self = PrivacyManager.class.getPackage().getName();
 		if (self.equals(context.getPackageName()))
-			return true;
+			return false;
 
-		if (SystemClock.elapsedRealtime() < cUseProviderAfterMs)
+		if (SystemClock.elapsedRealtime() < cUseProviderAfterMs / ("hammerhead".equals(Build.PRODUCT) ? 6 : 1))
 			return false;
 
 		if (isIsolated(Process.myUid()))
@@ -437,7 +451,7 @@ public class PrivacyManager {
 			if (!PrivacyManager.getSettingBool(null, null, 0, PrivacyManager.cSettingAndroidUsage, true, false))
 				return false;
 
-		return true;
+		return false;
 	}
 
 	public static void sendUsageData(final XHook hook, Context context) {
@@ -517,8 +531,15 @@ public class PrivacyManager {
 		if (contentResolver.update(PrivacyProvider.URI_RESTRICTION, values, restrictionName, null) <= 0)
 			Util.log(hook, Log.INFO, "Error updating restriction=" + restrictionName);
 
+		try {
+			String hookName = (hook == null ? null : hook.getClass().getSimpleName());
+			PrivacyService.getClient().setRestricted(hookName, uid, restrictionName, methodName, restricted);
+		} catch (Throwable ex) {
+			Util.bug(null, ex);
+		}
+
 		// Result
-		logRestriction(hook, context, uid, "set", restrictionName, methodName, restricted, false, 0);
+		logRestriction(hook, context, uid, "set", restrictionName, methodName, restricted, false, false, 0);
 
 		// Mark as restricted
 		if (restricted && changeState)
@@ -695,28 +716,44 @@ public class PrivacyManager {
 
 	// Settings
 
-	public static boolean getSettingBool(XHook hook, Context context, int uid, String settingName,
-			boolean defaultValue, boolean useCache) {
-		return Boolean.parseBoolean(getSetting(hook, context, uid, settingName, Boolean.toString(defaultValue),
-				useCache));
+	public static boolean getSettingBool(XHook hook, Context context, int uid, String name, boolean defaultValue,
+			boolean useCache) {
+		return Boolean.parseBoolean(getSetting(hook, context, uid, name, Boolean.toString(defaultValue), useCache));
 	}
 
-	public static String getSetting(XHook hook, Context context, int uid, String settingName, String defaultValue,
+	public static String getSetting(XHook hook, Context context, int uid, String name, String defaultValue,
 			boolean useCache) {
+
+		// Use privacy service
+		try {
+			String hookName = (hook == null ? null : hook.getClass().getSimpleName());
+			return PrivacyService.getClient().getSetting(hookName, uid, name, defaultValue);
+		} catch (Throwable ex) {
+			Util.bug(hook, ex);
+		}
+
 		if (uid == 0)
-			return getSetting(hook, context, settingName, defaultValue, useCache);
+			return getSetting(hook, context, name, defaultValue, useCache);
 		else {
-			String setting = getSetting(hook, context, String.format("%s.%d", settingName, uid), null, useCache);
+			String setting = getSetting(hook, context, String.format("%s.%d", name, uid), null, useCache);
 			if (setting == null)
-				return getSetting(hook, context, settingName, defaultValue, useCache);
+				return getSetting(hook, context, name, defaultValue, useCache);
 			else
 				return setting;
 		}
 	}
 
-	public static String getAppSetting(XHook hook, Context context, int uid, String settingName, String defaultValue,
+	public static String getAppSetting(XHook hook, Context context, int uid, String name, String defaultValue,
 			boolean useCache) {
-		return getSetting(hook, context, String.format("%s.%d", settingName, uid), null, useCache);
+		// Use privacy service
+		try {
+			String hookName = (hook == null ? null : hook.getClass().getSimpleName());
+			return PrivacyService.getClient().getSetting(hookName, uid, name, defaultValue);
+		} catch (Throwable ex) {
+			Util.bug(hook, ex);
+		}
+
+		return getSetting(hook, context, String.format("%s.%d", name, uid), null, useCache);
 	}
 
 	private static String getSetting(XHook hook, Context context, String name, String defaultValue, boolean useCache) {
@@ -778,7 +815,7 @@ public class PrivacyManager {
 
 		// Use fallback
 		if (fallback)
-			value = PrivacyProvider.getSettingFallback(name, defaultValue);
+			value = PrivacyProvider.getSettingFallback(name, defaultValue, true);
 
 		// Default value
 		if (value == null)
@@ -811,6 +848,13 @@ public class PrivacyManager {
 		if (contentResolver.update(PrivacyProvider.URI_SETTING, values, sName, null) <= 0)
 			Util.log(hook, Log.INFO, "Error updating setting=" + sName);
 		Util.log(hook, Log.INFO, String.format("set setting %s=%s", sName, value));
+
+		try {
+			String hookName = (hook == null ? null : hook.getClass().getSimpleName());
+			PrivacyService.getClient().setSetting(hookName, uid, settingName, value);
+		} catch (Throwable ex) {
+			Util.bug(null, ex);
+		}
 
 		// Flush caches
 		XApplication.manage(context, uid, XApplication.cActionFlushCache);
@@ -905,28 +949,30 @@ public class PrivacyManager {
 		if (name.equals("getIsimImpu"))
 			return null;
 
-		if (name.equals("getNetworkCountryIso")) {
+		if (name.equals("getNetworkCountryIso") || name.equals("gsm.operator.iso-country")) {
 			// ISO country code
 			String value = getSetting(null, null, uid, cSettingCountry, "XX", true);
 			return (cValueRandom.equals(value) ? getRandomProp("ISO3166") : value);
 		}
-		if (name.equals("getNetworkOperator")) // MCC+MNC: test network
+		if (name.equals("getNetworkOperator") || name.equals("gsm.operator.numeric"))
+			// MCC+MNC: test network
 			return getSetting(null, null, uid, cSettingMcc, "001", true)
 					+ getSetting(null, null, uid, cSettingMnc, "01", true);
-		if (name.equals("getNetworkOperatorName"))
+		if (name.equals("getNetworkOperatorName") || name.equals("gsm.operator.alpha"))
 			return getSetting(null, null, uid, cSettingOperator, cDeface, true);
 
-		if (name.equals("getSimCountryIso")) {
+		if (name.equals("getSimCountryIso") || name.equals("gsm.sim.operator.iso-country")) {
 			// ISO country code
 			String value = getSetting(null, null, uid, cSettingCountry, "XX", true);
 			return (cValueRandom.equals(value) ? getRandomProp("ISO3166") : value);
 		}
-		if (name.equals("getSimOperator")) // MCC+MNC: test network
+		if (name.equals("getSimOperator") || name.equals("gsm.sim.operator.numeric"))
+			// MCC+MNC: test network
 			return getSetting(null, null, uid, cSettingMcc, "001", true)
 					+ getSetting(null, null, uid, cSettingMnc, "01", true);
-		if (name.equals("getSimOperatorName"))
+		if (name.equals("getSimOperatorName") || name.equals("gsm.sim.operator.alpha"))
 			return getSetting(null, null, uid, cSettingOperator, cDeface, true);
-		if (name.equals("getSimSerialNumber"))
+		if (name.equals("getSimSerialNumber") || name.equals("getIccSerialNumber"))
 			return getSetting(null, null, uid, cSettingIccId, null, true);
 
 		if (name.equals("getSubscriberId")) { // IMSI for a GSM phone
@@ -1157,11 +1203,11 @@ public class PrivacyManager {
 	private static void logRestriction(
 			XHook hook, Context context,
 			int uid, String prefix, String restrictionName, String methodName,
-			boolean restricted, boolean cached, long ms) {
+			boolean restricted, boolean cached, boolean service, long ms) {
 		Util.log(hook, Log.INFO, String.format("%s %d/%s %s=%srestricted%s%s",
 				prefix, uid, methodName, restrictionName,
 				(restricted ? "" : "!"),
-				(cached ? " (cached)" : (context == null ? " (file)" : "")),
+				(cached ? " (cached)" : (service ? " (service)" : context == null ? " (file)" : "")),
 				(ms > 1 ? " " + ms + " ms" : "")));
 	}
 	// @formatter:on
@@ -1262,6 +1308,7 @@ public class PrivacyManager {
 		private boolean mRestart;
 		private String[] mPermissions;
 		private int mSdk;
+		private Version mFrom;
 
 		public MethodDescription(String restrictionName, String methodName) {
 			mRestrictionName = restrictionName;
@@ -1269,13 +1316,14 @@ public class PrivacyManager {
 		}
 
 		public MethodDescription(String restrictionName, String methodName, boolean dangerous, boolean restart,
-				String[] permissions, int sdk) {
+				String[] permissions, int sdk, Version from) {
 			mRestrictionName = restrictionName;
 			mMethodName = methodName;
 			mDangerous = dangerous;
 			mRestart = restart;
 			mPermissions = permissions;
 			mSdk = sdk;
+			mFrom = from;
 		}
 
 		public String getRestrictionName() {
@@ -1294,6 +1342,7 @@ public class PrivacyManager {
 			return mRestart;
 		}
 
+		@SuppressLint("FieldGetter")
 		public boolean hasNoUsageData() {
 			return isRestartRequired();
 		}
@@ -1304,6 +1353,10 @@ public class PrivacyManager {
 
 		public int getSdk() {
 			return mSdk;
+		}
+
+		public Version getFrom() {
+			return mFrom;
 		}
 
 		@Override
@@ -1321,6 +1374,11 @@ public class PrivacyManager {
 		public int compareTo(MethodDescription another) {
 			int x = mRestrictionName.compareTo(another.mRestrictionName);
 			return (x == 0 ? mMethodName.compareTo(another.mMethodName) : x);
+		}
+
+		@Override
+		public String toString() {
+			return String.format("%s/%s", mRestrictionName, mMethodName);
 		}
 	}
 
