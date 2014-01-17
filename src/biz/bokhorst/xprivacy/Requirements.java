@@ -5,6 +5,7 @@ import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.net.Inet4Address;
 import java.net.InterfaceAddress;
+import java.security.InvalidParameterException;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -117,12 +118,6 @@ public class Requirements {
 			alertDialog.show();
 		}
 
-		// TODO: account manager
-
-		// Check activity manager
-		if (!checkField(context.getSystemService(Context.ACTIVITY_SERVICE), "mContext", Context.class))
-			reportClass(context.getSystemService(Context.ACTIVITY_SERVICE).getClass(), context);
-
 		// Check activity thread
 		try {
 			Class<?> clazz = Class.forName("android.app.ActivityThread");
@@ -148,22 +143,10 @@ public class Requirements {
 			}
 		}
 
-		// Check clipboard manager
-		if (!checkField(context.getSystemService(Context.CLIPBOARD_SERVICE), "mContext", Context.class))
-			reportClass(context.getSystemService(Context.CLIPBOARD_SERVICE).getClass(), context);
-
-		// Check content resolver
-		if (!checkField(context.getContentResolver(), "mContext", Context.class))
-			reportClass(context.getContentResolver().getClass(), context);
-
 		// Check interface address
 		if (!checkField(InterfaceAddress.class, "address") || !checkField(InterfaceAddress.class, "broadcastAddress")
 				|| PrivacyManager.getDefacedProp(0, "InetAddress") == null)
 			reportClass(InterfaceAddress.class, context);
-
-		// Check package manager
-		if (!checkField(context.getPackageManager(), "mContext", Context.class))
-			reportClass(context.getPackageManager().getClass(), context);
 
 		// Check package manager service
 		try {
@@ -183,14 +166,6 @@ public class Requirements {
 			}
 		} catch (ClassNotFoundException ex) {
 			sendSupportInfo(ex.toString(), context);
-		}
-
-		// Check runtime
-		try {
-			Runtime.class.getDeclaredMethod("load", String.class, ClassLoader.class);
-			Runtime.class.getDeclaredMethod("loadLibrary", String.class, ClassLoader.class);
-		} catch (NoSuchMethodException ex) {
-			reportClass(Runtime.class, context);
 		}
 
 		// Check service manager
@@ -223,11 +198,16 @@ public class Requirements {
 			sendSupportInfo(ex.toString(), context);
 		}
 
-		// Check telephony manager
-		if (!checkField(context.getSystemService(Context.TELEPHONY_SERVICE), "sContext", Context.class)
-				&& !checkField(context.getSystemService(Context.TELEPHONY_SERVICE), "mContext", Context.class)
-				&& !checkField(context.getSystemService(Context.TELEPHONY_SERVICE), "sContextDuos", Context.class))
-			reportClass(context.getSystemService(Context.TELEPHONY_SERVICE).getClass(), context);
+		// Check privacy client
+		if (Util.isXposedEnabled()) {
+			try {
+				PrivacyService.enforcePermission();
+				if (!PrivacyService.getClient().ping("xprivacy").equals("xprivacy"))
+					throw new InvalidParameterException();
+			} catch (Throwable ex) {
+				sendSupportInfo(ex.toString(), context);
+			}
+		}
 
 		// Check wifi info
 		if (!checkField(WifiInfo.class, "mSupplicantState") || !checkField(WifiInfo.class, "mBSSID")
@@ -254,31 +234,6 @@ public class Requirements {
 		} catch (Throwable ex) {
 			reportClass(Inet4Address.class, context);
 		}
-	}
-
-	private static boolean checkField(Object obj, String fieldName, Class<?> expectedClass) {
-		try {
-			// Find field
-			Field field = null;
-			Class<?> superClass = (obj == null ? null : obj.getClass());
-			while (superClass != null)
-				try {
-					field = superClass.getDeclaredField(fieldName);
-					field.setAccessible(true);
-					break;
-				} catch (NoSuchFieldException ex) {
-					superClass = superClass.getSuperclass();
-				}
-
-			// Check field
-			if (field != null) {
-				Object value = field.get(obj);
-				if (value == null || expectedClass.isAssignableFrom(value.getClass()))
-					return true;
-			}
-		} catch (Throwable ex) {
-		}
-		return false;
 	}
 
 	private static boolean checkField(Class<?> clazz, String fieldName) {
