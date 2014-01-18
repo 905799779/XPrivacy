@@ -19,6 +19,16 @@ Test and beta releases will have experimental functions enabled by default.
 * Better method for hooking the bluetooth manager
 * Better method for hooking the package manager
 * Hook *getPackagesForUid*, *getPackagesHoldingPermissions* (JellyBean MR2) and *queryIntentContentProviders* (Kitkat)
+* Lower case randomized Android ID
+* Redesigned restriction/settings engine/database
+	* Existing restrictions/settings will be migrated automatically
+	* No more missing usage data
+	* Always up-to-date usage data
+	* Less processor and memory usage
+* Simple registration procedure for submitting restrictions
+* Moved IPC to separate category
+* Replaced *getNetwork...* and *getSim...* by system property restrictions
+* Upgrade settings in separate thread
 * Updated Arabic translation
 * Updated Chinese translation
 * Updated Lithuanian translation

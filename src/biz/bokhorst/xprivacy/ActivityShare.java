@@ -40,7 +40,9 @@ import org.xmlpull.v1.XmlSerializer;
 import android.accounts.Account;
 import android.accounts.AccountManager;
 import android.annotation.SuppressLint;
+import android.app.AlertDialog;
 import android.content.Context;
+import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager.NameNotFoundException;
@@ -54,6 +56,7 @@ import android.support.v4.content.LocalBroadcastManager;
 import android.util.Log;
 import android.util.SparseArray;
 import android.util.Xml;
+import android.widget.Toast;
 
 public class ActivityShare extends Activity {
 	private LocalBroadcastManager mBroadcastManager;
@@ -69,6 +72,7 @@ public class ActivityShare extends Activity {
 	public static final String cProgressMax = "ProgressMax";
 
 	public static final int cSubmitLimit = 10;
+	public static final int cProtocolVersion = 4;
 
 	public static final String ACTION_EXPORT = "biz.bokhorst.xprivacy.action.EXPORT";
 	public static final String ACTION_IMPORT = "biz.bokhorst.xprivacy.action.IMPORT";
@@ -96,7 +100,7 @@ public class ActivityShare extends Activity {
 		Bundle extras = getIntent().getExtras();
 		mBroadcastManager = LocalBroadcastManager.getInstance(this);
 
-		if (Util.hasProLicense(this) != null) {
+		if (Util.isProEnabled() || Util.hasProLicense(this) != null) {
 			// Import
 			if (getIntent().getAction().equals(ACTION_IMPORT)) {
 				int[] uid = (extras != null && extras.containsKey(cUidList) ? extras.getIntArray(cUidList) : new int[0]);
@@ -111,9 +115,11 @@ public class ActivityShare extends Activity {
 						: getFileName(false));
 				new ExportTask().executeOnExecutor(mExecutor, new File(fileName));
 			}
+		}
 
+		if (Util.hasProLicense(this) != null) {
 			// Fetch
-			else if (getIntent().getAction().equals(ACTION_FETCH)) {
+			if (getIntent().getAction().equals(ACTION_FETCH)) {
 				if (extras != null && extras.containsKey(cUidList)) {
 					int[] uid = extras.getIntArray(cUidList);
 					new FetchTask().executeOnExecutor(mExecutor, uid);
@@ -169,11 +175,14 @@ public class ActivityShare extends Activity {
 					// Process global settings
 					Map<String, String> mapGlobalSetting = PrivacyManager.getSettings(0);
 					for (String name : mapGlobalSetting.keySet()) {
+						String value = mapGlobalSetting.get(name);
+
 						// Serialize setting
 						serializer.startTag(null, "Setting");
 						serializer.attribute(null, "Id", "");
 						serializer.attribute(null, "Name", name);
-						serializer.attribute(null, "Value", mapGlobalSetting.get(name));
+						if (value != null)
+							serializer.attribute(null, "Value", value);
 						serializer.endTag(null, "Setting");
 					}
 
@@ -185,19 +194,23 @@ public class ActivityShare extends Activity {
 
 					// Process application settings
 					for (int uid : listUid) {
-						Map<String, String> mapSetting = PrivacyManager.getSettings(uid);
-						for (String name : mapSetting.keySet()) {
+						Map<String, String> mapAppSetting = PrivacyManager.getSettings(uid);
+						for (String name : mapAppSetting.keySet()) {
 							// Bind accounts/contacts to same device
-							if (name.startsWith("Account.") || name.startsWith("Contact.")
-									|| name.startsWith("RawContact.")) {
+							if (name.startsWith(PrivacyManager.cSettingAccount)
+									|| name.startsWith(PrivacyManager.cSettingContact)
+									|| name.startsWith(PrivacyManager.cSettingRawContact)) {
 								name += "." + android_id;
 							}
+
+							String value = mapAppSetting.get(name);
 
 							// Serialize setting
 							serializer.startTag(null, "Setting");
 							serializer.attribute(null, "Id", Integer.toString(uid));
 							serializer.attribute(null, "Name", name);
-							serializer.attribute(null, "Value", mapSetting.get(name));
+							if (value != null)
+								serializer.attribute(null, "Value", value);
 							serializer.endTag(null, "Setting");
 						}
 					}
@@ -208,22 +221,26 @@ public class ActivityShare extends Activity {
 							// Category
 							boolean crestricted = PrivacyManager.getRestricted(null, uid, restrictionName, null, false,
 									false);
-							serializer.startTag(null, "Restriction");
-							serializer.attribute(null, "Id", Integer.toString(uid));
-							serializer.attribute(null, "Name", restrictionName);
-							serializer.attribute(null, "Restricted", Boolean.toString(crestricted));
-							serializer.endTag(null, "Restriction");
-
-							// Methods
-							for (PrivacyManager.MethodDescription md : PrivacyManager.getMethods(restrictionName)) {
-								boolean mrestricted = PrivacyManager.getRestricted(null, uid, restrictionName,
-										md.getName(), false, false);
+							if (crestricted) {
 								serializer.startTag(null, "Restriction");
 								serializer.attribute(null, "Id", Integer.toString(uid));
 								serializer.attribute(null, "Name", restrictionName);
-								serializer.attribute(null, "Method", md.getName());
-								serializer.attribute(null, "Restricted", Boolean.toString(mrestricted));
+								serializer.attribute(null, "Restricted", Boolean.toString(crestricted));
 								serializer.endTag(null, "Restriction");
+
+								// Methods
+								for (PrivacyManager.MethodDescription md : PrivacyManager.getMethods(restrictionName)) {
+									boolean mrestricted = PrivacyManager.getRestricted(null, uid, restrictionName,
+											md.getName(), false, false);
+									if (!mrestricted || md.isDangerous()) {
+										serializer.startTag(null, "Restriction");
+										serializer.attribute(null, "Id", Integer.toString(uid));
+										serializer.attribute(null, "Name", restrictionName);
+										serializer.attribute(null, "Method", md.getName());
+										serializer.attribute(null, "Restricted", Boolean.toString(mrestricted));
+										serializer.endTag(null, "Restriction");
+									}
+								}
 							}
 						}
 					}
@@ -318,20 +335,24 @@ public class ActivityShare extends Activity {
 					mProgressCurrent++;
 					try {
 						publishProgress(packageName, Integer.toString(mProgressCurrent));
-						Util.log(null, Log.INFO, "Importing " + packageName);
 
 						// Get uid
 						int uid = getPackageManager().getPackageInfo(packageName, 0).applicationInfo.uid;
 
-						// Reset existing restrictions
-						PrivacyManager.deleteRestrictions(uid, true);
+						if (listUidSelected.size() == 0 || listUidSelected.contains(uid)) {
+							Util.log(null, Log.INFO, "Importing " + packageName);
 
-						// Set imported restrictions
-						for (String restrictionName : mapPackage.get(packageName).keySet()) {
-							PrivacyManager.setRestricted(null, uid, restrictionName, null, true, true);
-							for (ImportHandler.MethodDescription md : mapPackage.get(packageName).get(restrictionName))
-								PrivacyManager.setRestricted(null, uid, restrictionName, md.getMethodName(),
-										md.isRestricted(), true);
+							// Reset existing restrictions
+							PrivacyManager.deleteRestrictions(uid, true);
+
+							// Set imported restrictions
+							for (String restrictionName : mapPackage.get(packageName).keySet()) {
+								PrivacyManager.setRestricted(null, uid, restrictionName, null, true, true);
+								for (ImportHandler.MethodDescription md : mapPackage.get(packageName).get(
+										restrictionName))
+									PrivacyManager.setRestricted(null, uid, restrictionName, md.getMethodName(),
+											md.isRestricted(), true);
+							}
 						}
 					} catch (NameNotFoundException ex) {
 						Util.log(null, Log.WARN, "Not found package=" + packageName);
@@ -410,8 +431,9 @@ public class ActivityShare extends Activity {
 					String value = attributes.getValue("Value");
 
 					// Import accounts/contacts only for same device
-					// TODO: define constants
-					if (name.startsWith("Account.") || name.startsWith("Contact.") || name.startsWith("RawContact."))
+					if (name.startsWith(PrivacyManager.cSettingAccount)
+							|| name.startsWith(PrivacyManager.cSettingContact)
+							|| name.startsWith(PrivacyManager.cSettingRawContact))
 						if (name.endsWith("." + android_id))
 							name = name.replace("." + android_id, "");
 						else
@@ -548,8 +570,8 @@ public class ActivityShare extends Activity {
 				for (int uid : params[0])
 					lstApp.add(new ApplicationInfoEx(ActivityShare.this, uid));
 
+				String[] license = Util.getProLicenseUnchecked();
 				String android_id = Secure.getString(ActivityShare.this.getContentResolver(), Secure.ANDROID_ID);
-				String[] license = Util.getProLicense();
 				PackageInfo pXPrivacyInfo = getPackageManager().getPackageInfo(getPackageName(), 0);
 
 				String confidence = PrivacyManager.getSetting(null, 0, PrivacyManager.cSettingConfidence, "", false);
@@ -578,7 +600,7 @@ public class ActivityShare extends Activity {
 
 						// Encode package
 						JSONObject jRoot = new JSONObject();
-						jRoot.put("protocol_version", 4);
+						jRoot.put("protocol_version", cProtocolVersion);
 						jRoot.put("android_id", Util.md5(android_id).toLowerCase());
 						jRoot.put("android_sdk", Build.VERSION.SDK_INT);
 						jRoot.put("xprivacy_version", pXPrivacyInfo.versionCode);
@@ -707,7 +729,7 @@ public class ActivityShare extends Activity {
 					for (Account account : accountManager.getAccounts()) {
 						String sha1 = Util.sha1(account.name + account.type);
 						boolean allowed = PrivacyManager.getSettingBool(null, appInfo.getUid(),
-								String.format("Account.%s", sha1), false, false);
+								PrivacyManager.cSettingAccount + sha1, false, false);
 						if (allowed) {
 							allowedAccounts = true;
 							break;
@@ -719,7 +741,7 @@ public class ActivityShare extends Activity {
 					for (ApplicationInfoEx aAppInfo : ApplicationInfoEx.getXApplicationList(ActivityShare.this, null))
 						for (String packageName : aAppInfo.getPackageName()) {
 							boolean allowed = PrivacyManager.getSettingBool(null, aAppInfo.getUid(),
-									String.format("Application.%s", packageName), false, false);
+									PrivacyManager.cSettingApplication + packageName, false, false);
 							if (allowed) {
 								allowedApplications = true;
 								break;
@@ -735,7 +757,7 @@ public class ActivityShare extends Activity {
 							while (cursor.moveToNext()) {
 								long id = cursor.getLong(cursor.getColumnIndex(ContactsContract.Contacts._ID));
 								boolean allowed = PrivacyManager.getSettingBool(null, appInfo.getUid(),
-										String.format("Contact.%d", id), false, false);
+										PrivacyManager.cSettingContact + id, false, false);
 								if (allowed) {
 									allowedContacts = true;
 									break;
@@ -780,6 +802,7 @@ public class ActivityShare extends Activity {
 					}
 
 					// Get data
+					String[] license = Util.getProLicenseUnchecked();
 					PackageInfo pInfo = getPackageManager().getPackageInfo(getPackageName(), 0);
 					String android_id = Secure.getString(ActivityShare.this.getContentResolver(), Secure.ANDROID_ID);
 
@@ -801,7 +824,7 @@ public class ActivityShare extends Activity {
 
 					// Encode package
 					JSONObject jRoot = new JSONObject();
-					jRoot.put("protocol_version", 4);
+					jRoot.put("protocol_version", cProtocolVersion);
 					jRoot.put("android_id", Util.md5(android_id).toLowerCase());
 					jRoot.put("android_sdk", Build.VERSION.SDK_INT);
 					jRoot.put("xprivacy_version", pInfo.versionCode);
@@ -810,6 +833,10 @@ public class ActivityShare extends Activity {
 					jRoot.put("package_version_name", pkgVersionName);
 					jRoot.put("package_version_code", pkgVersionCode);
 					jRoot.put("settings", jSettings);
+					if (license != null) {
+						jRoot.put("email", license[1]);
+						jRoot.put("signature", license[2]);
+					}
 
 					// Submit
 					HttpParams httpParams = new BasicHttpParams();
@@ -834,8 +861,12 @@ public class ActivityShare extends Activity {
 							// Mark as shared
 							PrivacyManager.setSetting(null, appInfo.getUid(), PrivacyManager.cSettingState,
 									Integer.toString(ActivityMain.STATE_SHARED));
-						} else
+						} else {
+							// Mark as unregistered
+							PrivacyManager.setSetting(null, 0, PrivacyManager.cSettingRegistered,
+									Boolean.toString(false));
 							throw new Exception(status.getString("error"));
+						}
 					} else {
 						// Failed
 						response.getEntity().getContent().close();
@@ -876,6 +907,109 @@ public class ActivityShare extends Activity {
 			progressIntent.putExtra(cProgressMax, mProgressMax);
 			progressIntent.putExtra(cProgressValue, progress);
 			mBroadcastManager.sendBroadcast(progressIntent);
+		}
+	}
+
+	public static boolean registerDevice(final Context context) {
+		if (Util.hasProLicense(context) == null
+				&& !PrivacyManager.getSettingBool(null, 0, PrivacyManager.cSettingRegistered, false, false)) {
+			// Get accounts
+			final List<Account> listAccount = new ArrayList<Account>();
+			List<CharSequence> listName = new ArrayList<CharSequence>();
+			for (Account account : AccountManager.get(context).getAccounts())
+				if ("com.google".equals(account.type)) {
+					listAccount.add(account);
+					listName.add(String.format("%s (%s)", account.name, account.type));
+				}
+
+			// Build dialog
+			AlertDialog.Builder alertDialogBuilder = new AlertDialog.Builder(context);
+			alertDialogBuilder.setTitle(context.getString(R.string.msg_register));
+			alertDialogBuilder.setIcon(Util.getThemed(context, R.attr.icon_launcher));
+			alertDialogBuilder.setSingleChoiceItems(listName.toArray(new CharSequence[0]), -1,
+					new DialogInterface.OnClickListener() {
+						@Override
+						public void onClick(DialogInterface dialog, int which) {
+							Account account = listAccount.get(which);
+							new RegisterTask(context).executeOnExecutor(mExecutor, account.name);
+						}
+					});
+			alertDialogBuilder.setPositiveButton(context.getString(R.string.msg_done),
+					new DialogInterface.OnClickListener() {
+						@Override
+						public void onClick(DialogInterface dialog, int which) {
+							// Do nothing
+						}
+					});
+
+			// Show dialog
+			AlertDialog alertDialog = alertDialogBuilder.create();
+			alertDialog.show();
+
+			return false;
+		}
+		return true;
+	}
+
+	@SuppressLint("DefaultLocale")
+	private static class RegisterTask extends AsyncTask<String, String, String> {
+		private Context mContext;
+
+		public RegisterTask(Context context) {
+			mContext = context;
+		}
+
+		protected String doInBackground(String... params) {
+			try {
+				String android_id = Secure.getString(mContext.getContentResolver(), Secure.ANDROID_ID);
+
+				// Encode message
+				JSONObject jRoot = new JSONObject();
+				jRoot.put("protocol_version", cProtocolVersion);
+				jRoot.put("email", params[0]);
+				jRoot.put("android_id", Util.md5(android_id).toLowerCase());
+
+				// Submit
+				HttpParams httpParams = new BasicHttpParams();
+				HttpConnectionParams.setConnectionTimeout(httpParams, ActivityShare.TIMEOUT_MILLISEC);
+				HttpConnectionParams.setSoTimeout(httpParams, ActivityShare.TIMEOUT_MILLISEC);
+				HttpClient httpclient = new DefaultHttpClient(httpParams);
+
+				HttpPost httpost = new HttpPost(getBaseURL(null) + "device?format=json&action=register");
+				httpost.setEntity(new ByteArrayEntity(jRoot.toString().getBytes("UTF-8")));
+				httpost.setHeader("Accept", "application/json");
+				httpost.setHeader("Content-type", "application/json");
+				HttpResponse response = httpclient.execute(httpost);
+				StatusLine statusLine = response.getStatusLine();
+
+				if (statusLine.getStatusCode() == HttpStatus.SC_OK) {
+					// Succeeded
+					ByteArrayOutputStream out = new ByteArrayOutputStream();
+					response.getEntity().writeTo(out);
+					out.close();
+					JSONObject status = new JSONObject(out.toString("UTF-8"));
+					if (status.getBoolean("ok")) {
+						// Mark as registered
+						PrivacyManager.setSetting(null, 0, PrivacyManager.cSettingRegistered, Boolean.toString(true));
+						return null;
+					} else
+						throw new Exception(status.getString("error"));
+				} else {
+					// Failed
+					response.getEntity().getContent().close();
+					throw new IOException(statusLine.getReasonPhrase());
+				}
+			} catch (Throwable ex) {
+				Util.bug(null, ex);
+				return ex.getMessage();
+			}
+		}
+
+		@Override
+		protected void onPostExecute(String result) {
+			String message = (result == null ? mContext.getString(R.string.msg_registered) : result);
+			Toast toast = Toast.makeText(mContext, message, Toast.LENGTH_LONG);
+			toast.show();
 		}
 	}
 

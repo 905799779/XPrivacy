@@ -13,10 +13,14 @@ import java.util.concurrent.Executors;
 import android.content.ContentValues;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
+import android.database.sqlite.SQLiteDoneException;
+import android.database.sqlite.SQLiteStatement;
 import android.os.Binder;
 import android.os.Environment;
 import android.os.IBinder;
 import android.os.RemoteException;
+import android.os.StrictMode;
+import android.os.StrictMode.ThreadPolicy;
 import android.util.Log;
 
 public class PrivacyService {
@@ -24,12 +28,17 @@ public class PrivacyService {
 	private static SQLiteDatabase mDatabase = null;
 	private static ExecutorService mExecutor = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors());
 
-	private static String cServiceName = "xprivacy";
+	private static SQLiteStatement stmtGetRestriction = null;
+	private static SQLiteStatement stmtGetSetting = null;
 
-	// TODO: define table/column names
-	// TODO: transactions?
-	// TODO: convert shared preferences
-	// TODO: error handling (no client, remote exception)
+	private static int cCurrentVersion = 1;
+	private static String cServiceName = "xprivacy";
+	private static String cTableRestriction = "restriction";
+	private static String cTableUsage = "usage";
+	private static String cTableSetting = "setting";
+
+	// TODO: define column names
+	// TODO: use precompiled statements
 
 	public static void register() {
 		try {
@@ -37,7 +46,7 @@ public class PrivacyService {
 			Class<?> cServiceManager = Class.forName("android.os.ServiceManager");
 			Method mAddService = cServiceManager.getDeclaredMethod("addService", String.class, IBinder.class);
 			mAddService.invoke(null, cServiceName, mPrivacyService);
-			Util.log(null, Log.WARN, "Privacy service registered");
+			Util.log(null, Log.WARN, "Privacy service registered name=" + cServiceName);
 		} catch (Throwable ex) {
 			Util.bug(null, ex);
 		}
@@ -46,21 +55,32 @@ public class PrivacyService {
 	public static IPrivacyService getClient() {
 		if (mClient == null)
 			try {
+				// TODO: retries to get privacy client?
 				// public static IBinder getService(String name)
 				Class<?> cServiceManager = Class.forName("android.os.ServiceManager");
 				Method mGetService = cServiceManager.getDeclaredMethod("getService", String.class);
 				mClient = IPrivacyService.Stub.asInterface((IBinder) mGetService.invoke(null, cServiceName));
+				if (mClient != null)
+					if (PrivacyService.getClient().getVersion() != cCurrentVersion)
+						mClient = null;
 			} catch (Throwable ex) {
+				mClient = null;
 				Util.bug(null, ex);
 			}
+
+		// Disable disk strict mode
+		ThreadPolicy oldPolicy = StrictMode.getThreadPolicy();
+		ThreadPolicy newpolicy = new ThreadPolicy.Builder(oldPolicy).permitDiskReads().permitDiskWrites().build();
+		StrictMode.setThreadPolicy(newpolicy);
+
 		return mClient;
 	}
 
 	private static final IPrivacyService.Stub mPrivacyService = new IPrivacyService.Stub() {
 
 		@Override
-		public String ping(String pong) {
-			return pong;
+		public int getVersion() throws RemoteException {
+			return cCurrentVersion;
 		}
 
 		// Restrictions
@@ -72,28 +92,37 @@ public class PrivacyService {
 				enforcePermission();
 				getDatabase();
 
-				// Create category record
-				if (methodName == null || restricted) {
-					ContentValues cvalues = new ContentValues();
-					cvalues.put("uid", uid);
-					cvalues.put("restriction", restrictionName);
-					cvalues.put("method", "");
-					cvalues.put("restricted", restricted);
-					mDatabase.insertWithOnConflict("restriction", null, cvalues, SQLiteDatabase.CONFLICT_REPLACE);
-				}
+				mDatabase.beginTransaction();
+				try {
+					// Create category record
+					if (methodName == null || restricted) {
+						ContentValues cvalues = new ContentValues();
+						cvalues.put("uid", uid);
+						cvalues.put("restriction", restrictionName);
+						cvalues.put("method", "");
+						cvalues.put("restricted", restricted);
+						mDatabase.insertWithOnConflict(cTableRestriction, null, cvalues,
+								SQLiteDatabase.CONFLICT_REPLACE);
+					}
 
-				// Create method record
-				if (methodName != null) {
-					ContentValues mvalues = new ContentValues();
-					mvalues.put("uid", uid);
-					mvalues.put("restriction", restrictionName);
-					mvalues.put("method", methodName);
-					mvalues.put("restricted", !restricted);
-					mDatabase.insertWithOnConflict("restriction", null, mvalues, SQLiteDatabase.CONFLICT_REPLACE);
+					// Create method record
+					if (methodName != null) {
+						ContentValues mvalues = new ContentValues();
+						mvalues.put("uid", uid);
+						mvalues.put("restriction", restrictionName);
+						mvalues.put("method", methodName);
+						mvalues.put("restricted", !restricted);
+						mDatabase.insertWithOnConflict(cTableRestriction, null, mvalues,
+								SQLiteDatabase.CONFLICT_REPLACE);
+					}
+
+					mDatabase.setTransactionSuccessful();
+				} finally {
+					mDatabase.endTransaction();
 				}
 			} catch (Throwable ex) {
 				Util.bug(null, ex);
-				// throw new RemoteException(ex.toString());
+				throw new RemoteException(ex.toString());
 			}
 		}
 
@@ -102,33 +131,48 @@ public class PrivacyService {
 				final boolean usage) throws RemoteException {
 			boolean restricted = false;
 			try {
+				// No persmissions required
 				getDatabase();
 
-				Cursor ccursor = mDatabase.query("restriction", new String[] { "restricted" },
-						"uid=? AND restriction=? AND method=?", new String[] { Integer.toString(uid), restrictionName,
-								"" }, null, null, null);
-				if (ccursor == null)
-					Util.log(null, Log.WARN, "Database cursor null (restriction)");
-				else
+				// Precompile statement when needed
+				if (stmtGetRestriction == null) {
+					String sql = "SELECT restricted FROM " + cTableRestriction
+							+ " WHERE uid=? AND restriction=? AND method=?";
+					stmtGetRestriction = mDatabase.compileStatement(sql);
+				}
+
+				// Execute statement
+				mDatabase.beginTransaction();
+				try {
 					try {
-						if (ccursor.moveToNext())
-							restricted = (ccursor.getInt(0) > 0);
-					} finally {
-						ccursor.close();
+						synchronized (stmtGetRestriction) {
+							stmtGetRestriction.clearBindings();
+							stmtGetRestriction.bindLong(1, uid);
+							stmtGetRestriction.bindString(2, restrictionName);
+							stmtGetRestriction.bindString(3, "");
+							restricted = (stmtGetRestriction.simpleQueryForLong() > 0);
+						}
+					} catch (SQLiteDoneException ignored) {
+						restricted = false;
 					}
 
-				if (restricted && methodName != null) {
-					Cursor mcursor = mDatabase.query("restriction", new String[] { "restricted" },
-							"uid=? AND restriction=? AND method=?", new String[] { Integer.toString(uid),
-									restrictionName, methodName }, null, null, null);
-					try {
-						// Check method exception
-						if (mcursor.moveToNext())
-							if (mcursor.getInt(0) > 0)
-								restricted = false;
-					} finally {
-						mcursor.close();
-					}
+					if (restricted && methodName != null)
+						try {
+							synchronized (stmtGetRestriction) {
+								stmtGetRestriction.clearBindings();
+								stmtGetRestriction.bindLong(1, uid);
+								stmtGetRestriction.bindString(2, restrictionName);
+								stmtGetRestriction.bindString(3, methodName);
+								if (stmtGetRestriction.simpleQueryForLong() > 0)
+									restricted = false;
+							}
+						} catch (SQLiteDoneException ignored) {
+							// no change
+						}
+
+					mDatabase.setTransactionSuccessful();
+				} finally {
+					mDatabase.endTransaction();
 				}
 
 				// Log usage
@@ -136,30 +180,40 @@ public class PrivacyService {
 					final boolean sRestricted = restricted;
 					mExecutor.execute(new Runnable() {
 						public void run() {
-							// Category
-							ContentValues cvalues = new ContentValues();
-							cvalues.put("uid", uid);
-							cvalues.put("restriction", restrictionName);
-							cvalues.put("method", "");
-							cvalues.put("restricted", sRestricted);
-							cvalues.put("time", new Date().getTime());
-							mDatabase.insertWithOnConflict("usage", null, cvalues, SQLiteDatabase.CONFLICT_REPLACE);
+							mDatabase.beginTransaction();
+							try {
+								// Category
+								ContentValues cvalues = new ContentValues();
+								cvalues.put("uid", uid);
+								cvalues.put("restriction", restrictionName);
+								cvalues.put("method", "");
+								cvalues.put("restricted", sRestricted);
+								cvalues.put("time", new Date().getTime());
+								mDatabase.insertWithOnConflict("usage", null, cvalues, SQLiteDatabase.CONFLICT_REPLACE);
 
-							// Method
-							if (methodName != null) {
-								ContentValues mvalues = new ContentValues();
-								mvalues.put("uid", uid);
-								mvalues.put("restriction", restrictionName);
-								mvalues.put("method", methodName);
-								mvalues.put("restricted", sRestricted);
-								mvalues.put("time", new Date().getTime());
-								mDatabase.insertWithOnConflict("usage", null, mvalues, SQLiteDatabase.CONFLICT_REPLACE);
+								// Method
+								if (methodName != null) {
+									ContentValues mvalues = new ContentValues();
+									mvalues.put("uid", uid);
+									mvalues.put("restriction", restrictionName);
+									mvalues.put("method", methodName);
+									mvalues.put("restricted", sRestricted);
+									mvalues.put("time", new Date().getTime());
+									mDatabase.insertWithOnConflict("usage", null, mvalues,
+											SQLiteDatabase.CONFLICT_REPLACE);
+								}
+								mDatabase.setTransactionSuccessful();
+							} catch (Throwable ex) {
+								Util.bug(null, ex);
+							} finally {
+								mDatabase.endTransaction();
 							}
 						}
 					});
 				}
 			} catch (Throwable ex) {
 				Util.bug(null, ex);
+				return false;
 			}
 			return restricted;
 		}
@@ -168,12 +222,19 @@ public class PrivacyService {
 		@SuppressWarnings({ "unchecked", "rawtypes" })
 		public List getRestrictionList(int uid, String restrictionName) throws RemoteException {
 			List result = new ArrayList();
-			if (restrictionName == null)
-				for (String sRestrictionName : PrivacyManager.getRestrictions())
-					result.add(getRestriction(uid, sRestrictionName, null, false));
-			else
-				for (PrivacyManager.MethodDescription md : PrivacyManager.getMethods(restrictionName))
-					result.add(getRestriction(uid, restrictionName, md.getName(), false));
+			try {
+				enforcePermission();
+
+				if (restrictionName == null)
+					for (String sRestrictionName : PrivacyManager.getRestrictions())
+						result.add(getRestriction(uid, sRestrictionName, null, false));
+				else
+					for (PrivacyManager.MethodDescription md : PrivacyManager.getMethods(restrictionName))
+						result.add(getRestriction(uid, restrictionName, md.getName(), false));
+			} catch (Throwable ex) {
+				Util.bug(null, ex);
+				throw new RemoteException(ex.toString());
+			}
 			return result;
 		}
 
@@ -182,16 +243,19 @@ public class PrivacyService {
 			try {
 				enforcePermission();
 				getDatabase();
+
 				mDatabase.beginTransaction();
 				try {
-					mDatabase.delete("restriction", "uid=?", new String[] { Integer.toString(uid) });
-					mDatabase.setTransactionSuccessful();
+					mDatabase.delete(cTableRestriction, "uid=?", new String[] { Integer.toString(uid) });
 					Util.log(null, Log.WARN, "Restrictions deleted uid=" + uid);
+
+					mDatabase.setTransactionSuccessful();
 				} finally {
 					mDatabase.endTransaction();
 				}
 			} catch (Throwable ex) {
 				Util.bug(null, ex);
+				throw new RemoteException(ex.toString());
 			}
 		}
 
@@ -200,68 +264,85 @@ public class PrivacyService {
 		@Override
 		public long getUsage(int uid, String restrictionName, String methodName) throws RemoteException {
 			long lastUsage = 0;
-			boolean restricted = false;
 			try {
+				enforcePermission();
 				getDatabase();
 
-				Cursor cursor;
-				if (methodName == null)
-					cursor = mDatabase.query("usage", new String[] { "restricted", "time" }, "uid=? AND restriction=?",
-							new String[] { Integer.toString(uid), restrictionName }, null, null, null);
-				else
-					cursor = mDatabase.query("usage", new String[] { "restricted", "time" },
-							"uid=? AND restriction=? AND method=?", new String[] { Integer.toString(uid),
-									restrictionName, methodName }, null, null, null);
-				if (cursor == null)
-					Util.log(null, Log.WARN, "Database cursor null (usage)");
-				else
-					try {
-						while (cursor.moveToNext()) {
-							restricted = (restricted || cursor.getInt(0) > 0);
-							long usage = cursor.getLong(1);
-							if (usage > lastUsage)
-								lastUsage = usage;
+				mDatabase.beginTransaction();
+				try {
+					Cursor cursor;
+					if (methodName == null)
+						cursor = mDatabase.query(cTableUsage, new String[] { "time" }, "uid=? AND restriction=?",
+								new String[] { Integer.toString(uid), restrictionName }, null, null, null);
+					else
+						cursor = mDatabase.query(cTableUsage, new String[] { "time" },
+								"uid=? AND restriction=? AND method=?", new String[] { Integer.toString(uid),
+										restrictionName, methodName }, null, null, null);
+					if (cursor == null)
+						Util.log(null, Log.WARN, "Database cursor null (usage)");
+					else
+						try {
+							while (cursor.moveToNext()) {
+								long usage = cursor.getLong(0);
+								if (usage > lastUsage)
+									lastUsage = usage;
+							}
+						} finally {
+							cursor.close();
 						}
-					} finally {
-						cursor.close();
-					}
+
+					mDatabase.setTransactionSuccessful();
+				} finally {
+					mDatabase.endTransaction();
+				}
 			} catch (Throwable ex) {
 				Util.bug(null, ex);
+				throw new RemoteException(ex.toString());
 			}
-			return lastUsage * (restricted ? 1 : -1);
+			return lastUsage;
 		}
 
 		@Override
 		public List<ParcelableUsageData> getUsageList(int uid) throws RemoteException {
 			List<ParcelableUsageData> result = new ArrayList<ParcelableUsageData>();
 			try {
+				enforcePermission();
 				getDatabase();
 
-				Cursor cursor;
-				if (uid == 0)
-					cursor = mDatabase.query("usage", new String[] { "uid", "restriction", "method", "restricted",
-							"time" }, null, new String[] {}, null, null, null);
-				else
-					cursor = mDatabase.query("usage", new String[] { "uid", "restriction", "method", "restricted",
-							"time" }, "uid=?", new String[] { Integer.toString(uid) }, null, null, null);
-				if (cursor == null)
-					Util.log(null, Log.WARN, "Database cursor null (usage data)");
-				else
-					try {
-						while (cursor.moveToNext()) {
-							ParcelableUsageData data = new ParcelableUsageData();
-							data.uid = cursor.getInt(0);
-							data.restrictionName = cursor.getString(1);
-							data.methodName = cursor.getString(2);
-							data.restricted = (cursor.getInt(3) > 0);
-							data.time = cursor.getLong(4);
-							result.add(data);
+				mDatabase.beginTransaction();
+				try {
+					Cursor cursor;
+					if (uid == 0)
+						cursor = mDatabase.query(cTableUsage, new String[] { "uid", "restriction", "method",
+								"restricted", "time" }, null, new String[] {}, null, null, null);
+					else
+						cursor = mDatabase.query(cTableUsage, new String[] { "uid", "restriction", "method",
+								"restricted", "time" }, "uid=?", new String[] { Integer.toString(uid) }, null, null,
+								null);
+					if (cursor == null)
+						Util.log(null, Log.WARN, "Database cursor null (usage data)");
+					else
+						try {
+							while (cursor.moveToNext()) {
+								ParcelableUsageData data = new ParcelableUsageData();
+								data.uid = cursor.getInt(0);
+								data.restrictionName = cursor.getString(1);
+								data.methodName = cursor.getString(2);
+								data.restricted = (cursor.getInt(3) > 0);
+								data.time = cursor.getLong(4);
+								result.add(data);
+							}
+						} finally {
+							cursor.close();
 						}
-					} finally {
-						cursor.close();
-					}
+
+					mDatabase.setTransactionSuccessful();
+				} finally {
+					mDatabase.endTransaction();
+				}
 			} catch (Throwable ex) {
 				Util.bug(null, ex);
+				throw new RemoteException(ex.toString());
 			}
 			return result;
 		}
@@ -271,16 +352,19 @@ public class PrivacyService {
 			try {
 				enforcePermission();
 				getDatabase();
+
 				mDatabase.beginTransaction();
 				try {
-					mDatabase.delete("usage", "uid=?", new String[] { Integer.toString(uid) });
-					mDatabase.setTransactionSuccessful();
+					mDatabase.delete(cTableUsage, "uid=?", new String[] { Integer.toString(uid) });
 					Util.log(null, Log.WARN, "Usage data deleted uid=" + uid);
+
+					mDatabase.setTransactionSuccessful();
 				} finally {
 					mDatabase.endTransaction();
 				}
 			} catch (Throwable ex) {
 				Util.bug(null, ex);
+				throw new RemoteException(ex.toString());
 			}
 		}
 
@@ -292,17 +376,25 @@ public class PrivacyService {
 				enforcePermission();
 				getDatabase();
 
-				// Create record
-				ContentValues values = new ContentValues();
-				values.put("uid", uid);
-				values.put("name", name);
-				values.put("value", value);
+				mDatabase.beginTransaction();
+				try {
+					// Create record
+					ContentValues values = new ContentValues();
+					values.put("uid", uid);
+					values.put("name", name);
+					values.put("value", value);
 
-				// Insert/update record
-				mDatabase.insertWithOnConflict("setting", null, values, SQLiteDatabase.CONFLICT_REPLACE);
+					// Insert/update record
+					mDatabase.insertWithOnConflict(cTableSetting, null, values, SQLiteDatabase.CONFLICT_REPLACE);
+
+					mDatabase.setTransactionSuccessful();
+				} finally {
+					mDatabase.endTransaction();
+				}
+
 			} catch (Throwable ex) {
 				Util.bug(null, ex);
-				// throw new RemoteException(ex.toString());
+				throw new RemoteException(ex.toString());
 			}
 		}
 
@@ -310,25 +402,36 @@ public class PrivacyService {
 		public String getSetting(int uid, String name, String defaultValue) throws RemoteException {
 			String value = null;
 			try {
+				// No persmissions required
 				getDatabase();
 
-				Cursor cursor = mDatabase.query("setting", new String[] { "value" }, "uid=? AND name=?", new String[] {
-						Integer.toString(uid), name }, null, null, null);
-				if (cursor == null)
-					Util.log(null, Log.WARN, "Database cursor null (setting)");
-				else
+				// Precompile statement when needed
+				if (stmtGetSetting == null) {
+					String sql = "SELECT value FROM " + cTableSetting + " WHERE uid=? AND name=?";
+					stmtGetSetting = mDatabase.compileStatement(sql);
+				}
+
+				// Execute statement
+				mDatabase.beginTransaction();
+				try {
 					try {
-						if (cursor.moveToNext()) {
-							value = cursor.getString(0);
-							if (value.equals("") && defaultValue != null)
-								value = defaultValue;
-						} else
-							value = defaultValue;
-					} finally {
-						cursor.close();
+						synchronized (stmtGetSetting) {
+							stmtGetSetting.clearBindings();
+							stmtGetSetting.bindLong(1, uid);
+							stmtGetSetting.bindString(2, name);
+							value = stmtGetSetting.simpleQueryForString();
+						}
+					} catch (SQLiteDoneException ignored) {
+						value = defaultValue;
 					}
+
+					mDatabase.setTransactionSuccessful();
+				} finally {
+					mDatabase.endTransaction();
+				}
 			} catch (Throwable ex) {
 				Util.bug(null, ex);
+				return defaultValue;
 			}
 			return value;
 		}
@@ -338,21 +441,30 @@ public class PrivacyService {
 		public Map getSettings(int uid) throws RemoteException {
 			Map mapName = new HashMap();
 			try {
+				enforcePermission();
 				getDatabase();
 
-				Cursor cursor = mDatabase.query("setting", new String[] { "name", "value" }, "uid=?",
-						new String[] { Integer.toString(uid) }, null, null, null);
-				if (cursor == null)
-					Util.log(null, Log.WARN, "Database cursor null (settings)");
-				else
-					try {
-						while (cursor.moveToNext())
-							mapName.put(cursor.getString(0), cursor.getString(1));
-					} finally {
-						cursor.close();
-					}
+				mDatabase.beginTransaction();
+				try {
+					Cursor cursor = mDatabase.query(cTableSetting, new String[] { "name", "value" }, "uid=?",
+							new String[] { Integer.toString(uid) }, null, null, null);
+					if (cursor == null)
+						Util.log(null, Log.WARN, "Database cursor null (settings)");
+					else
+						try {
+							while (cursor.moveToNext())
+								mapName.put(cursor.getString(0), cursor.getString(1));
+						} finally {
+							cursor.close();
+						}
+
+					mDatabase.setTransactionSuccessful();
+				} finally {
+					mDatabase.endTransaction();
+				}
 			} catch (Throwable ex) {
 				Util.bug(null, ex);
+				throw new RemoteException(ex.toString());
 			}
 			return mapName;
 		}
@@ -362,16 +474,19 @@ public class PrivacyService {
 			try {
 				enforcePermission();
 				getDatabase();
+
 				mDatabase.beginTransaction();
 				try {
-					mDatabase.delete("setting", "uid=?", new String[] { Integer.toString(uid) });
-					mDatabase.setTransactionSuccessful();
+					mDatabase.delete(cTableSetting, "uid=?", new String[] { Integer.toString(uid) });
 					Util.log(null, Log.WARN, "Settings deleted uid=" + uid);
+
+					mDatabase.setTransactionSuccessful();
 				} finally {
 					mDatabase.endTransaction();
 				}
 			} catch (Throwable ex) {
 				Util.bug(null, ex);
+				throw new RemoteException(ex.toString());
 			}
 		}
 	};

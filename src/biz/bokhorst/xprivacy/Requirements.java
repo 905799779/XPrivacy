@@ -5,7 +5,6 @@ import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.net.Inet4Address;
 import java.net.InterfaceAddress;
-import java.security.InvalidParameterException;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -53,8 +52,6 @@ public class Requirements {
 		if (xVersion < PrivacyManager.cXposedAppProcessMinVersion) {
 			String msg = String.format(context.getString(R.string.app_notxposed),
 					PrivacyManager.cXposedAppProcessMinVersion);
-			Util.log(null, Log.WARN, msg);
-
 			AlertDialog.Builder alertDialogBuilder = new AlertDialog.Builder(context);
 			alertDialogBuilder.setTitle(context.getString(R.string.app_name));
 			alertDialogBuilder.setMessage(msg);
@@ -73,13 +70,17 @@ public class Requirements {
 		}
 
 		// Check if XPrivacy is enabled
-		if (!Util.isXposedEnabled()) {
-			String msg = context.getString(R.string.app_notenabled);
-			Util.log(null, Log.WARN, msg);
-
+		if (Util.isXposedEnabled()) {
+			// Check privacy client
+			try {
+				PrivacyService.enforcePermission();
+			} catch (Throwable ex) {
+				sendSupportInfo(ex.toString(), context);
+			}
+		} else {
 			AlertDialog.Builder alertDialogBuilder = new AlertDialog.Builder(context);
 			alertDialogBuilder.setTitle(context.getString(R.string.app_name));
-			alertDialogBuilder.setMessage(msg);
+			alertDialogBuilder.setMessage(context.getString(R.string.app_notenabled));
 			alertDialogBuilder.setIcon(Util.getThemed(context, R.attr.icon_launcher));
 			alertDialogBuilder.setPositiveButton(context.getString(android.R.string.ok),
 					new DialogInterface.OnClickListener() {
@@ -98,12 +99,9 @@ public class Requirements {
 		// Check pro enabler
 		Version version = Util.getProEnablerVersion(context);
 		if (version != null && !Util.isValidProEnablerVersion(version)) {
-			String msg = context.getString(R.string.app_wrongenabler);
-			Util.log(null, Log.WARN, msg);
-
 			AlertDialog.Builder alertDialogBuilder = new AlertDialog.Builder(context);
 			alertDialogBuilder.setTitle(context.getString(R.string.app_name));
-			alertDialogBuilder.setMessage(msg);
+			alertDialogBuilder.setMessage(context.getString(R.string.app_wrongenabler));
 			alertDialogBuilder.setIcon(Util.getThemed(context, R.attr.icon_launcher));
 			alertDialogBuilder.setPositiveButton(context.getString(android.R.string.ok),
 					new DialogInterface.OnClickListener() {
@@ -145,7 +143,7 @@ public class Requirements {
 
 		// Check interface address
 		if (!checkField(InterfaceAddress.class, "address") || !checkField(InterfaceAddress.class, "broadcastAddress")
-				|| PrivacyManager.getDefacedProp(0, "InetAddress") == null)
+				|| (PrivacyService.getClient() != null && PrivacyManager.getDefacedProp(0, "InetAddress") == null))
 			reportClass(InterfaceAddress.class, context);
 
 		// Check package manager service
@@ -185,10 +183,17 @@ public class Requirements {
 					if (!"".equals(serviceName))
 						listService.add(serviceName);
 				}
-				for (String service : XBinder.cListService) {
+
+				// Check services
+				List<String> listMissing = new ArrayList<String>();
+				for (String service : XBinder.cListService)
 					if (!listService.contains(service))
-						sendSupportInfo(TextUtils.join("\r\n", listService), context);
-				}
+						listMissing.add(service);
+
+				// Check result
+				if (listMissing.size() > 0)
+					sendSupportInfo("Missing:\r\n" + TextUtils.join("\r\n", listMissing) + "\r\n\r\nAvailable:\r\n"
+							+ TextUtils.join("\r\n", listService), context);
 			} catch (NoSuchMethodException ex) {
 				reportClass(clazz, context);
 			} catch (Throwable ex) {
@@ -196,17 +201,6 @@ public class Requirements {
 			}
 		} catch (ClassNotFoundException ex) {
 			sendSupportInfo(ex.toString(), context);
-		}
-
-		// Check privacy client
-		if (Util.isXposedEnabled()) {
-			try {
-				PrivacyService.enforcePermission();
-				if (!PrivacyService.getClient().ping("xprivacy").equals("xprivacy"))
-					throw new InvalidParameterException();
-			} catch (Throwable ex) {
-				sendSupportInfo(ex.toString(), context);
-			}
 		}
 
 		// Check wifi info

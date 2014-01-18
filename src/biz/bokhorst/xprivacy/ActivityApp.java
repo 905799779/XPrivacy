@@ -542,30 +542,33 @@ public class ActivityApp extends Activity {
 	}
 
 	private void optionSubmit() {
-		AlertDialog.Builder alertDialogBuilder = new AlertDialog.Builder(this);
-		alertDialogBuilder.setTitle(getString(R.string.menu_submit));
-		alertDialogBuilder.setMessage(getString(R.string.msg_sure));
-		alertDialogBuilder.setIcon(Util.getThemed(this, R.attr.icon_launcher));
-		alertDialogBuilder.setPositiveButton(getString(android.R.string.ok), new DialogInterface.OnClickListener() {
-			@Override
-			public void onClick(DialogInterface dialog, int which) {
-				int[] uid = new int[] { mAppInfo.getUid() };
-				Intent intent = new Intent("biz.bokhorst.xprivacy.action.SUBMIT");
-				intent.putExtra(ActivityShare.cUidList, uid);
-				startActivityForResult(intent, ACTIVITY_SUBMIT);
-			}
-		});
-		alertDialogBuilder.setNegativeButton(getString(android.R.string.cancel), new DialogInterface.OnClickListener() {
-			@Override
-			public void onClick(DialogInterface dialog, int which) {
-			}
-		});
-		AlertDialog alertDialog = alertDialogBuilder.create();
-		alertDialog.show();
+		if (ActivityShare.registerDevice(this)) {
+			AlertDialog.Builder alertDialogBuilder = new AlertDialog.Builder(this);
+			alertDialogBuilder.setTitle(getString(R.string.menu_submit));
+			alertDialogBuilder.setMessage(getString(R.string.msg_sure));
+			alertDialogBuilder.setIcon(Util.getThemed(this, R.attr.icon_launcher));
+			alertDialogBuilder.setPositiveButton(getString(android.R.string.ok), new DialogInterface.OnClickListener() {
+				@Override
+				public void onClick(DialogInterface dialog, int which) {
+					int[] uid = new int[] { mAppInfo.getUid() };
+					Intent intent = new Intent("biz.bokhorst.xprivacy.action.SUBMIT");
+					intent.putExtra(ActivityShare.cUidList, uid);
+					startActivityForResult(intent, ACTIVITY_SUBMIT);
+				}
+			});
+			alertDialogBuilder.setNegativeButton(getString(android.R.string.cancel),
+					new DialogInterface.OnClickListener() {
+						@Override
+						public void onClick(DialogInterface dialog, int which) {
+						}
+					});
+			AlertDialog alertDialog = alertDialogBuilder.create();
+			alertDialog.show();
+		}
 	}
 
 	private void optionFetch() {
-		if (Util.getProLicense() == null) {
+		if (Util.hasProLicense(this) == null) {
 			// Redirect to pro page
 			Util.viewUri(this, ActivityMain.cProUri);
 		} else {
@@ -599,7 +602,7 @@ public class ActivityApp extends Activity {
 	}
 
 	private void optionApplications() {
-		if (Util.getProLicense() == null) {
+		if (Util.hasProLicense(this) == null) {
 			// Redirect to pro page
 			Util.viewUri(this, ActivityMain.cProUri);
 		} else {
@@ -609,7 +612,7 @@ public class ActivityApp extends Activity {
 	}
 
 	private void optionContacts() {
-		if (Util.getProLicense() == null) {
+		if (Util.hasProLicense(this) == null) {
 			// Redirect to pro page
 			Util.viewUri(this, ActivityMain.cProUri);
 		} else {
@@ -677,7 +680,7 @@ public class ActivityApp extends Activity {
 					mListAccount.add(String.format("%s (%s)", mAccounts[i].name, mAccounts[i].type));
 					String sha1 = Util.sha1(mAccounts[i].name + mAccounts[i].type);
 					mSelection[i] = PrivacyManager.getSettingBool(null, mAppInfo.getUid(),
-							String.format("Account.%s", sha1), false, false);
+							PrivacyManager.cSettingAccount + sha1, false, false);
 				} catch (Throwable ex) {
 					Util.bug(null, ex);
 				}
@@ -696,8 +699,8 @@ public class ActivityApp extends Activity {
 							try {
 								Account account = mAccounts[whichButton];
 								String sha1 = Util.sha1(account.name + account.type);
-								PrivacyManager.setSetting(null, mAppInfo.getUid(), String.format("Account.%s", sha1),
-										Boolean.toString(isChecked));
+								PrivacyManager.setSetting(null, mAppInfo.getUid(), PrivacyManager.cSettingAccount
+										+ sha1, Boolean.toString(isChecked));
 							} catch (Throwable ex) {
 								Util.bug(null, ex);
 								Toast toast = Toast.makeText(ActivityApp.this, ex.toString(), Toast.LENGTH_LONG);
@@ -748,7 +751,7 @@ public class ActivityApp extends Activity {
 						mApp[i] = String.format("%s (%s)", appName, pkgName);
 						mPackage[i] = pkgName;
 						mSelection[i] = PrivacyManager.getSettingBool(null, mAppInfo.getUid(),
-								String.format("Application.%s", pkgName), false, false);
+								PrivacyManager.cSettingApplication + pkgName, false, false);
 						i++;
 					} catch (Throwable ex) {
 						Util.bug(null, ex);
@@ -765,8 +768,8 @@ public class ActivityApp extends Activity {
 			alertDialogBuilder.setMultiChoiceItems(mApp, mSelection, new DialogInterface.OnMultiChoiceClickListener() {
 				public void onClick(DialogInterface dialog, int whichButton, boolean isChecked) {
 					try {
-						PrivacyManager.setSetting(null, mAppInfo.getUid(),
-								String.format("Application.%s", mPackage[whichButton]), Boolean.toString(isChecked));
+						PrivacyManager.setSetting(null, mAppInfo.getUid(), PrivacyManager.cSettingApplication
+								+ mPackage[whichButton], Boolean.toString(isChecked));
 					} catch (Throwable ex) {
 						Util.bug(null, ex);
 						Toast toast = Toast.makeText(ActivityApp.this, ex.toString(), Toast.LENGTH_LONG);
@@ -821,8 +824,8 @@ public class ActivityApp extends Activity {
 			for (Long id : mapContact.keySet()) {
 				mListContact.add(mapContact.get(id));
 				mIds[i] = id;
-				mSelection[i++] = PrivacyManager.getSettingBool(null, mAppInfo.getUid(),
-						String.format("Contact.%d", id), false, false);
+				mSelection[i++] = PrivacyManager.getSettingBool(null, mAppInfo.getUid(), PrivacyManager.cSettingContact
+						+ id, false, false);
 			}
 			return null;
 		}
@@ -837,8 +840,8 @@ public class ActivityApp extends Activity {
 					new DialogInterface.OnMultiChoiceClickListener() {
 						public void onClick(DialogInterface dialog, int whichButton, boolean isChecked) {
 							// Contact
-							PrivacyManager.setSetting(null, mAppInfo.getUid(),
-									String.format("Contact.%d", mIds[whichButton]), Boolean.toString(isChecked));
+							PrivacyManager.setSetting(null, mAppInfo.getUid(), PrivacyManager.cSettingContact
+									+ mIds[whichButton], Boolean.toString(isChecked));
 
 							// Raw contacts
 							Cursor cursor = getContentResolver().query(ContactsContract.RawContacts.CONTENT_URI,
@@ -847,8 +850,8 @@ public class ActivityApp extends Activity {
 									new String[] { String.valueOf(mIds[whichButton]) }, null);
 							try {
 								while (cursor.moveToNext()) {
-									PrivacyManager.setSetting(null, 0,
-											String.format("RawContact.%d.%d", mAppInfo.getUid(), cursor.getLong(0)),
+									PrivacyManager.setSetting(null, mAppInfo.getUid(),
+											PrivacyManager.cSettingRawContact + cursor.getLong(0),
 											Boolean.toString(isChecked));
 								}
 							} finally {

@@ -2,6 +2,9 @@ package biz.bokhorst.xprivacy;
 
 import java.io.File;
 import java.io.FileInputStream;
+import java.io.FileOutputStream;
+import java.io.InputStream;
+import java.io.OutputStream;
 import java.lang.reflect.Field;
 import java.net.Inet4Address;
 import java.net.InetAddress;
@@ -48,6 +51,7 @@ public class PrivacyManager {
 	public static final String cEMail = "email";
 	public static final String cIdentification = "identification";
 	public static final String cInternet = "internet";
+	public static final String cIPC = "ipc";
 	public static final String cLocation = "location";
 	public static final String cMedia = "media";
 	public static final String cMessages = "messages";
@@ -64,7 +68,7 @@ public class PrivacyManager {
 
 	// This should correspond with the above definitions
 	private static final String cRestrictionNames[] = new String[] { cAccounts, cBrowser, cCalendar, cCalling,
-			cClipboard, cContacts, cDictionary, cEMail, cIdentification, cInternet, cLocation, cMedia, cMessages,
+			cClipboard, cContacts, cDictionary, cEMail, cIdentification, cInternet, cIPC, cLocation, cMedia, cMessages,
 			cNetwork, cNfc, cNotifications, cOverlay, cPhone, cSensors, cShell, cStorage, cSystem, cView };
 
 	// Setting names
@@ -107,7 +111,13 @@ public class PrivacyManager {
 	public final static String cSettingState = "State";
 	public final static String cSettingConfidence = "Confidence";
 	public final static String cSettingHttps = "Https";
+	public final static String cSettingRegistered = "Registered";
+
 	public final static String cSettingTemplate = "Template";
+	public final static String cSettingAccount = "Account.";
+	public final static String cSettingApplication = "Application.";
+	public final static String cSettingContact = "Contact.";
+	public final static String cSettingRawContact = "RawContact.";
 
 	// Special value names
 	public final static String cValueRandom = "#Random#";
@@ -124,30 +134,68 @@ public class PrivacyManager {
 	public final static int cUseProviderAfterMs = 3 * 60 * 1000;
 
 	// Static data
-	private static Map<String, List<MethodDescription>> mMethod = new LinkedHashMap<String, List<MethodDescription>>();
-	private static Map<String, List<MethodDescription>> mPermission = new LinkedHashMap<String, List<MethodDescription>>();
+	private static boolean mMetaData = false;
+	private static Map<String, List<MethodDescription>> mMethod;
+	private static Map<String, List<MethodDescription>> mPermission;
 	private static Map<CSetting, CSetting> mSettingsCache = new HashMap<CSetting, CSetting>();
 	private static Map<CRestriction, CRestriction> mRestrictionCache = new HashMap<CRestriction, CRestriction>();
 
 	static {
-		// Scan meta data
+		readMetaData();
+	}
+
+	public static void writeMetaData(Context context) {
+		// Write meta data
+		// TODO: find a way to get the meta data without context
 		try {
-			File in = new File(Util.getUserDataDirectory(Process.myUid()) + File.separator + "meta.xml");
-			Util.log(null, Log.INFO, "Reading meta=" + in.getAbsolutePath());
-			FileInputStream fis = null;
-			try {
-				fis = new FileInputStream(in);
-				XMLReader xmlReader = SAXParserFactory.newInstance().newSAXParser().getXMLReader();
-				MetaHandler metaHandler = new MetaHandler();
-				xmlReader.setContentHandler(metaHandler);
-				xmlReader.parse(new InputSource(fis));
-			} finally {
-				if (fis != null)
-					fis.close();
-			}
+			File out = new File(Util.getUserDataDirectory(Process.myUid()) + File.separator + "meta.xml");
+			Util.log(null, Log.WARN, "Writing meta=" + out.getAbsolutePath());
+			InputStream is = context.getAssets().open("meta.xml");
+			OutputStream os = new FileOutputStream(out.getAbsolutePath());
+			byte[] buffer = new byte[1024];
+			int read;
+			while ((read = is.read(buffer)) != -1)
+				os.write(buffer, 0, read);
+			is.close();
+			os.flush();
+			os.close();
+			out.setReadable(true, false);
 		} catch (Throwable ex) {
 			Util.bug(null, ex);
 		}
+	}
+
+	public static void readMetaData() {
+		// Reset meta data
+		mMethod = new LinkedHashMap<String, List<MethodDescription>>();
+		mPermission = new LinkedHashMap<String, List<MethodDescription>>();
+
+		// Read meta data
+		try {
+			File in = new File(Util.getUserDataDirectory(Process.myUid()) + File.separator + "meta.xml");
+			if (in.exists()) {
+				Util.log(null, Log.INFO, "Reading meta=" + in.getAbsolutePath());
+				FileInputStream fis = null;
+				try {
+					fis = new FileInputStream(in);
+					XMLReader xmlReader = SAXParserFactory.newInstance().newSAXParser().getXMLReader();
+					MetaHandler metaHandler = new MetaHandler();
+					xmlReader.setContentHandler(metaHandler);
+					xmlReader.parse(new InputSource(fis));
+					mMetaData = true;
+				} finally {
+					if (fis != null)
+						fis.close();
+				}
+			} else
+				Util.log(null, Log.WARN, "Not found meta=" + in.getAbsolutePath());
+		} catch (Throwable ex) {
+			Util.bug(null, ex);
+		}
+	}
+
+	public static boolean hasMetaData() {
+		return mMetaData;
 	}
 
 	private static class MetaHandler extends DefaultHandler {
@@ -164,6 +212,7 @@ public class PrivacyManager {
 				String permissions = attributes.getValue("permissions");
 				int sdk = (attributes.getValue("sdk") == null ? 0 : Integer.parseInt(attributes.getValue("sdk")));
 				String from = attributes.getValue("from");
+				String replaces = attributes.getValue("replaces");
 
 				// Add meta data
 				if (Build.VERSION.SDK_INT >= sdk) {
@@ -171,7 +220,7 @@ public class PrivacyManager {
 					boolean restartRequired = (restart == null ? false : Boolean.parseBoolean(restart));
 					String[] permission = (permissions == null ? null : permissions.split(","));
 					MethodDescription md = new MethodDescription(restrictionName, methodName, danger, restartRequired,
-							permission, sdk, from == null ? null : new Version(from));
+							permission, sdk, from == null ? null : new Version(from), replaces);
 
 					if (!mMethod.containsKey(restrictionName))
 						mMethod.put(restrictionName, new ArrayList<MethodDescription>());
@@ -197,7 +246,7 @@ public class PrivacyManager {
 	// Meta data
 
 	public static void registerMethod(String restrictionName, String methodName, int sdk) {
-		if (restrictionName != null && methodName != null && Build.VERSION.SDK_INT >= sdk) {
+		if (hasMetaData() && restrictionName != null && methodName != null && Build.VERSION.SDK_INT >= sdk) {
 			if (!mMethod.containsKey(restrictionName)
 					|| !mMethod.get(restrictionName).contains(new MethodDescription(restrictionName, methodName)))
 				Util.log(null, Log.WARN, "Missing method " + methodName);
@@ -473,9 +522,14 @@ public class PrivacyManager {
 		// Get settings
 		if (!cached)
 			try {
-				value = PrivacyService.getClient().getSetting(Math.abs(uid), name, defaultValue);
-				if (value == null && uid > 0)
-					value = PrivacyService.getClient().getSetting(0, name, defaultValue);
+				IPrivacyService client = PrivacyService.getClient();
+				if (client == null)
+					value = defaultValue;
+				else {
+					value = client.getSetting(Math.abs(uid), name, defaultValue);
+					if (value == null && uid > 0)
+						value = client.getSetting(0, name, defaultValue);
+				}
 
 				// Add to cache
 				key.setValue(value);
@@ -589,26 +643,26 @@ public class PrivacyManager {
 		if (name.equals("getIsimImpu"))
 			return null;
 
-		if (name.equals("getNetworkCountryIso") || name.equals("gsm.operator.iso-country")) {
+		if (name.equals("gsm.operator.iso-country")) {
 			// ISO country code
 			String value = getSetting(null, uid, cSettingCountry, "XX", true);
 			return (cValueRandom.equals(value) ? getRandomProp("ISO3166") : value);
 		}
-		if (name.equals("getNetworkOperator") || name.equals("gsm.operator.numeric"))
+		if (name.equals("gsm.operator.numeric"))
 			// MCC+MNC: test network
 			return getSetting(null, uid, cSettingMcc, "001", true) + getSetting(null, uid, cSettingMnc, "01", true);
-		if (name.equals("getNetworkOperatorName") || name.equals("gsm.operator.alpha"))
+		if (name.equals("gsm.operator.alpha"))
 			return getSetting(null, uid, cSettingOperator, cDeface, true);
 
-		if (name.equals("getSimCountryIso") || name.equals("gsm.sim.operator.iso-country")) {
+		if (name.equals("gsm.sim.operator.iso-country")) {
 			// ISO country code
 			String value = getSetting(null, uid, cSettingCountry, "XX", true);
 			return (cValueRandom.equals(value) ? getRandomProp("ISO3166") : value);
 		}
-		if (name.equals("getSimOperator") || name.equals("gsm.sim.operator.numeric"))
+		if (name.equals("gsm.sim.operator.numeric"))
 			// MCC+MNC: test network
 			return getSetting(null, uid, cSettingMcc, "001", true) + getSetting(null, uid, cSettingMnc, "01", true);
-		if (name.equals("getSimOperatorName") || name.equals("gsm.sim.operator.alpha"))
+		if (name.equals("gsm.sim.operator.alpha"))
 			return getSetting(null, uid, cSettingOperator, cDeface, true);
 		if (name.equals("getSimSerialNumber") || name.equals("getIccSerialNumber"))
 			return getSetting(null, uid, cSettingIccId, null, true);
@@ -770,7 +824,7 @@ public class PrivacyManager {
 
 		if (name.equals("ANDROID_ID")) {
 			long v = r.nextLong();
-			return Long.toHexString(v).toUpperCase();
+			return Long.toHexString(v);
 		}
 
 		if (name.equals("ISO3166")) {
@@ -1000,6 +1054,7 @@ public class PrivacyManager {
 		private String[] mPermissions;
 		private int mSdk;
 		private Version mFrom;
+		private String mReplaces;
 
 		public MethodDescription(String restrictionName, String methodName) {
 			mRestrictionName = restrictionName;
@@ -1007,7 +1062,7 @@ public class PrivacyManager {
 		}
 
 		public MethodDescription(String restrictionName, String methodName, boolean dangerous, boolean restart,
-				String[] permissions, int sdk, Version from) {
+				String[] permissions, int sdk, Version from, String replaces) {
 			mRestrictionName = restrictionName;
 			mMethodName = methodName;
 			mDangerous = dangerous;
@@ -1015,6 +1070,7 @@ public class PrivacyManager {
 			mPermissions = permissions;
 			mSdk = sdk;
 			mFrom = from;
+			mReplaces = replaces;
 		}
 
 		public String getRestrictionName() {
@@ -1048,6 +1104,10 @@ public class PrivacyManager {
 
 		public Version getFrom() {
 			return mFrom;
+		}
+
+		public String getReplaces() {
+			return mReplaces;
 		}
 
 		@Override
