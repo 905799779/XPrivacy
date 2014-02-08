@@ -13,47 +13,24 @@ Test and beta releases will have experimental functions enabled by default.
 
 * None at this time
 
-**On demand restricting logic**
-
-* The dialog will appear if:
-	* On demand restricting is enabled in the main settings
-	* On demand restricting is enabled in the application settings
-	* The category and the function were not asked for yet (has a question mark)
-	* The function is not excepted (only *Phone/Configuration.MCC/MNC*)
-	* The function is not dangerous or if *Restrict dangerous functions* is enabled
-	* The application is a user application or if *Restrict dangerous functions* is enabled
-* *Apply to entire category* will:
-	* Set the category to be asked for
-	* Apply the choice (deny/allow) to the category only
-	* If the choice doesn't match the current category restriction:
-		* The function exceptions are reset and set to be not asked for
-* When applying to a function only (*Apply to entire category* not checked):
-	* If the choice matches the current category restriction:
-		* The function is set to be asked for
-		* The choice is applied to the function only
-	* If the choice doesn't match the current category restriction and was deny:
-		* The category is set to be not asked for
-		* The choice is applied to the category
-		* All functions are set to match the category and to be not asked for
-		* The function is set to be asked for
-		* The choice is applied to the function
-* If *Restrict dangerous functions* is disabled (the default):
-	* Any category change to restricted will result in exceptions for dangerous functions:
-		* Set to be not asked for
-		* Set to be not restricted
-* The default after dialog timeout is deny
-	* Unless restrict dangerous not is enabled
-		* And the function is dangerous
-		* Or the application is a system application
-
 **Next release**
 
+* Updated Lithuanian translation
+* Increased on demand restricting timeout to 20 seconds ([issue](/../../issues/1293))
+* When registering, nicely ask for e-mail address
+
 [Open issues](https://github.com/M66B/XPrivacy/issues?state=open)
+
+**Version 1.99.36 BETA**
+
+* Fixed filter count (adding on-demand filter)
+* XPrivacy will not start with LBE Security master installed ([issue](/../../issues/1231))
+* Respect *Restrict dangerous functions* setting when fetching restrictions
 
 **Version 1.99.35 BETA**
 
 * Fixed all issues reported with the support info
-* Fixed a locking bug for new installation, which resulted in a bootloop ([issue](/../../issues/1282))
+* Fixed a locking bug for new installations, which resulted in a bootloop ([issue](/../../issues/1282))
 * Clear button for filters, thanks @[jpeg729](https://github.com/jpeg729) ([issue](/../../issues/1281))
 * Added filter for on-demand restricting, thanks @[jpeg729](https://github.com/jpeg729)
 * Smooth count down for on-demand restricting, thanks @[jpeg729](https://github.com/jpeg729)

@@ -44,6 +44,10 @@ public class XPrivacy implements IXposedHookLoadPackage, IXposedHookZygoteInit {
 
 	@SuppressLint("InlinedApi")
 	public void initZygote(StartupParam startupParam) throws Throwable {
+		// Check for LBE security master
+		if (Util.hasLBE())
+			return;
+
 		Util.log(null, Log.INFO, String.format("Load %s", startupParam.modulePath));
 
 		// Generate secret
@@ -149,6 +153,10 @@ public class XPrivacy implements IXposedHookLoadPackage, IXposedHookZygoteInit {
 	}
 
 	public void handleLoadPackage(final LoadPackageParam lpparam) throws Throwable {
+		// Check for LBE security master
+		if (Util.hasLBE())
+			return;
+
 		// Log load
 		Util.log(null, Log.INFO, String.format("Load package=%s uid=%d", lpparam.packageName, Process.myUid()));
 
@@ -341,7 +349,7 @@ public class XPrivacy implements IXposedHookLoadPackage, IXposedHookZygoteInit {
 			}
 
 			// Check if found
-			if (hookSet.isEmpty()) {
+			if (hookSet.isEmpty() && !hook.getClassName().startsWith("com.google.android.gms")) {
 				String packageName = AndroidAppHelper.currentPackageName();
 				String restrictionName = hook.getRestrictionName();
 				String message = String.format("%s: method not found: %s.%s for %s/%s uid=%d", packageName,

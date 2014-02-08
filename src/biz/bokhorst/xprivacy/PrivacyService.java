@@ -69,7 +69,7 @@ public class PrivacyService {
 	private static final String cTableUsage = "usage";
 	private static final String cTableSetting = "setting";
 
-	private static final int cCurrentVersion = 269;
+	private static final int cCurrentVersion = 270;
 	private static final String cServiceName = "xprivacy" + cCurrentVersion;
 
 	// TODO: define column names
@@ -230,7 +230,7 @@ public class PrivacyService {
 		private ExecutorService mExecutor = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors());
 
 		private final int cMaxUsageData = 500; // entries
-		private final int cMaxOnDemandDialog = 10; // seconds
+		private final int cMaxOnDemandDialog = 20; // seconds
 
 		// Management
 
@@ -1101,6 +1101,7 @@ public class PrivacyService {
 							@Override
 							public void run() {
 								try {
+									// Dialog
 									AlertDialog.Builder builder = getOnDemandDialogBuilder(restriction, hook, appInfo,
 											dangerous, result, context, latch);
 									AlertDialog alertDialog = builder.create();
@@ -1110,24 +1111,21 @@ public class PrivacyService {
 									alertDialog.show();
 									holder.dialog = alertDialog;
 
+									// Progress bar
 									final ProgressBar mProgress = (ProgressBar) alertDialog.findViewById(1966);
-									holder.thread = new Thread(new Runnable() {
+									mProgress.setMax(cMaxOnDemandDialog * 20);
+									mProgress.setProgress(cMaxOnDemandDialog * 20);
+									Runnable rProgress = new Runnable() {
+										@Override
 										public void run() {
-											try {
-												mProgress.setMax(cMaxOnDemandDialog * 20);
-												mProgress.setProgress(cMaxOnDemandDialog * 20);
-												while (mProgress.getProgress() > 0) {
-													Thread.sleep(50);
-													mProgress.incrementProgressBy(-1);
-												}
-											} catch (InterruptedException ignored) {
-											} catch (Throwable ex) {
-												Util.bug(null, ex);
+											AlertDialog dialog = holder.dialog;
+											if (dialog != null && dialog.isShowing() && mProgress.getProgress() > 0) {
+												mProgress.incrementProgressBy(-1);
+												mHandler.postDelayed(this, 50);
 											}
 										}
-									});
-									holder.thread.start();
-
+									};
+									mHandler.postDelayed(rProgress, 50);
 								} catch (Throwable ex) {
 									Util.bug(null, ex);
 									latch.countDown();
@@ -1150,10 +1148,6 @@ public class PrivacyService {
 								}
 							});
 						}
-
-						// Garbage collect
-						holder.thread.interrupt();
-						holder.thread = null;
 					} finally {
 						mOndemandSemaphore.release();
 					}
@@ -1167,7 +1161,6 @@ public class PrivacyService {
 
 		final class AlertDialogHolder {
 			public AlertDialog dialog = null;
-			public Thread thread = null;
 		}
 
 		private AlertDialog.Builder getOnDemandDialogBuilder(final PRestriction restriction, final Hook hook,
