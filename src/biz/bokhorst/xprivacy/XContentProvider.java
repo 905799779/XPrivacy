@@ -7,6 +7,7 @@ import java.util.Arrays;
 import java.util.List;
 
 import android.annotation.SuppressLint;
+import android.annotation.TargetApi;
 import android.database.AbstractWindowedCursor;
 import android.database.Cursor;
 import android.database.MatrixCursor;
@@ -256,6 +257,7 @@ public class XContentProvider extends XHook {
 	 * @param object the object whose value type is to be returned
 	 * @return object value type
 	 */
+	@SuppressLint("InlinedApi")
 	public static int getTypeOfObject(Object object) {
 		if (object == null) {
 			return Cursor.FIELD_TYPE_NULL;
@@ -276,6 +278,8 @@ public class XContentProvider extends XHook {
 	 * @param index the zero-based index of the target column.
 	 * @return column value type
 	 */
+	@SuppressLint("InlinedApi")
+	@SuppressWarnings("deprecation")
 	public static int getTypeOfCursor(Cursor cursor, int index) {
 		if (cursor.isNull(index)) {
 			return Cursor.FIELD_TYPE_NULL;
@@ -310,13 +314,18 @@ public class XContentProvider extends XHook {
 		return -1;
 	}
 
+	@TargetApi(Build.VERSION_CODES.HONEYCOMB)
+	static int getTypeOfCursorHC(Cursor cursor, int index) {
+		return cursor.getType(index);
+	}
+
 	private void copyColumns(Cursor cursor, MatrixCursor result) {
 		try {
 			Object[] columns = new Object[cursor.getColumnCount()];
 			for (int i = 0; i < cursor.getColumnCount(); i++) {
 				int type = -1;
 				if (Build.VERSION.SDK_INT > Build.VERSION_CODES.GINGERBREAD_MR1) {
-					type = cursor.getType(i);
+					type = getTypeOfCursorHC(cursor, i);
 				} else {
 					type = getTypeOfCursor(cursor, i);
 				}
