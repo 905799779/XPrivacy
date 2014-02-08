@@ -6,6 +6,7 @@ import java.util.List;
 
 import android.app.Notification;
 import android.app.NotificationManager;
+import android.app.PendingIntent;
 import android.app.Service;
 import android.content.Context;
 import android.content.Intent;
@@ -58,6 +59,8 @@ public class UpdateService extends Service {
 			builder.setWhen(System.currentTimeMillis());
 			builder.setAutoCancel(false);
 			builder.setOngoing(true);
+			PendingIntent pi = PendingIntent.getActivity(this, 0, new Intent(), 0);
+			builder.setContentIntent(pi);
 			Notification notification = builder.build();
 			startForeground(Util.NOTIFY_SERVICE, notification);
 
