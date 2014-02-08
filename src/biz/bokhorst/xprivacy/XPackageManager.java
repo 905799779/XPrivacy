@@ -31,7 +31,6 @@ public class XPackageManager extends XHook {
 
 	// public List<ApplicationInfo> getInstalledApplications(int flags)
 	// public List<PackageInfo> getInstalledPackages(int flags)
-	// public String[] getPackagesForUid(int uid)
 	// public List<PackageInfo> getPackagesHoldingPermissions(String[] permissions, int flags)
 	// public List<PackageInfo> getPreferredPackages(int flags)
 	// public List<ResolveInfo> queryBroadcastReceivers(Intent intent, int flags)
@@ -45,7 +44,7 @@ public class XPackageManager extends XHook {
 	// @formatter:on
 
 	private enum Methods {
-		getInstalledApplications, getInstalledPackages, getPackagesForUid, getPackagesHoldingPermissions, getPreferredPackages, queryBroadcastReceivers, queryContentProviders, queryIntentActivities, queryIntentActivityOptions, queryIntentContentProviders, queryIntentServices
+		getInstalledApplications, getInstalledPackages, getPackagesHoldingPermissions, getPreferredPackages, queryBroadcastReceivers, queryContentProviders, queryIntentActivities, queryIntentActivityOptions, queryIntentContentProviders, queryIntentServices
 	};
 
 	public static List<XHook> getInstances(Object instance) {
@@ -74,21 +73,22 @@ public class XPackageManager extends XHook {
 		if (mMethod == Methods.getInstalledApplications) {
 			if (param.getResult() != null && isRestricted(param))
 				param.setResult(filterApplicationInfo((List<ApplicationInfo>) param.getResult()));
-		} else if (mMethod == Methods.getPackagesForUid) {
-			if (param.getResult() != null && isRestricted(param))
-				param.setResult(new String[0]);
+
 		} else if (mMethod == Methods.getInstalledPackages || mMethod == Methods.getPackagesHoldingPermissions
 				|| mMethod == Methods.getPreferredPackages) {
 			if (param.getResult() != null && isRestricted(param))
 				param.setResult(filterPackageInfo((List<PackageInfo>) param.getResult()));
+
 		} else if (mMethod == Methods.queryBroadcastReceivers || mMethod == Methods.queryIntentActivities
 				|| mMethod == Methods.queryIntentActivityOptions || mMethod == Methods.queryIntentContentProviders
 				|| mMethod == Methods.queryIntentServices) {
 			if (param.getResult() != null && isRestricted(param))
 				param.setResult(filterResolveInfo((List<ResolveInfo>) param.getResult()));
+
 		} else if (mMethod == Methods.queryContentProviders) {
 			if (param.getResult() != null && isRestricted(param))
 				param.setResult(filterProviderInfo((List<ProviderInfo>) param.getResult()));
+
 		} else
 			Util.log(this, Log.WARN, "Unknown method=" + param.method.getName());
 	}
@@ -103,30 +103,39 @@ public class XPackageManager extends XHook {
 
 	private List<PackageInfo> filterPackageInfo(List<PackageInfo> original) {
 		ArrayList<PackageInfo> result = new ArrayList<PackageInfo>();
-		for (PackageInfo appInfo : original)
-			if (isPackageAllowed(appInfo.packageName))
-				result.add(appInfo);
+		for (PackageInfo pkgInfo : original)
+			if (isPackageAllowed(pkgInfo.packageName))
+				result.add(pkgInfo);
 		return result;
 	}
 
 	private List<ProviderInfo> filterProviderInfo(List<ProviderInfo> original) {
 		ArrayList<ProviderInfo> result = new ArrayList<ProviderInfo>();
-		for (ProviderInfo appInfo : original)
-			if (isPackageAllowed(appInfo.packageName))
-				result.add(appInfo);
+		for (ProviderInfo provInfo : original)
+			if (isPackageAllowed(provInfo.packageName))
+				result.add(provInfo);
 		return result;
 	}
 
 	private List<ResolveInfo> filterResolveInfo(List<ResolveInfo> original) {
 		ArrayList<ResolveInfo> result = new ArrayList<ResolveInfo>();
-		for (ResolveInfo appInfo : original)
-			if (isPackageAllowed(appInfo.resolvePackageName))
-				result.add(appInfo);
+		for (ResolveInfo resInfo : original)
+			if (resInfo.activityInfo != null && resInfo.activityInfo.applicationInfo != null)
+				if (isPackageAllowed(resInfo.activityInfo.applicationInfo.packageName))
+					result.add(resInfo);
 		return result;
 	}
 
 	public static boolean isPackageAllowed(String packageName) {
-		return PrivacyManager.getSettingBool(null, Binder.getCallingUid(), PrivacyManager.cSettingApplication
-				+ packageName, false, true);
+		int uid = Binder.getCallingUid();
+
+		if (packageName == null) {
+			Util.log(null, Log.WARN, "isPackageAllowed uid=" + uid + " package=" + packageName);
+			Util.logStack(null);
+			return false;
+		}
+
+		String name = PrivacyManager.cSettingApplication + packageName;
+		return PrivacyManager.getSettingBool(uid, name, false, true);
 	}
 }

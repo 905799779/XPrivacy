@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import android.net.NetworkInfo;
+import android.os.Binder;
 import android.util.Log;
 
 import de.robv.android.xposed.XC_MethodHook.MethodHookParam;
@@ -28,7 +29,7 @@ public class XNetworkInfo extends XHook {
 	// http://developer.android.com/reference/android/net/NetworkInfo.html
 
 	private enum Methods {
-		getDetailedState, getState, isConnected, isConnectedOrConnecting
+		getDetailedState, getExtraInfo, getState, isConnected, isConnectedOrConnecting
 	};
 
 	public static List<XHook> getInstances() {
@@ -48,12 +49,19 @@ public class XNetworkInfo extends XHook {
 		if (mMethod == Methods.getDetailedState) {
 			if (param.getResult() != null && isRestricted(param))
 				param.setResult(NetworkInfo.DetailedState.DISCONNECTED);
+
+		} else if (mMethod == Methods.getExtraInfo) {
+			if (param.getResult() != null && isRestricted(param))
+				param.setResult(PrivacyManager.getDefacedProp(Binder.getCallingUid(), "ExtraInfo"));
+
 		} else if (mMethod == Methods.getState) {
 			if (param.getResult() != null && isRestricted(param))
 				param.setResult(NetworkInfo.State.DISCONNECTED);
+
 		} else if (mMethod == Methods.isConnected || mMethod == Methods.isConnectedOrConnecting) {
 			if (isRestricted(param))
 				param.setResult(false);
+
 		} else
 			Util.log(this, Log.WARN, "Unknown method=" + param.method.getName());
 	}

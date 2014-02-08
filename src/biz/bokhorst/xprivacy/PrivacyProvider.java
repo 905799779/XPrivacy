@@ -52,6 +52,14 @@ public class PrivacyProvider extends ContentProvider {
 	private static final int TYPE_USAGE = 2;
 	private static final int TYPE_SETTING = 3;
 
+	private static Object mFallbackRestrictionLock = new Object();
+	private static Object mFallbackSettingsLock = new Object();
+	private static int mFallbackRestrictionsUid = 0;
+	private static long mFallbackRestrictionsTime = 0;
+	private static long mFallbackSettingsTime = 0;
+	private static SharedPreferencesEx mFallbackRestrictions = null;
+	private static SharedPreferencesEx mFallbackSettings = null;
+
 	private static ExecutorService mExecutor = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors());
 
 	static {
@@ -133,7 +141,7 @@ public class PrivacyProvider extends ContentProvider {
 						cursor.addRow(new Object[] { appInfo.uid, eRestrictionName, null, true });
 
 						// Exceptions
-						for (PrivacyManager.MethodDescription md : PrivacyManager.getMethods(eRestrictionName)) {
+						for (Hook md : PrivacyManager.getHooks(eRestrictionName)) {
 							boolean restricted = getRestricted(eRestrictionName, md.getName(), prefs);
 							if (!restricted || md.isDangerous())
 								cursor.addRow(new Object[] { appInfo.uid, eRestrictionName, md.getName(), restricted });
@@ -150,7 +158,7 @@ public class PrivacyProvider extends ContentProvider {
 				for (String eRestrictionName : listRestrictionName) {
 					boolean eRestricted = getRestricted(eRestrictionName, null, prefs);
 					cursor.addRow(new Object[] { uid, eRestrictionName, null, Boolean.toString(eRestricted) });
-					for (PrivacyManager.MethodDescription md : PrivacyManager.getMethods(eRestrictionName)) {
+					for (Hook md : PrivacyManager.getHooks(eRestrictionName)) {
 						eRestricted = getRestricted(eRestrictionName, md.getName(), prefs);
 						cursor.addRow(new Object[] { uid, eRestrictionName, md.getName(), Boolean.toString(eRestricted) });
 					}
@@ -219,7 +227,7 @@ public class PrivacyProvider extends ContentProvider {
 			// Selected restrictions/methods
 			for (String eRestrictionName : listRestriction)
 				if (methodName == null)
-					for (PrivacyManager.MethodDescription md : PrivacyManager.getMethods(eRestrictionName))
+					for (Hook md : PrivacyManager.getHooks(eRestrictionName))
 						getUsage(uid, eRestrictionName, md.getName(), cursor);
 				else
 					getUsage(uid, eRestrictionName, methodName, cursor);
@@ -421,6 +429,93 @@ public class PrivacyProvider extends ContentProvider {
 		return rows;
 	}
 
+	// The following methods are used as fallback, when:
+	// - there is no context (Java threads)
+	// - the content provider cannot be queried (PackageManagerService)
+
+	public static boolean getRestrictedFallback(XHook hook, int uid, String restrictionName, String methodName) {
+		try {
+			long now = new Date().getTime();
+			File file = new File(getPrefFileName(PREF_RESTRICTION, uid));
+			if (!file.exists())
+				Util.log(null, Log.INFO, "Not found file=" + file.getAbsolutePath());
+
+			synchronized (mFallbackRestrictionLock) {
+				if (mFallbackRestrictions == null || mFallbackRestrictionsUid != uid) {
+					// Initial load
+					mFallbackRestrictions = new SharedPreferencesEx(file);
+					mFallbackRestrictionsUid = uid;
+					mFallbackRestrictionsTime = now;
+					long ms = System.currentTimeMillis() - now;
+					Util.log(null, Log.INFO, "Load fallback restrictions uid=" + uid + "/" + mFallbackRestrictionsUid
+							+ " " + ms + " ms");
+				} else if (mFallbackRestrictionsTime + PrivacyManager.cRestrictionCacheTimeoutMs < now) {
+					// Check update
+					mFallbackRestrictions.reload();
+					mFallbackRestrictionsUid = uid;
+					mFallbackRestrictionsTime = now;
+					long ms = System.currentTimeMillis() - now;
+					Util.log(null, Log.INFO, "Reload fallback restrictions uid=" + uid + " " + ms + " ms");
+				}
+			}
+
+			return getRestricted(restrictionName, methodName, mFallbackRestrictions);
+		} catch (Throwable ex) {
+			Util.bug(hook, ex);
+			return false;
+		}
+	}
+
+	public static String getSettingFallback(String name, String defaultValue, boolean log) {
+		try {
+			long now = new Date().getTime();
+			File file = new File(getPrefFileName(PREF_SETTINGS));
+			if (!file.exists())
+				if (log)
+					Util.log(null, Log.INFO, "Not found file=" + file.getAbsolutePath());
+
+			synchronized (mFallbackSettingsLock) {
+				// Initial load
+				if (mFallbackSettings == null) {
+					mFallbackSettings = new SharedPreferencesEx(file);
+					mFallbackSettingsTime = now;
+					if (log) {
+						long ms = System.currentTimeMillis() - now;
+						Util.log(null, Log.INFO, "Load fallback settings uid=" + Binder.getCallingUid() + " " + ms
+								+ " ms");
+					}
+				}
+
+				// Get update
+				if (mFallbackSettingsTime + PrivacyManager.cSettingCacheTimeoutMs < now) {
+					mFallbackSettings.reload();
+					mFallbackSettingsTime = now;
+					if (log) {
+						long ms = System.currentTimeMillis() - now;
+						Util.log(null, Log.INFO, "Reload fallback settings uid=" + Binder.getCallingUid() + " " + ms
+								+ " ms");
+					}
+				}
+			}
+
+			return mFallbackSettings.getString(getSettingPref(name), defaultValue);
+		} catch (Throwable ex) {
+			if (log)
+				Util.bug(null, ex);
+			return defaultValue;
+		}
+	}
+
+	public static void flush() {
+		Util.log(null, Log.INFO, "Flush uid=" + Binder.getCallingUid());
+		synchronized (mFallbackRestrictionLock) {
+			mFallbackRestrictions = null;
+		}
+		synchronized (mFallbackSettingsLock) {
+			mFallbackSettings = null;
+		}
+	}
+
 	// Helper methods
 
 	private void enforcePermission() throws SecurityException {
@@ -449,9 +544,9 @@ public class PrivacyProvider extends ContentProvider {
 	public static void fixFilePermissions() {
 		File folder = new File(Util.getUserDataDirectory(Process.myUid()) + File.separator + "shared_prefs");
 		folder.setReadable(true, false);
-		File list[] = folder.listFiles();
-		if (list != null)
-			for (File file : list)
+		File[] files = folder.listFiles();
+		if (files != null)
+			for (File file : files)
 				if (file.getName().startsWith("biz.bokhorst.xprivacy.provider.") && file.getName().endsWith(".xml")
 						&& !file.getName().contains(".usage."))
 					file.setReadable(true, false);
@@ -482,7 +577,7 @@ public class PrivacyProvider extends ContentProvider {
 				+ File.separator + "biz.bokhorst.xprivacy.provider.xml");
 		File backup = new File(source.getAbsoluteFile() + ".orig");
 		if (source.exists() && !backup.exists()) {
-			Util.log(null, Log.INFO, "Converting restrictions");
+			Util.log(null, Log.WARN, "Converting restrictions");
 			SharedPreferences prefs = context.getSharedPreferences(PREF_RESTRICTION, Context.MODE_WORLD_READABLE);
 			for (String key : prefs.getAll().keySet()) {
 				String[] component = key.split("\\.");
@@ -510,115 +605,147 @@ public class PrivacyProvider extends ContentProvider {
 	}
 
 	private static void convertSettings(Context context) throws IOException {
-		SharedPreferences prefs = context.getSharedPreferences(PREF_SETTINGS, Context.MODE_WORLD_READABLE);
-		SharedPreferences.Editor editor = prefs.edit();
-		for (String key : prefs.getAll().keySet())
-			try {
-				String value = prefs.getString(key, null);
-				if (PrivacyManager.cValueRandomLegacy.equals(value))
-					editor.putString(key, PrivacyManager.cValueRandom);
-			} catch (Throwable ex) {
-			}
-
-		editor.commit();
-		setPrefFileReadable(PREF_SETTINGS);
-	}
-
-	public static void migrateRestrictions(Context context) {
-		try {
-			// Legacy restrictions
-			convertRestrictions(context);
-
-			// Process applications restrictions
-			PackageManager pm = context.getPackageManager();
-			for (ApplicationInfo appInfo : pm.getInstalledApplications(PackageManager.GET_META_DATA)) {
-				File prefFile = new File(getPrefFileName(PREF_RESTRICTION, appInfo.uid));
-				if (prefFile.exists()) {
-					Util.log(null, Log.WARN, "Migrating " + prefFile);
-
-					SharedPreferences prefs = context.getSharedPreferences(PREF_RESTRICTION + "." + appInfo.uid,
-							Context.MODE_WORLD_READABLE);
-
-					// Process restrictions
-					for (String restrictionName : PrivacyManager.getRestrictions())
-						if (getRestricted(restrictionName, null, prefs)) {
-							// Category
-							PrivacyService.getClient().setRestriction(appInfo.uid, restrictionName, null, true);
-							Util.log(null, Log.WARN, "Migrate restriction uid=" + appInfo.uid + " name="
-									+ restrictionName);
-
-							// Exceptions
-							for (PrivacyManager.MethodDescription md : PrivacyManager.getMethods(restrictionName)) {
-								boolean restricted = getRestricted(restrictionName, md.getName(), prefs);
-								if (!restricted || md.isDangerous()) {
-									PrivacyService.getClient().setRestriction(appInfo.uid, restrictionName,
-											md.getName(), restricted);
-									Util.log(null, Log.WARN, "Migrate restriction uid=" + appInfo.uid + " name="
-											+ restrictionName + " method=" + md.getName());
-								}
-							}
-						}
-
-					prefFile.renameTo(new File(prefFile + ".migrated"));
+		if (new File(getPrefFileName(PREF_SETTINGS)).exists()) {
+			SharedPreferences prefs = context.getSharedPreferences(PREF_SETTINGS, Context.MODE_WORLD_READABLE);
+			SharedPreferences.Editor editor = prefs.edit();
+			for (String key : prefs.getAll().keySet())
+				try {
+					String value = prefs.getString(key, null);
+					if (PrivacyManager.cValueRandomLegacy.equals(value))
+						editor.putString(key, PrivacyManager.cValueRandom);
+				} catch (Throwable ex) {
 				}
-			}
-		} catch (Throwable ex) {
-			Util.bug(null, ex);
+
+			editor.commit();
+			setPrefFileReadable(PREF_SETTINGS);
 		}
 	}
 
-	public static void migrateSettings(Context context) {
-		try {
-			// Process settings
-			File prefFile = new File(getPrefFileName(PREF_SETTINGS));
-			if (prefFile.exists()) {
-				Util.log(null, Log.WARN, "Migrating " + prefFile);
+	private static void splitSettings(Context context) {
+		File prefFile = new File(getPrefFileName(PREF_SETTINGS));
+		File migratedFile = new File(prefFile + ".migrated");
+		if (prefFile.exists() && !migratedFile.exists()) {
+			Util.log(null, Log.WARN, "Splitting " + prefFile);
 
-				// Legacy settings
-				convertSettings(context);
+			SharedPreferences prefs = context.getSharedPreferences(PREF_SETTINGS, Context.MODE_WORLD_READABLE);
+			for (String settingKey : prefs.getAll().keySet())
+				try {
+					int uid = 0;
+					String name = getSettingName(settingKey);
+					String value = prefs.getString(settingKey, "");
 
-				SharedPreferences prefs = context.getSharedPreferences(PREF_SETTINGS, Context.MODE_WORLD_READABLE);
-				for (String settingKey : prefs.getAll().keySet())
-					try {
-						int uid = 0;
-						String name = getSettingName(settingKey);
-						String value = prefs.getString(settingKey, null);
-						String[] component = name.split("\\.");
-						if (name.startsWith(PrivacyManager.cSettingAccount)
-								|| name.startsWith(PrivacyManager.cSettingApplication)
-								|| name.startsWith(PrivacyManager.cSettingContact)
-								|| name.startsWith(PrivacyManager.cSettingRawContact)) {
-							try {
-								// name.uid.key
-								uid = Integer.parseInt(component[1]);
-								name = component[0];
-								for (int i = 2; i < component.length; i++)
-									name += "." + component[i];
-							} catch (NumberFormatException ignored) {
-								// Initial uid/name will be used
-							}
-						} else if (component.length > 1) {
-							try {
-								// name.x.y.z.uid
-								uid = Integer.parseInt(component[component.length - 1]);
-								name = component[0];
-								for (int i = 1; i < component.length - 1; i++)
-									name += "." + component[i];
-							} catch (NumberFormatException ignored) {
-								// Initial uid/name will be used
-							}
+					// Decode setting
+					String[] component = name.split("\\.");
+					if (name.startsWith(PrivacyManager.cSettingAccount)
+							|| name.startsWith(PrivacyManager.cSettingApplication)
+							|| name.startsWith(PrivacyManager.cSettingContact)
+							|| name.startsWith(PrivacyManager.cSettingRawContact)) {
+						try {
+							// name.uid.key
+							uid = Integer.parseInt(component[1]);
+							name = component[0];
+							for (int i = 2; i < component.length; i++)
+								name += "." + component[i];
+						} catch (NumberFormatException ignored) {
+							// Initial uid/name will be used
 						}
-						PrivacyService.getClient().setSetting(uid, name, value);
-						Util.log(null, Log.WARN, "Migrate setting=" + getSettingName(settingKey) + " uid=" + uid
-								+ " name=" + name + " value=" + value);
-					} catch (Throwable ex) {
-						// Legacy boolean
+					} else if (component.length > 1) {
+						try {
+							// name.x.y.z.uid
+							uid = Integer.parseInt(component[component.length - 1]);
+							name = component[0];
+							for (int i = 1; i < component.length - 1; i++)
+								name += "." + component[i];
+						} catch (NumberFormatException ignored) {
+							// Initial uid/name will be used
+						}
 					}
 
-				prefFile.renameTo(new File(prefFile + ".migrated"));
-			}
-		} catch (Throwable ex) {
-			Util.bug(null, ex);
+					SharedPreferences aprefs = context.getSharedPreferences(PREF_SETTINGS + "." + uid,
+							Context.MODE_WORLD_READABLE);
+					SharedPreferences.Editor editor = aprefs.edit();
+					editor.putString(name, value);
+					editor.commit();
+				} catch (Throwable ex) {
+					// Legacy boolean
+					Util.bug(null, ex);
+				}
+
+			prefFile.renameTo(migratedFile);
 		}
+	}
+
+	// Migration
+
+	public static void migrateLegacy(Context context) throws IOException {
+		convertSettings(context);
+		convertRestrictions(context);
+		splitSettings(context);
+	}
+
+	public static List<PRestriction> migrateRestrictions(Context context, int uid) {
+		List<PRestriction> listWork = new ArrayList<PRestriction>();
+
+		File prefFile = new File(getPrefFileName(PREF_RESTRICTION, uid));
+		File migratedFile = new File(prefFile + ".migrated");
+		if (prefFile.exists() && !migratedFile.exists()) {
+			Util.log(null, Log.WARN, "Migrating " + prefFile);
+
+			SharedPreferences prefs = context.getSharedPreferences(PREF_RESTRICTION + "." + uid,
+					Context.MODE_WORLD_READABLE);
+
+			// Process restrictions
+			for (String restrictionName : PrivacyManager.getRestrictions())
+				if (getRestricted(restrictionName, null, prefs)) {
+					// Category
+					listWork.add(new PRestriction(uid, restrictionName, null, true));
+
+					// Exceptions
+					for (Hook md : PrivacyManager.getHooks(restrictionName)) {
+						boolean restricted = getRestricted(restrictionName, md.getName(), prefs);
+						if (!restricted || md.isDangerous())
+							listWork.add(new PRestriction(uid, restrictionName, md.getName(), restricted));
+					}
+				}
+		}
+
+		return listWork;
+	}
+
+	public static void finishMigrateRestrictions(int uid) {
+		File prefFile = new File(getPrefFileName(PREF_RESTRICTION, uid));
+		File migratedFile = new File(prefFile + ".migrated");
+		prefFile.renameTo(migratedFile);
+	}
+
+	public static List<PSetting> migrateSettings(Context context, int uid) {
+		// Process settings
+		List<PSetting> listWork = new ArrayList<PSetting>();
+
+		File prefFile = new File(getPrefFileName(PREF_SETTINGS, uid));
+		File migratedFile = new File(prefFile + ".migrated");
+		if (prefFile.exists() && !migratedFile.exists()) {
+			Util.log(null, Log.WARN, "Migrating " + prefFile);
+
+			SharedPreferences prefs = context.getSharedPreferences(PREF_SETTINGS + "." + uid,
+					Context.MODE_WORLD_READABLE);
+			for (String name : prefs.getAll().keySet())
+				try {
+					String value = prefs.getString(name, null);
+					if (value != null && !"".equals(value))
+						listWork.add(new PSetting(uid, name, value));
+				} catch (Throwable ex) {
+					// Legacy boolean
+					Util.bug(null, ex);
+				}
+		}
+
+		return listWork;
+	}
+
+	public static void finishMigrateSettings(int uid) {
+		File prefFile = new File(getPrefFileName(PREF_SETTINGS, uid));
+		File migratedFile = new File(prefFile + ".migrated");
+		prefFile.renameTo(migratedFile);
 	}
 }

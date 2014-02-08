@@ -1,5 +1,6 @@
 package biz.bokhorst.xprivacy;
 
+import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -10,7 +11,9 @@ import android.os.Binder;
 import android.os.Build;
 import android.os.Bundle;
 import android.util.Log;
+import android.location.GpsSatellite;
 import android.location.LocationListener;
+import android.location.GpsStatus;
 
 import de.robv.android.xposed.XC_MethodHook.MethodHookParam;
 
@@ -40,6 +43,7 @@ public class XLocationManager extends XHook {
 	// public void addGeofence(LocationRequest request, Geofence fence, PendingIntent intent)
 	// public boolean addNmeaListener(GpsStatus.NmeaListener listener)
 	// public void addProximityAlert(double latitude, double longitude, float radius, long expiration, PendingIntent intent)
+	// public GpsStatus getGpsStatus(GpsStatus status)
 	// public Location getLastKnownLocation(String provider)
 	// public List<String> getProviders(boolean enabledOnly)
 	// public List<String> getProviders(Criteria criteria, boolean enabledOnly)
@@ -61,20 +65,32 @@ public class XLocationManager extends XHook {
 
 	// @formatter:on
 
+	// @formatter:off
 	private enum Methods {
-		addNmeaListener, addProximityAlert, getLastKnownLocation, getProviders, isProviderEnabled, removeUpdates, requestLocationUpdates, requestSingleUpdate, sendExtraCommand, addGeofence, getLastLocation
+		addGeofence, addNmeaListener, addProximityAlert,
+		getGpsStatus,
+		getLastKnownLocation, getLastLocation,
+		getProviders, isProviderEnabled,
+		removeUpdates,
+		requestLocationUpdates, requestSingleUpdate,
+		sendExtraCommand
 	};
+	// @formatter:on
 
 	public static List<XHook> getInstances(Object instance) {
 		String className = instance.getClass().getName();
 		List<XHook> listHook = new ArrayList<XHook>();
 		for (Methods loc : Methods.values())
-			if (loc != Methods.addGeofence && loc != Methods.getLastLocation)
+			if (loc == Methods.addGeofence)
+				listHook.add(new XLocationManager(Methods.addGeofence, PrivacyManager.cLocation, className,
+						Build.VERSION_CODES.JELLY_BEAN_MR1));
+			else if (loc == Methods.getLastLocation)
+				listHook.add(new XLocationManager(Methods.getLastLocation, PrivacyManager.cLocation, className,
+						Build.VERSION_CODES.JELLY_BEAN_MR1));
+			else if (loc == Methods.removeUpdates)
+				listHook.add(new XLocationManager(loc, null, className));
+			else
 				listHook.add(new XLocationManager(loc, PrivacyManager.cLocation, className));
-		listHook.add(new XLocationManager(Methods.addGeofence, PrivacyManager.cLocation, className,
-				Build.VERSION_CODES.JELLY_BEAN_MR1));
-		listHook.add(new XLocationManager(Methods.getLastLocation, PrivacyManager.cLocation, className,
-				Build.VERSION_CODES.JELLY_BEAN_MR1));
 		return listHook;
 	}
 
@@ -83,15 +99,18 @@ public class XLocationManager extends XHook {
 		if (mMethod == Methods.addNmeaListener) {
 			if (isRestricted(param))
 				param.setResult(false);
+
 		} else if (mMethod == Methods.addGeofence || mMethod == Methods.addProximityAlert) {
 			if (isRestricted(param))
 				param.setResult(null);
+
 		} else if (mMethod == Methods.removeUpdates) {
-			if (isRestricted(param))
-				removeLocationListener(param);
+			removeLocationListener(param);
+
 		} else if (mMethod == Methods.requestLocationUpdates) {
 			if (isRestricted(param))
 				replaceLocationListener(param, 3);
+
 		} else if (mMethod == Methods.requestSingleUpdate) {
 			if (isRestricted(param))
 				replaceLocationListener(param, 1);
@@ -106,16 +125,32 @@ public class XLocationManager extends XHook {
 			if (mMethod == Methods.isProviderEnabled) {
 				if (isRestricted(param))
 					param.setResult(false);
+
+			} else if (mMethod == Methods.getGpsStatus) {
+				if (param.getResult() != null && isRestricted(param)) {
+					GpsStatus status = (GpsStatus) param.getResult();
+					// private GpsSatellite mSatellites[]
+					try {
+						Field mSatellites = status.getClass().getDeclaredField("mSatellites");
+						mSatellites.setAccessible(true);
+						mSatellites.set(status, new GpsSatellite[0]);
+					} catch (Throwable ex) {
+						Util.bug(null, ex);
+					}
+				}
 			} else if (mMethod == Methods.getLastLocation || mMethod == Methods.getLastKnownLocation) {
 				Location location = (Location) param.getResult();
 				if (location != null && isRestricted(param))
 					param.setResult(PrivacyManager.getDefacedLocation(Binder.getCallingUid(), location));
+
 			} else if (mMethod == Methods.getProviders) {
 				if (param.getResult() != null && isRestricted(param))
 					param.setResult(new ArrayList<String>());
+
 			} else if (mMethod == Methods.sendExtraCommand) {
 				if (isRestricted(param))
 					param.setResult(false);
+
 			} else
 				Util.log(this, Log.WARN, "Unknown method=" + param.method.getName());
 	}
@@ -145,9 +180,7 @@ public class XLocationManager extends XHook {
 			LocationListener listener = (LocationListener) param.args[0];
 			synchronized (mListener) {
 				XLocationListener xlistener = mListener.get(listener);
-				if (xlistener == null)
-					Util.log(this, Log.WARN, "Not found count=" + mListener.size() + " uid=" + Binder.getCallingUid());
-				else {
+				if (xlistener != null) {
 					param.args[0] = xlistener;
 					mListener.remove(listener);
 				}

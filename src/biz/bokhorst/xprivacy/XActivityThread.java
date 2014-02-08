@@ -53,6 +53,8 @@ public class XActivityThread extends XHook {
 	// @formatter:off
 
 	// private void handleReceiver(ReceiverData data)
+	// private static void performConfigurationChanged(ComponentCallbacks2 cb, Configuration config)
+	// private final void performConfigurationChanged(ComponentCallbacks2 cb, Configuration config)
 	// frameworks/base/core/java/android/app/ActivityThread.java
 
 	// @formatter:on
@@ -184,6 +186,7 @@ public class XActivityThread extends XHook {
 					}
 				}
 			}
+
 		} else
 			Util.log(this, Log.WARN, "Unknown method=" + methodName);
 	}
@@ -208,6 +211,8 @@ public class XActivityThread extends XHook {
 				BroadcastReceiver.PendingResult pr = (BroadcastReceiver.PendingResult) param.args[0];
 				pr.finish();
 			}
+		} catch (IllegalStateException ignored) {
+			// No receivers for action ...
 		} catch (Throwable ex) {
 			Util.bug(this, ex);
 		}

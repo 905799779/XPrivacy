@@ -1,13 +1,14 @@
 <resources>
 
-    <string name="app_notxposed" formatted="false">Xposed framework wersja %d+ nie jest zainstalowany</string>
+    <string name="app_notxposed" formatted="false">Framework Xposed w wersji %d+ nie jest zainstalowany</string>
     <string name="app_notenabled">XPrivacy nie został włączony w instalatorze Xposed</string>
-    <string name="app_wrongandroid">Tylko dla Androida w wersji 4.0+</string>
+    <string name="app_wrongandroid">Tylko dla Androida w wersji 4.0.3+</string>
+    <string name="app_incompatible" formatted="false">XPrivacy jest niekompatybilne z %s</string>
     <string name="app_version" formatted="false">Wersja XPrivacy: %s (%d)</string>
-    <string name="app_description">The ultimate privacy manager</string>
-    <string name="app_xversion" formatted="false">Wersja Xposed framework: %d</string>
+    <string name="app_description">Kompleksowy menadżer prywatności</string>
+    <string name="app_xversion" formatted="false">Wersja frameworka Xposed: %d</string>
     <string name="app_copyright">Copyright \u00A9 2013–2014 by M. Bokhorst (M66B)</string>
-    <string name="menu_usage">Log dostępu do danych</string>
+    <string name="menu_usage">Dostęp do danych</string>
     <string name="menu_refresh">Odśwież</string>
     <string name="menu_settings">Ustawienia</string>
     <string name="menu_template">Szablon</string>
@@ -21,11 +22,14 @@
     <string name="menu_about">O programie</string>
     <string name="menu_help">Pomoc</string>
     <string name="menu_select_all">Wybierz wszystko</string>
+    <string name="menu_sort">Sortuj</string>
+    <string name="menu_filter">Filtruj</string>
     <string name="menu_all">Wszystko</string>
     <string name="menu_restriction_all">Przełącz restrykcje</string>
     <string name="menu_clear_all">Wyczyść wszystko</string>
     <string name="menu_restrict_all">Ogranicz wszystko</string>
     <string name="menu_clear_usage">Wyczyść</string>
+    <string name="menu_clear_db">Wyczyść wszystkie dane</string>
     <string name="menu_usage_all">Przełącz filtry</string>
     <string name="menu_apply">Zastosuj szablon</string>
     <string name="menu_clear">Wyczyść</string>
@@ -37,6 +41,10 @@
     <string name="menu_applications">Wybierz dozwolone aplikacje</string>
     <string name="menu_contacts">Wybierz dozwolone kontakty</string>
     <string name="menu_tutorial">Samouczek</string>
+    <string name="menu_exclude">Wyklucz</string>
+    <string name="menu_close">Zamknij</string>
+    <string name="msg_abort">Przerywanie</string>
+    <string name="msg_aborted">Przerwano</string>
     <string name="msg_new">Nowa aplikacja</string>
     <string name="msg_update">Aktualizacja</string>
     <string name="msg_licensed" formatted="false">Licencjonowane dla: %s</string>
@@ -44,7 +52,7 @@
     <string name="msg_applying">Stosowanie</string>
     <string name="msg_applied">Zastosowano szablon</string>
     <string name="msg_saved_to" formatted="false">Zapisane do %s</string>
-    <string name="msg_no_restrictions">Nie znaleziono ograniczeń</string>
+    <string name="msg_no_restrictions">Nie znaleziono reguł blokowania</string>
     <string name="msg_sure">Czy jesteś pewny/a?</string>
     <string name="msg_select">Proszę wyberz jakieś aplikacje</string>
     <string name="msg_limit">Proszę wybierz mniej niż %d aplikacji</string>
@@ -54,6 +62,14 @@
     <string name="msg_random_access">Losuj podczas dostępu</string>
     <string name="msg_random_boot">Losuj po restarcie</string>
     <string name="msg_restart">Wymagany restart aplikacji</string>
+    <string name="msg_register">Proszę zarejestruj swoje urządzenie</string>
+    <string name="msg_registered">Sprawdź swój e-mail aby zaktywować urządzenie</string>
+    <string name="msg_service">Usługa aktualizacji pracuje</string>
+    <string name="msg_migrating" formatted="false">Migrowanie %s</string>
+    <string name="msg_randomizing" formatted="false">Losowanie %s</string>
+    <string name="msg_upgrading" formatted="false">Aktualizacja %s</string>
+    <string name="msg_support_info">Wewnętrzna kontrola się nie powiodła. Czy chcesz wysłać informacje do supportu?</string>
+    <string name="msg_restrictedby">Ograniczone przez XPrivacy</string>
     <string name="msg_first"><b>Dołożyliśmy wszelkich starań podczas programowania i testów XPrivacy.
     Jednak nie możemy zagwarantować, że będzie on działać bezbłędnie na każdym urządzeniu oraz z każdą aplikacją.
 \n\nUżywasz go całkowicie na własne ryzyko.</b>\n\nZobacz też licencję:</string>
@@ -81,24 +97,33 @@
     <string name="restrict_view">Widok (przeglądarka)</string>
     <string name="title_categories">Kategorie</string>
     <string name="title_restrict">Zaznacz aby zablokować:</string>
-    <string name="title_filters">Filtry</string>
-
-    <plurals name="title_active_filters">
-        <item quantity="one">1 aktywny filtr</item>
-        <item quantity="few">%d aktywne filtry</item>
-        <item quantity="other">%d aktywnych filtrów</item>
-    </plurals>
-
     <string name="title_fused">Filtruj wg dostępu do danych</string>
     <string name="title_finternet">Filtruj wg dostępu do internetu</string>
     <string name="title_fpermission">Filtruj wg uprawnień</string>
     <string name="title_frestricted">Filtruj wg ograniczeń</string>
     <string name="title_fuser">Filtruj wg aplikacji użytkownika</string>
+    <string name="title_fondemand">Filter by on-demand</string>
     <string name="title_fsystem">Filtruj wg aplikacji systemowych</string>
     <string name="title_fnot">Odwróć</string>
+    <string name="title_sname">Po nazwie</string>
+    <string name="title_suid">Po uid</string>
+    <string name="title_sinstalled">Po dacie instalacji</string>
+    <string name="title_supdated">Po dacie aktualizacji</string>
+    <string name="title_smodified">Po dacie modyfikacji (XPrivacy)</string>
+    <string name="title_sinvert">Odwróć porządek sortowania</string>
+    <string name="title_attempt">Usage attempt of:</string>
+    <string name="title_category">Category:</string>
+    <string name="title_function">Function:</string>
+    <string name="title_parameters">Parameters:</string>
+    <string name="title_applycat">Zastosuj do całej kategorii</string>
+    <string name="title_once">Jednorazowo na %1$s sekund</string>
+    <string name="title_allow">Pozwól</string>
+    <string name="title_deny">Zabroń</string>
+    <string name="title_pleasesubmit">Proszę wyślij twoje ograniczenia aby pomóc innym</string>
     <string name="settings_serial">Numer seryjny</string>
     <string name="settings_lat">Szerokość geograficzna</string>
     <string name="settings_lon">Długość geograficzna</string>
+    <string name="settings_alt">Wysokość</string>
     <string name="settings_mac">Adres MAC</string>
     <string name="settings_ip">Adres IP</string>
     <string name="settings_phone">Numer telefonu</string>
@@ -110,14 +135,18 @@
     <string name="settings_ua">User agent</string>
     <string name="settings_general">Ogólne</string>
     <string name="settings_fake_data">Fałszowanie danych</string>
-    <string name="settings_global">Użyj globalnych fałszywych danych</string>
     <string name="settings_notify">Aktualizuj powiadomienia</string>
-    <string name="settings_log">Debug log (wymaga restartu)</string>
+    <string name="settings_ondemand">Ograniczanie na żądanie</string>
+    <string name="settings_log">Log debugowania (wymaga restartu)</string>
     <string name="settings_expert">Tryb eksperta</string>
     <string name="settings_dangerous">Ogranicz niebezpieczne funkcje</string>
-    <string name="settings_confidence">Maximum fetch confidence interval</string>
+    <string name="settings_confidence">Maksymalna wartość wspołczynnika zaufania</string>
     <string name="settings_experimental">Eksperymentalne funkcje (wymaga restartu)</string>
-    <string name="settings_https">Use secure connections</string>
+    <string name="settings_https">Użyj bezpiecznych połaczeń</string>
+    <string name="settings_syscomponents">Ogranicz komponenty systemowe (Android) (wymaga restartu)</string>
+    <string name="settings_usagedata">Pokaż użycie danych przez aplikacje (wymaga restartu)</string>
+    <string name="help_longpress">Przytrzymaj na nazwie aby wybrać</string>
+    <string name="help_ondemand">będą pytania o ograniczenia</string>
     <string name="help_application">Aplikacja</string>
     <string name="help_internet">ma dostęp do internetu</string>
     <string name="help_granted">ma dostęp do uprawnień Androida</string>
@@ -126,10 +155,10 @@
     <string name="help_frozen">jest wyłączona</string>
     <string name="help_dangerous">niebezpieczne uprawnienie, ograniczenie może spowodować problemy</string>
     <string name="help_half">częściowo ograniczone</string>
-    <string name="help_attention">ograniczenia wymagają sprawdzenia</string>
-    <string name="help_restricted">ograniczenia się zmieniły</string>
-    <string name="help_shared">ogrniczenia zostały wysłane</string>
-    <string name="tutorial_mainheader">Wybierz kategorię do ograniczenia; wybierz widoczne aplikacje za pomocą filtrów</string>
+    <string name="help_attention">restrykcje wymagają sprawdzenia</string>
+    <string name="help_restricted">restrykcje się zmieniły</string>
+    <string name="help_shared">restrykcje zostały wysłane</string>
+    <string name="tutorial_mainheader">Wybierz kategorię do ograniczenia</string>
     <string name="tutorial_mainlist">Tapnij checkbox aby ograniczyć wybraną kategorię dla danej aplikacji\n
 \nDla ograniczonych kategorii aplikacjom będą podawane puste albo sfałszowane dane\n
 \nTapnij ikonę aplikacji aby uzyskać dostęp do szczegółowych ograniczeń i ustawień</string>

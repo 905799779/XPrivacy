@@ -12,11 +12,24 @@
         android:showAsAction="always"
         android:title="@string/menu_select_all"/>
     <item
+        android:id="@+id/menu_sort"
+        android:icon="@drawable/icon_sort"
+        android:showAsAction="always"
+        android:title="@string/menu_sort"/>
+    <item
+        android:id="@+id/menu_filter"
+        android:icon="@drawable/icon_filter"
+        android:showAsAction="always"
+        android:title="@string/menu_filter"/>
+    <item
         android:id="@+id/menu_tutorial"
         android:title="@string/menu_tutorial"/>
     <item
         android:id="@+id/menu_all"
         android:title="@string/menu_restriction_all"/>
+    <item
+        android:id="@+id/menu_clear_db"
+        android:title="@string/menu_clear_db"/>
     <item
         android:id="@+id/menu_usage"
         android:title="@string/menu_usage"/>

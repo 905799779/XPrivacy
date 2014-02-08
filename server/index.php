@@ -46,14 +46,13 @@
 		$data = json_decode($body);
 		if (empty($body) || empty($data)) {
 			log_error('json: empty request', $my_email, $data);
-			echo json_encode(array('ok' => false, 'error' => 'Empty request'));
+			echo json_encode(array('ok' => false, 'errno' => 101, 'error' => 'Empty request'));
 			exit();
 		}
 
 		// Check XPrivacy version
 		if (empty($data->xprivacy_version) || (int)$data->xprivacy_version < 219) {
-			//log_error('json: XPrivacy version: ' . $data->xprivacy_version, $my_email, $data);
-			echo json_encode(array('ok' => false, 'error' => 'Please upgrade to at least XPrivacy version 1.11'));
+			echo json_encode(array('ok' => false, 'errno' => 102, 'error' => 'Please upgrade to at least XPrivacy version 1.11'));
 			exit();
 		}
 
@@ -61,7 +60,7 @@
 		$db = new mysqli($db_host, $db_user, $db_password, $db_database);
 		if ($db->connect_errno) {
 			log_error('json: database connect: ' . $db->connect_error, $my_email, $data);
-			echo json_encode(array('ok' => false, 'error' => 'Error connecting to database'));
+			echo json_encode(array('ok' => false, 'errno' => 103, 'error' => 'Error connecting to database'));
 			exit();
 		}
 
@@ -73,12 +72,12 @@
 			// Validate
 			if (empty($data->android_id)) {
 				log_error('submit: Android ID missing', $my_email, $data);
-				echo json_encode(array('ok' => false, 'error' => 'Android ID missing'));
+				echo json_encode(array('ok' => false, 'errno' => 202, 'error' => 'Android ID missing'));
 				exit();
 			}
 			if (empty($data->package_name)) {
 				log_error('submit: package name missing', $my_email, $data);
-				echo json_encode(array('ok' => false, 'error' => 'Package name missing'));
+				echo json_encode(array('ok' => false, 'errno' => 203, 'error' => 'Package name missing'));
 				exit();
 			}
 
@@ -110,17 +109,12 @@
 			// Validate
 			if (count($data->package_name) > $max_packages) {
 				log_error('submit: too many packages count=' . count($data->package_name) . '/' . $max_packages, $my_email, $data);
-				echo json_encode(array('ok' => false, 'error' => 'Too many packages for application'));
+				echo json_encode(array('ok' => false, 'errno' => 204, 'error' => 'Too many packages for application'));
 				exit();
 			}
 
 			// Check restrictions
 			if (!empty($data->settings)) {
-				//$xml = file_get_contents ('meta.xml');
-				//$parser = xml_parser_create();
-				//xml_parse_into_struct($parser, $xml, $vals, $index);
-				//xml_parser_free($parser);
-
 				foreach ($data->settings as $restriction) {
 					$found = false;
 
@@ -173,25 +167,12 @@
 					else if ($restriction->restriction == 'view')
 						$found = true;
 
-					//if (!$found)
-					//	foreach ($index['HOOK'] as $hookidx) {
-					//		$category = $vals[$hookidx]['attributes']['RESTRICTION'];
-					//		$method = $vals[$hookidx]['attributes']['METHOD'];
-					//		if ($restriction->restriction == $category &&
-					//			(empty($restriction->method) || $restriction->method == $method)) {
-					//			$found = true;
-					//			break;
-					//		}
-					//	}
-
 					if (!$found) {
 						if (empty($restriction->method))
 							$name = $restriction->restriction;
 						else
 							$name = $restriction->restriction . '/' . $restriction->method;
 						log_error('submit: restriction unknown: ' . $name , $my_email, $data);
-						//echo json_encode(array('ok' => false, 'error' => 'Restriction unknown: ' . $name));
-						//exit();
 					}
 				}
 			}
@@ -249,7 +230,7 @@
 				}
 
 			// Send reponse
-			echo json_encode(array('ok' => $ok, 'error' => ($ok ? '' : 'Error storing restrictions')));
+			echo json_encode(array('ok' => $ok, 'errno' => ($ok ? 0 : 205), 'error' => ($ok ? '' : 'Error storing restrictions')));
 			exit();
 		}
 
@@ -262,14 +243,14 @@
 
 			if (empty($signature) || $signature != $data->signature) {
 				log_error('fetch: not authorized', $my_email, $data);
-				echo json_encode(array('ok' => false, 'error' => 'Not authorized'));
+				echo json_encode(array('ok' => false, 'errno' => 301, 'error' => 'Not authorized'));
 				exit();
 			}
 
 			// Validate
 			if (empty($data->package_name)) {
 				log_error('fetch: package name missing', $my_email, $data);
-				echo json_encode(array('ok' => false, 'error' => 'Package name missing'));
+				echo json_encode(array('ok' => false, 'errno' => 303, 'error' => 'Package name missing'));
 				exit();
 			}
 
@@ -280,7 +261,7 @@
 			// Validate
 			if (count($data->package_name) > $max_packages) {
 				log_error('fetch: too many packages count=' . count($data->package_name) . '/' . $max_packages, $my_email, $data);
-				echo json_encode(array('ok' => false, 'error' => 'Too many packages for application'));
+				echo json_encode(array('ok' => false, 'errno' => 304, 'error' => 'Too many packages for application'));
 				exit();
 			}
 
@@ -297,6 +278,8 @@
 
 			// Get restrictions
 			$settings = Array();
+			$empty = ($data->xprivacy_version >= 240);
+
 			$sql = "SELECT restriction, method";
 			$sql .= ", SUM(CASE WHEN restricted = 1 THEN 1 ELSE 0 END) AS restricted";
 			$sql .= ", SUM(CASE WHEN restricted != 1 THEN 1 ELSE 0 END) AS not_restricted";
@@ -305,13 +288,15 @@
 			$sql .= " FROM xprivacy";
 			$sql .= " WHERE package_name IN (" . $package_names . ")";
 			$sql .= " GROUP BY restriction, method";
-			$sql .= " ORDER BY restriction DESC, method DESC";
+			$sql .= " ORDER BY restriction ASC, method ASC";
 			$result = $db->query($sql);
 			if ($result) {
 				while (($row = $result->fetch_object())) {
 					$ci = confidence($row->restricted, $row->not_restricted);
 					$diff = $row->restricted / ($row->restricted + $row->not_restricted);
 					$restrict = ($ci < $max_ci && $diff > $min_diff && $row->allowed <= $row->not_allowed);
+					if ($restrict)
+						$empty = false;
 
 					$entry = Array();
 					$entry['restriction'] = $row->restriction;
@@ -328,12 +313,15 @@
 			}
 
 			// Send reponse
-			echo json_encode(array('ok' => $ok, 'error' => ($ok ? '' : 'Error retrieving restrictions'), 'settings' => $settings));
+			if ($ok && $empty)
+				echo json_encode(array('ok' => false, 'errno' => 305, 'error' => 'No restrictions available', 'settings' => $settings));
+			else
+				echo json_encode(array('ok' => $ok, 'errno' => ($ok ? 0 : 306), 'error' => ($ok ? '' : 'Error retrieving restrictions'), 'settings' => $settings));
 			exit();
 		}
 		else {
 			log_error('json: unknown action', $my_email, $data);
-			echo json_encode(array('ok' => false, 'error' => 'Unknown action: ' . $action));
+			echo json_encode(array('ok' => false, 'errno' => 104, 'error' => 'Unknown action: ' . $action));
 			exit();
 		}
 
@@ -401,7 +389,10 @@
 			// Select character set
 			$db->query("SET NAMES 'utf8'");
 ?>
-			<div class="page-header">
+			<div class="page-header" style="overflow: hidden;">
+				<div class="pull-right">
+					<a href="http://www.blackducksoftware.com/news/releases/black-duck-announces-open-source-rookies-year-winners" target="_blank"><img style="width: 158px; height: 167px;" src="open-source-rookie-of-the-year.png" alt="" /></a>
+				</div>
 <?php
 				$count = 0;
 				$total = 0;
@@ -530,7 +521,7 @@
 							<span class="glyphicon glyphicon-file"></span>
 							<a class="action" href="#" id="details">Show details</a>
 							<span class="glyphicon glyphicon-comment"></span>
-							<a class="action" href="http://forum.faircode.eu/forums/forum/xprivacy/?package_name=<?php echo urlencode($package_name); ?>" target="_blank">Discussion</a>
+							<a class="action" href="http://forum.faircode.eu/forums/forum/android/xprivacy/applications/?package_name=<?php echo urlencode($package_name); ?>" target="_blank">Discussion</a>
 							<a class="action" href="https://play.google.com/store/apps/details?id=<?php echo urlencode($package_name); ?>" target="_blank"><img src="play_logo_x2.png" style="width:95px; height:20px" alt="Play store" /></a>
 						</p>
 					</div>

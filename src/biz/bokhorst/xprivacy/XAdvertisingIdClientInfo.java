@@ -33,7 +33,8 @@ public class XAdvertisingIdClientInfo extends XHook {
 
 	public static List<XHook> getInstances() {
 		List<XHook> listHook = new ArrayList<XHook>();
-		listHook.add(new XAdvertisingIdClientInfo(Methods.getId, PrivacyManager.cIdentification, "AdvertisingId"));
+		listHook.add(new XAdvertisingIdClientInfo(Methods.getId, PrivacyManager.cIdentification, "AdvertisingId")
+				.optional());
 		return listHook;
 	}
 
@@ -42,6 +43,7 @@ public class XAdvertisingIdClientInfo extends XHook {
 		if (mMethod == Methods.getId) {
 			if (isRestricted(param))
 				param.setResult(PrivacyManager.getDefacedProp(Binder.getCallingUid(), "AdvertisingId"));
+
 		} else
 			Util.log(this, Log.WARN, "Unknown method=" + param.method.getName());
 	}

@@ -4,21 +4,22 @@ import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
-import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.io.UnsupportedEncodingException;
 import java.lang.reflect.Method;
+import java.lang.SecurityException;
+import java.net.SocketTimeoutException;
+import java.net.UnknownHostException;
+import javax.net.ssl.SSLPeerUnverifiedException;
 import java.security.KeyFactory;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.security.PublicKey;
 import java.security.Signature;
 import java.security.spec.X509EncodedKeySpec;
-import java.text.SimpleDateFormat;
-import java.util.Calendar;
 import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -40,25 +41,39 @@ import android.net.Uri;
 import android.os.Build;
 import android.os.Environment;
 import android.os.Process;
+import android.os.RemoteException;
 import android.os.UserHandle;
 import android.util.Base64;
 import android.util.Log;
-import android.util.SparseArray;
 import android.util.TypedValue;
 
 public class Util {
 	private static boolean mPro = false;
 	private static boolean mLog = true;
 	private static boolean mLogDetermined = false;
+	private static boolean mHasLBE = false;
+	private static boolean mHasLBEDetermined = false;
+
 	private static Version MIN_PRO_VERSION = new Version("1.12");
 	private static String LICENSE_FILE_NAME = "XPrivacy_license.txt";
 
+	public static int NOTIFY_RESTART = 0;
+	public static int NOTIFY_NOTXPOSED = 1;
+	public static int NOTIFY_SERVICE = 2;
+	public static int NOTIFY_MIGRATE = 3;
+	public static int NOTIFY_RANDOMIZE = 4;
+	public static int NOTIFY_UPGRADE = 5;
+
 	public static void log(XHook hook, int priority, String msg) {
 		// Check if logging enabled
-		if (Process.myUid() > 0 && !mLogDetermined) {
+		int uid = Process.myUid();
+		if (!mLogDetermined && uid > 0) {
 			mLogDetermined = true;
 			try {
-				mLog = PrivacyManager.getSettingBool(null, 0, PrivacyManager.cSettingLog, false, true);
+				if (uid == Process.SYSTEM_UID)
+					mLog = PrivacyService.getSettingBool(0, PrivacyManager.cSettingLog, false);
+				else
+					mLog = PrivacyManager.getSettingBool(0, PrivacyManager.cSettingLog, false, true);
 			} catch (Throwable ignored) {
 				mLog = false;
 			}
@@ -71,67 +86,42 @@ public class Util {
 			else
 				Log.println(priority, String.format("XPrivacy/%s", hook.getClass().getSimpleName()), msg);
 
-		if (priority != Log.DEBUG && priority != Log.INFO)
-			logData(hook, priority, msg);
+		// Report to service
+		if (Process.myUid() > 0 && priority == Log.ERROR)
+			if (Process.myUid() == Process.SYSTEM_UID)
+				PrivacyService.reportErrorInternal(msg);
+			else
+				try {
+					IPrivacyService client = PrivacyService.getClient();
+					if (client != null)
+						client.reportError(msg);
+				} catch (RemoteException ignored) {
+				}
 	}
 
 	public static void bug(XHook hook, Throwable ex) {
-		log(hook, Log.ERROR, ex.toString() + " uid=" + Process.myUid() + "\n" + Log.getStackTraceString(ex));
+		int priority;
+		if (ex instanceof OutOfMemoryError)
+			priority = Log.WARN;
+		else if (ex instanceof ActivityShare.AbortException)
+			priority = Log.WARN;
+		else if (ex instanceof IOException)
+			priority = Log.WARN;
+		else if (ex instanceof SecurityException)
+			priority = Log.WARN;
+		else if (ex instanceof SocketTimeoutException)
+			priority = Log.WARN;
+		else if (ex instanceof SSLPeerUnverifiedException)
+			priority = Log.WARN;
+		else if (ex instanceof UnknownHostException)
+			priority = Log.WARN;
+		else
+			priority = Log.ERROR;
+		log(hook, priority, ex.toString() + " uid=" + Process.myUid() + "\n" + Log.getStackTraceString(ex));
 	}
 
 	public static void logStack(XHook hook) {
 		log(hook, Log.WARN, Log.getStackTraceString(new Exception("StackTrace")));
-	}
-
-	public static File getDataFile() {
-		return new File(Environment.getDataDirectory() + File.separator + "data" + File.separator
-				+ Util.class.getPackage().getName() + File.separator + "log.txt");
-	}
-
-	public static void clearData() {
-		File dataFile = getDataFile();
-		dataFile.delete();
-		try {
-			dataFile.createNewFile();
-			logData(null, Log.WARN, "Start " + Build.PRODUCT);
-			dataFile.setReadable(true, false);
-			dataFile.setWritable(true, false);
-		} catch (Throwable ex) {
-			Util.bug(null, ex);
-		}
-	}
-
-	@SuppressLint("SimpleDateFormat")
-	private static void logData(XHook hook, int priority, String message) {
-		if (getDataFile().exists()) {
-			String time = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS").format(Calendar.getInstance().getTime());
-			String prio;
-			if (priority == Log.WARN)
-				prio = "W";
-			else if (priority == Log.ERROR)
-				prio = "E";
-			else
-				prio = Integer.toString(priority);
-			String tag = (hook == null ? "XPrivacy" : String.format("XPrivacy/%s", hook.getClass().getSimpleName()));
-
-			FileWriter fw = null;
-			try {
-				fw = new FileWriter(getDataFile(), true);
-				fw.write(String.format("%s %s/%s: %s\n", time, prio, tag, message));
-				fw.flush();
-			} catch (Throwable ex) {
-				Util.bug(hook, ex);
-			} finally {
-				if (fw != null)
-					try {
-						fw.close();
-						getDataFile().setReadable(true, false);
-						getDataFile().setWritable(true, false);
-					} catch (Throwable ex) {
-						Util.bug(hook, ex);
-					}
-			}
-		}
 	}
 
 	public static int getXposedAppProcessVersion() {
@@ -173,9 +163,6 @@ public class Util {
 
 	public static String hasProLicense(Context context) {
 		try {
-			// Disable storage restriction
-			PrivacyManager.setRestricted(null, Process.myUid(), PrivacyManager.cStorage, null, false, false);
-
 			// Get license
 			String[] license = getProLicenseUnchecked();
 			if (license == null)
@@ -272,7 +259,9 @@ public class Util {
 				os.flush();
 				os.close();
 
-				out.setWritable(false);
+				// Protect license file
+				setPermissions(out.getAbsolutePath(), 0700, Process.myUid(), Process.myUid());
+
 				licenseFile.delete();
 			} catch (Throwable ex) {
 				Util.bug(null, ex);
@@ -343,12 +332,50 @@ public class Util {
 	}
 
 	public static void viewUri(Context context, Uri uri) {
-		// Disable view restriction
-		PrivacyManager.setRestricted(null, Process.myUid(), PrivacyManager.cView, null, false, false);
-
 		Intent infoIntent = new Intent(Intent.ACTION_VIEW);
 		infoIntent.setData(uri);
 		context.startActivity(infoIntent);
+	}
+
+	public static boolean hasLBE() {
+		if (!mHasLBEDetermined) {
+			mHasLBEDetermined = true;
+			try {
+				File apps = new File(Environment.getDataDirectory() + File.separator + "app");
+				File[] files = (apps == null ? null : apps.listFiles());
+				if (files != null)
+					for (File file : files)
+						if (file.getName().startsWith("com.lbe.security"))
+							mHasLBE = true;
+			} catch (Throwable ex) {
+				Util.bug(null, ex);
+			}
+		}
+		return mHasLBE;
+	}
+
+	public static int getSelfVersionCode(Context context) {
+		try {
+			String self = Util.class.getPackage().getName();
+			PackageManager pm = context.getPackageManager();
+			PackageInfo pInfo = pm.getPackageInfo(self, 0);
+			return pInfo.versionCode;
+		} catch (NameNotFoundException ex) {
+			Util.bug(null, ex);
+			return 0;
+		}
+	}
+
+	public static String getSelfVersionName(Context context) {
+		try {
+			String self = Util.class.getPackage().getName();
+			PackageManager pm = context.getPackageManager();
+			PackageInfo pInfo = pm.getPackageInfo(self, 0);
+			return pInfo.versionName;
+		} catch (NameNotFoundException ex) {
+			Util.bug(null, ex);
+			return null;
+		}
 	}
 
 	private static byte[] hex2bytes(String hex) {
@@ -391,7 +418,7 @@ public class Util {
 
 	public static String sha1(String text) throws NoSuchAlgorithmException, UnsupportedEncodingException {
 		// SHA1
-		String salt = PrivacyManager.getSetting(null, 0, PrivacyManager.cSettingSalt, "", true);
+		String salt = PrivacyManager.getSetting(0, PrivacyManager.cSettingSalt, "", true);
 		MessageDigest digest = MessageDigest.getInstance("SHA-1");
 		byte[] bytes = (text + salt).getBytes("UTF-8");
 		digest.update(bytes, 0, bytes.length);
@@ -422,6 +449,20 @@ public class Util {
 		return (packageManager.queryIntentActivities(intent, PackageManager.GET_ACTIVITIES).size() > 0);
 	}
 
+	public static void setPermissions(String path, int mode, int uid, int gid) {
+		try {
+			// frameworks/base/core/java/android/os/FileUtils.java
+			Class<?> fileUtils = Class.forName("android.os.FileUtils");
+			Method setPermissions = fileUtils
+					.getMethod("setPermissions", String.class, int.class, int.class, int.class);
+			setPermissions.invoke(null, path, mode, uid, gid);
+			Util.log(null, Log.WARN, "Changed permission path=" + path + " mode=" + Integer.toOctalString(mode)
+					+ " uid=" + uid + " gid=" + gid);
+		} catch (Throwable ex) {
+			Util.bug(null, ex);
+		}
+	}
+
 	public static void copy(File src, File dst) throws IOException {
 		InputStream in = new FileInputStream(src);
 		OutputStream out = new FileOutputStream(dst);
@@ -431,41 +472,6 @@ public class Util {
 			out.write(buf, 0, len);
 		in.close();
 		out.close();
-	}
-
-	private static SparseArray<String> mPidPkg = new SparseArray<String>();
-
-	public static String getPackageNameByPid(int pid) {
-		// This doesn't work for all processes!
-
-		synchronized (mPidPkg) {
-			String pkg = mPidPkg.get(pid);
-			if (pkg != null)
-				return pkg;
-		}
-
-		String pkg = null;
-		try {
-			byte[] buffer = new byte[256];
-			File cmdLineFile = new File(String.format("/proc/%d/cmdline", pid));
-			FileInputStream is = new FileInputStream(cmdLineFile);
-			int len = is.read(buffer);
-			is.close();
-
-			int i = 0;
-			while (i < len && buffer[i] != 0)
-				i++;
-			pkg = new String(buffer, 0, i);
-		} catch (Throwable ex) {
-			pkg = ex.getMessage();
-		}
-
-		synchronized (mPidPkg) {
-			if (mPidPkg.indexOfKey(pid) < 0)
-				mPidPkg.put(pid, pkg);
-		}
-
-		return pkg;
 	}
 
 	public static Bitmap[] getTriStateCheckBox(Context context) {

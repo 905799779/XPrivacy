@@ -37,9 +37,9 @@ public class XGoogleAuthUtil extends XHook {
 
 	public static List<XHook> getInstances() {
 		List<XHook> listHook = new ArrayList<XHook>();
-		listHook.add(new XGoogleAuthUtil(Methods.getToken, PrivacyManager.cAccounts, "getTokenGoogle"));
+		listHook.add(new XGoogleAuthUtil(Methods.getToken, PrivacyManager.cAccounts, "getTokenGoogle").optional());
 		listHook.add(new XGoogleAuthUtil(Methods.getTokenWithNotification, PrivacyManager.cAccounts,
-				"getTokenWithNotificationGoogle"));
+				"getTokenWithNotificationGoogle").optional());
 		return listHook;
 	}
 
@@ -51,8 +51,10 @@ public class XGoogleAuthUtil extends XHook {
 	@Override
 	protected void after(MethodHookParam param) throws Throwable {
 		if (mMethod == Methods.getToken || mMethod == Methods.getTokenWithNotification) {
-			if (param.getResult() != null && isRestricted(param))
-				param.setThrowable(new IOException());
+			if (param.args.length > 1)
+				if (param.getResult() != null && isRestrictedExtra(param, (String) param.args[1]))
+					param.setThrowable(new IOException());
+
 		} else
 			Util.log(this, Log.WARN, "Unknown method=" + param.method.getName());
 	}

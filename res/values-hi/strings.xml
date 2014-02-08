@@ -3,6 +3,7 @@
     <string name="app_notxposed" formatted="false">Xposed framework का वर्शन %d+ इन्सटाल्ड नहीं हैं</string>
     <string name="app_notenabled">Xposed इनस्टॉलर मैं XPrivacy इनेबल नहीं हैं</string>
     <string name="app_wrongandroid">सिर्फ Android वर्शन 4.0+ के लिये</string>
+    <string name="app_incompatible" formatted="false">XPrivacy is incompatible with %s</string>
     <string name="app_version" formatted="false">XPrivacy वर्शन: %s (%d)</string>
     <string name="app_description">The ultimate privacy manager</string>
     <string name="app_xversion" formatted="false">Xposed framework वर्शन: %d</string>
@@ -21,11 +22,14 @@
     <string name="menu_about">जानकारी</string>
     <string name="menu_help">मदद</string>
     <string name="menu_select_all">Select all</string>
+    <string name="menu_sort">Sort</string>
+    <string name="menu_filter">Filter</string>
     <string name="menu_all">प्रत्येक</string>
     <string name="menu_restriction_all">प्रतिबंध toggle करे</string>
     <string name="menu_clear_all">सब clear करे</string>
     <string name="menu_restrict_all">सब प्रतिबंध करे</string>
     <string name="menu_clear_usage">Clear</string>
+    <string name="menu_clear_db">Clear all data</string>
     <string name="menu_usage_all">फिल्टर toggle करे</string>
     <string name="menu_apply">टेम्पलेट लागू करें</string>
     <string name="menu_clear">साफ़ करे</string>
@@ -37,6 +41,10 @@
     <string name="menu_applications">अनुमति के लिए applications को चुने</string>
     <string name="menu_contacts">अनुमति के लिए संपर्क को चुने</string>
     <string name="menu_tutorial">शिक्षा</string>
+    <string name="menu_exclude">Exclude</string>
+    <string name="menu_close">Close</string>
+    <string name="msg_abort">Aborting</string>
+    <string name="msg_aborted">Aborted</string>
     <string name="msg_new">नया</string>
     <string name="msg_update">अद्यतन</string>
     <string name="msg_licensed" formatted="false">अधिकारी: %s</string>
@@ -54,6 +62,14 @@
     <string name="msg_random_access">उपयोग पर अटपटा करें</string>
     <string name="msg_random_boot">रिबूट के पश्चात अटपटा करे</string>
     <string name="msg_restart">application पुनःप्रारंभ जरुरी</string>
+    <string name="msg_register">Please register your device</string>
+    <string name="msg_registered">Check your e-mail to activate your device</string>
+    <string name="msg_service">Update service running</string>
+    <string name="msg_migrating" formatted="false">Migrating %s</string>
+    <string name="msg_randomizing" formatted="false">Randomizing %s</string>
+    <string name="msg_upgrading" formatted="false">Upgrading %s</string>
+    <string name="msg_support_info">An internal check failed, do you want to send the support info?</string>
+    <string name="msg_restrictedby">Restricted by XPrivacy</string>
     <string name="msg_first"><b>XPrivacy बनाने मैं बहुत ख्याल रखा गया है,
 किन्तु वह सभी साधन और सभी application के लिए बरोबर चलेगा उसकी गारंटी देना असंभव है।
 \n\nइसका उपयोग पूरी तरह से आपके अपने जोखिम पर है।</b>\n\nलाइसेंस को भी पढ़े:</string>
@@ -81,23 +97,33 @@
     <string name="restrict_view">View (ब्राउज़र)</string>
     <string name="title_categories">श्रेणियाँ</string>
     <string name="title_restrict">प्रतिबंधित करने के लिए मार्क करे:</string>
-    <string name="title_filters">फिल्टर्स</string>
-
-    <plurals name="title_active_filters">
-        <item quantity="one">१ सक्रिय फिल्टर</item>
-        <item quantity="other">%d सक्रिय फिल्टर</item>
-    </plurals>
-
     <string name="title_fused">डेटा उपयोग पर फिल्टर करे</string>
     <string name="title_finternet">इन्टरनेट उपयोग पर फिल्टर करे</string>
     <string name="title_fpermission">अनुमति के द्वारा फिल्टर करे</string>
     <string name="title_frestricted">प्रतिबंध पर फिल्टर करे</string>
     <string name="title_fuser">उपयोगकर्ता की Applications पर फिल्टर करे</string>
+    <string name="title_fondemand">Filter by on-demand</string>
     <string name="title_fsystem">सिस्टम की Applications पर फिल्टर करे</string>
     <string name="title_fnot">नकारे</string>
+    <string name="title_sname">By name</string>
+    <string name="title_suid">By uid</string>
+    <string name="title_sinstalled">By date installed</string>
+    <string name="title_supdated">By date updated</string>
+    <string name="title_smodified">By date modified (XPrivacy)</string>
+    <string name="title_sinvert">Invert sort order</string>
+    <string name="title_attempt">Usage attempt of:</string>
+    <string name="title_category">Category:</string>
+    <string name="title_function">Function:</string>
+    <string name="title_parameters">Parameters:</string>
+    <string name="title_applycat">Apply to entire category</string>
+    <string name="title_once">Once for %1$s seconds</string>
+    <string name="title_allow">Allow</string>
+    <string name="title_deny">Deny</string>
+    <string name="title_pleasesubmit">Please submit your restrictions to help others</string>
     <string name="settings_serial">क्रमांक#</string>
     <string name="settings_lat">अक्षांश</string>
     <string name="settings_lon">रेखांश</string>
+    <string name="settings_alt">Altitude</string>
     <string name="settings_mac">MAC address</string>
     <string name="settings_ip">IP address</string>
     <string name="settings_phone">फ़ोन संख्या</string>
@@ -109,14 +135,18 @@
     <string name="settings_ua">User agent</string>
     <string name="settings_general">सामान्य</string>
     <string name="settings_fake_data">नकली डेटा</string>
-    <string name="settings_global">सार्वत्रिक नकली डेटा का  उपयोग करे</string>
     <string name="settings_notify">अद्यतन सुचना</string>
+    <string name="settings_ondemand">Restrict on demand</string>
     <string name="settings_log">Debug log (पुनरारंभ जरूरी)</string>
     <string name="settings_expert">विशेषज्ञ mode</string>
     <string name="settings_dangerous">खतरनाक कार्य प्रतिबंधित करे</string>
     <string name="settings_confidence">अधिकतम विश्वसनीय fetch अंतराल</string>
     <string name="settings_experimental">प्रायोगिक कार्य (पुनःप्रारंभ जरुरी)</string>
     <string name="settings_https">Use secure connections</string>
+    <string name="settings_syscomponents">Restrict system components (Android) (requires restart)</string>
+    <string name="settings_usagedata">Show application usage data (requires restart)</string>
+    <string name="help_longpress">Long press name to select</string>
+    <string name="help_ondemand">restrictions will be asked</string>
     <string name="help_application">Application</string>
     <string name="help_internet">इंटरनेट की अनुमति है</string>
     <string name="help_granted">Android की अनुमति है</string>
@@ -128,7 +158,7 @@
     <string name="help_attention">प्रतिबंध पर ध्यान आवश्यक</string>
     <string name="help_restricted">प्रतिबंध बदले गए</string>
     <string name="help_shared">प्रतिबंध submit हो गए</string>
-    <string name="tutorial_mainheader">प्रतिबन्ध के लिए श्रेणी चुने; प्रत्यक्ष app को फ़िल्टर के साथ चुने</string>
+    <string name="tutorial_mainheader">Select the category to restrict</string>
     <string name="tutorial_mainlist">App कि चुनी गयी श्रेणी को प्रतिबंधित करने के लिए checkbox tap करे\n
 \nप्रतिबंधित श्रेणी के लिए Apps को खाली या नकली डेटा दिया जायेगा\n
 \nविस्तृत प्रतिबन्ध व settings के लिए app icon को tap करे</string>

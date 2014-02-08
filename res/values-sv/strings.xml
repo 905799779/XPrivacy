@@ -3,6 +3,7 @@
     <string name="app_notxposed" formatted="false">Xposed framework version %d+ är inte installerad</string>
     <string name="app_notenabled">XPrivacy är inte aktiverad i Xposed Installer</string>
     <string name="app_wrongandroid">Endast för Android 4.0+</string>
+    <string name="app_incompatible" formatted="false">XPrivacy is incompatible with %s</string>
     <string name="app_version" formatted="false">XPrivacy version: %s (%d)</string>
     <string name="app_description">The ultimate privacy manager</string>
     <string name="app_xversion" formatted="false">Xposed framework version: %d</string>
@@ -21,11 +22,14 @@
     <string name="menu_about">Om</string>
     <string name="menu_help">Hjälp</string>
     <string name="menu_select_all">Select all</string>
+    <string name="menu_sort">Sort</string>
+    <string name="menu_filter">Filter</string>
     <string name="menu_all">Alla</string>
     <string name="menu_restriction_all">Toggle restrictions</string>
     <string name="menu_clear_all">Clear all</string>
     <string name="menu_restrict_all">Restrict all</string>
     <string name="menu_clear_usage">Clear</string>
+    <string name="menu_clear_db">Clear all data</string>
     <string name="menu_usage_all">Toggle filter</string>
     <string name="menu_apply">Applicera mall</string>
     <string name="menu_clear">Rensa</string>
@@ -37,6 +41,10 @@
     <string name="menu_applications">Select applications to allow</string>
     <string name="menu_contacts">Välj kontakter att tillåta</string>
     <string name="menu_tutorial">Tutorial</string>
+    <string name="menu_exclude">Exclude</string>
+    <string name="menu_close">Close</string>
+    <string name="msg_abort">Aborting</string>
+    <string name="msg_aborted">Aborted</string>
     <string name="msg_new">Ny</string>
     <string name="msg_update">Uppdatera</string>
     <string name="msg_licensed" formatted="false">Licensierat till: %s</string>
@@ -54,6 +62,14 @@
     <string name="msg_random_access">Randomize on access</string>
     <string name="msg_random_boot">Slumpa efter uppstart</string>
     <string name="msg_restart">Application restart required</string>
+    <string name="msg_register">Please register your device</string>
+    <string name="msg_registered">Check your e-mail to activate your device</string>
+    <string name="msg_service">Update service running</string>
+    <string name="msg_migrating" formatted="false">Migrating %s</string>
+    <string name="msg_randomizing" formatted="false">Randomizing %s</string>
+    <string name="msg_upgrading" formatted="false">Upgrading %s</string>
+    <string name="msg_support_info">An internal check failed, do you want to send the support info?</string>
+    <string name="msg_restrictedby">Restricted by XPrivacy</string>
     <string name="msg_first"><b>XPrivacy utvecklas och testas med stor omsorg.
 Det är emellertid omöjligt att garantera att appen fungerar på alla enheter och appar.
 \n\nAnvänding sker helt på egen risk.</b>\n\nSe också licensen:</string>
@@ -81,23 +97,33 @@ Det är emellertid omöjligt att garantera att appen fungerar på alla enheter o
     <string name="restrict_view">View (webbläsare)</string>
     <string name="title_categories">Categories</string>
     <string name="title_restrict">Markera för att blockera:</string>
-    <string name="title_filters">Filters</string>
-
-    <plurals name="title_active_filters">
-        <item quantity="one">1 aktivt filter</item>
-        <item quantity="other">%d aktiva filter</item>
-    </plurals>
-
     <string name="title_fused">Filtrera efter använd data</string>
     <string name="title_finternet">Filtrera efter internetbehörighet</string>
     <string name="title_fpermission">Filtrera efter behörighet</string>
     <string name="title_frestricted">Filtrera efter begränsad</string>
     <string name="title_fuser">Filtrera efter vanliga appar</string>
+    <string name="title_fondemand">Filter by on-demand</string>
     <string name="title_fsystem">Filtrera efter systemappar</string>
     <string name="title_fnot">Negate</string>
+    <string name="title_sname">By name</string>
+    <string name="title_suid">By uid</string>
+    <string name="title_sinstalled">By date installed</string>
+    <string name="title_supdated">By date updated</string>
+    <string name="title_smodified">By date modified (XPrivacy)</string>
+    <string name="title_sinvert">Invert sort order</string>
+    <string name="title_attempt">Usage attempt of:</string>
+    <string name="title_category">Category:</string>
+    <string name="title_function">Function:</string>
+    <string name="title_parameters">Parameters:</string>
+    <string name="title_applycat">Apply to entire category</string>
+    <string name="title_once">Once for %1$s seconds</string>
+    <string name="title_allow">Allow</string>
+    <string name="title_deny">Deny</string>
+    <string name="title_pleasesubmit">Please submit your restrictions to help others</string>
     <string name="settings_serial">Serial#</string>
     <string name="settings_lat">Latitud</string>
     <string name="settings_lon">Longitud</string>
+    <string name="settings_alt">Altitude</string>
     <string name="settings_mac">MAC-adress</string>
     <string name="settings_ip">IP-adress</string>
     <string name="settings_phone">Telefonnummer</string>
@@ -109,14 +135,18 @@ Det är emellertid omöjligt att garantera att appen fungerar på alla enheter o
     <string name="settings_ua">Användaragent</string>
     <string name="settings_general">General</string>
     <string name="settings_fake_data">Fake data</string>
-    <string name="settings_global">Use global fake data</string>
     <string name="settings_notify">Update notifications</string>
+    <string name="settings_ondemand">Restrict on demand</string>
     <string name="settings_log">Felsökningslogg (kräver omstart)</string>
     <string name="settings_expert">Expert mode</string>
     <string name="settings_dangerous">Restrict dangerous functions</string>
     <string name="settings_confidence">Maximum fetch confidence interval</string>
     <string name="settings_experimental">Experimental functions (requires restart)</string>
     <string name="settings_https">Use secure connections</string>
+    <string name="settings_syscomponents">Restrict system components (Android) (requires restart)</string>
+    <string name="settings_usagedata">Show application usage data (requires restart)</string>
+    <string name="help_longpress">Long press name to select</string>
+    <string name="help_ondemand">restrictions will be asked</string>
     <string name="help_application">Applikation</string>
     <string name="help_internet">har internetbehörighet</string>
     <string name="help_granted">har Android-behörighet</string>
@@ -128,7 +158,7 @@ Det är emellertid omöjligt att garantera att appen fungerar på alla enheter o
     <string name="help_attention">restrictions need attention</string>
     <string name="help_restricted">restrictions are changed</string>
     <string name="help_shared">restrictions are submitted</string>
-    <string name="tutorial_mainheader">Select the category to restrict; choose visible apps with the filters</string>
+    <string name="tutorial_mainheader">Select the category to restrict</string>
     <string name="tutorial_mainlist">Tap a check box to restrict the selected category for an app\n
 \nApps will be fed empty or fake data for restricted categories\n
 \nTap the app icon for detailed restrictions and settings</string>

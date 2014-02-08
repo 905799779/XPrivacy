@@ -1,6 +1,6 @@
 #!/bin/bash
-grep -RIl "\<string name=\"settings_experimental" . | xargs sed -i -e '/string name="settings_experimental/a \
-\ \ \ \ <string name="settings_https">Use secure connections</string>'
+grep -RIl "\<string name=\"title_sinvert" res | xargs sed -i -e '/title_sinvert/a \
+\ \ \ \ <string name="title_attempt">Usage attempt of:</string>'
 
-#grep -RIl "\<string name=\"settings_usage" . | xargs sed -i -e '/settings_usage/d'
-#grep -RIl "\<string name=\"settings_experimental" . | xargs sed -i -e 's/Experimental features/Experimental functions/g'
+#grep -RIl "\<string name=\"msg_ondemand" res | xargs sed -i -e '/msg_ondemand/d'
+#grep -RIl "\<string name=\"menu_app_store" res | xargs sed -i -e 's/%$3s/%3$s/g'

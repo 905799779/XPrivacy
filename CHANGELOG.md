@@ -11,20 +11,369 @@ Test and beta releases will have experimental functions enabled by default.
 
 **Experimental functions**
 
-* Kill applications
-* Auto flush restriction/settings cache
+* None at this time
+
+**On demand restricting logic**
+
+* The dialog will appear if:
+	* On demand restricting is enabled in the main settings
+	* On demand restricting is enabled in the application settings
+	* The category and the function were not asked for yet (has a question mark)
+	* The function is not excepted (only *Phone/Configuration.MCC/MNC*)
+	* The function is not dangerous or if *Restrict dangerous functions* is enabled
+	* The application is a user application or if *Restrict dangerous functions* is enabled
+* *Apply to entire category* will:
+	* Set the category to be asked for
+	* Apply the choice (deny/allow) to the category only
+	* If the choice doesn't match the current category restriction:
+		* The function exceptions are reset and set to be not asked for
+* When applying to a function only (*Apply to entire category* not checked):
+	* If the choice matches the current category restriction:
+		* The function is set to be asked for
+		* The choice is applied to the function only
+	* If the choice doesn't match the current category restriction and was deny:
+		* The category is set to be not asked for
+		* The choice is applied to the category
+		* All functions are set to match the category and to be not asked for
+		* The function is set to be asked for
+		* The choice is applied to the function
+* If *Restrict dangerous functions* is disabled (the default):
+	* Any category change to restricted will result in exceptions for dangerous functions:
+		* Set to be not asked for
+		* Set to be not restricted
+* The default after dialog timeout is deny
+	* Unless restrict dangerous not is enabled
+		* And the function is dangerous
+		* Or the application is a system application
 
 **Next release**
 
+[Open issues](https://github.com/M66B/XPrivacy/issues?state=open)
+
+**Version 1.99.35 BETA**
+
+* Fixed all issues reported with the support info
+* Fixed a locking bug for new installation, which resulted in a bootloop ([issue](/../../issues/1282))
+* Clear button for filters, thanks @[jpeg729](https://github.com/jpeg729) ([issue](/../../issues/1281))
+* Added filter for on-demand restricting, thanks @[jpeg729](https://github.com/jpeg729)
+* Smooth count down for on-demand restricting, thanks @[jpeg729](https://github.com/jpeg729)
+* Updated documentation, thanks @[Jimmy34742](https://github.com/Jimmy34742) and reviewers
+* Updated Dutch translation
+* Updated German translation
+* Updated Spanish translation
+
+**Version 1.99.34 BETA**
+
+* Fixed all issues reported with the support info
+* Fixed database locking problem
+* Attempt to fix usage data list
+* Improved layout of on demand restricting dialog
+* Added category and function name to *Restricted by XPrivacy* message
+* Updated Dutch translation
+* Updated Slovak translation
+* Updated Polish translation
+
+**Version 1.99.33-3 TEST**
+
+* Fixed all issues reported with the support info
+* Fixed caching of category restrictions for on demand restricting
+* Fixed a few corner cases in on demand restricting logic
+* Fixed on demand dialog not appearing ([issue](/../../issues/1261))
+* Set category to restricted on change for on demand restricting
+* Remember last choice for *Apply to entire category* and *Once for ... seconds*
+* Display on demand restriction status in application list
+* Clearing restrictions from the application list will enable on demand restricting
+* Increased usage data list to maximum 500 entries (was 250 entries)
+* If a corrupt database is detected:
+	* Backup old database
+	* Create new, empty database
+	* This is default Android behavior
+* Automatically handle *removeOnAccountsUpdatedListener*, *removeUpdates* and *GMS.removeLocationUpdates*
+* Toggle will apply template and take into account dangerous functions ([issue](/../../issues/1266))
+* Notify usage for *Calling* and *Clipboard* category and *action.VIEW* (like the *Media* category)
+* Display account name when retrieving accounts through Google Play services
+* Display URL for *View/loadUrl*
+* Fixed cursor blinking with an ugly hack
+* New icon for filter, thanks @[danielmmmm](https://github.com/danielmmmm)
+* Updated Dutch translation
+* Updated Lithuanian translation
+
+**Version 1.99.32 TEST**
+
+* Fixed respecting dangerous while applying template ([issue](/../../issues/1251))
+* Fixed fetching function exceptions
+* Moved filter to action bar, thanks @[jpeg729](https://github.com/jpeg729) ([issue](/../../issues/1240))
+* Support info for user interface errors
+* Rewritten on demand restricting logic ([issue](/../../issues/1245)) ([issue](/../../issues/1247)) ([issue](/../../issues/1253))
+* Added progress bar for on demand restricting time out
+* Show shell command/library ([issue](/../../issues/1258))
+* Show account name/type ([issue](/../../issues/1258))
+* Show /proc/... ([issue](/../../issues/1258))
+* Limited usage data display to prevent crash
+* Updated traditional Chinese translation
+* Updated Japanese translation
+* Updated Lithuanian translation
+* Updated Polish translation
+
+**Version 1.99.31 TEST**
+
+* Fixed on demand asking for secondary users
+* Fixed on demand asking for same restriction again
+* Fixed restrictions undone when using on demand restricting in some situation
+* Disabling a restriction category will delete exceptions in application details view ([issue](https://github.com/M66B/XPrivacy/issues/1198))
+* No on demand restricting while device is locked ([issue](https://github.com/M66B/XPrivacy/issues/1243))
+* No on demand restricting while device is sleeping ([issue](https://github.com/M66B/XPrivacy/issues/1243))
+* Several speed optimizations for the user interface
+* Checking integrity of privacy database on boot and better error handling in privacy service
+
+**Version 1.99.30 TEST**
+
+* Fixed not restricting if not using on demand ([issue](https://github.com/M66B/XPrivacy/issues/1242))
+* Fixed multiple on demand dialogs ([issue](https://github.com/M66B/XPrivacy/issues/1243))
+* Broken on demand asking for same restriction
+
+**Version 1.99.29 TEST**
+
+* Fixed on demand choice not sticking
+* Fixed on demand asking for same restriction
+* Fixed on demand reboot problem ([issue](https://github.com/M66B/XPrivacy/issues/1238))
+* Added setting for height ([issue](https://github.com/M66B/XPrivacy/issues/1179))
+* Added restriction for *getGpsStatus* ([issue](https://github.com/M66B/XPrivacy/issues/1179))
+* Removed restriction *Srv.getConfiguredNetworks*, use [Pry-Fi](http://forum.xda-developers.com/showthread.php?t=2631512)
+
+**Version 1.99.28 TEST**
+
+* Attempt to fix reboot in relation to on demand ([issue](https://github.com/M66B/XPrivacy/issues/1238))
+* Upgrading *Srv.getConfiguredNetworks* (dangerous function)
+* Updated Lithuanian translation
+
+**Version 1.99.27 TEST**
+
+* Fixed some invalid *restart required* messages
+* Fixed restriction of functions without usage data
+* Added restriction for *Srv.getConfiguredNetworks*
+* Updated Dutch translation
+
+**Version 1.99.26 TEST**
+
+* Less restrictive database file permissions, always set on boot
+* Support for multi SIM IPC restrictions (Huawei and maybe others)
+* Added *act on category* check box to restricting on demand prompt, thanks @[jpeg729](https://github.com/jpeg729)
+* Added application icon to restricting on demand prompt
+* On demand restricting default enabled (there is a new main setting to disable it)
+* If LBE Security Master is enabled, only applications can be restricted ([issue](https://github.com/M66B/XPrivacy/issues/1231))
+* Fixed randomize on access not sticking for latitude and longitude
+* Updated German translation
+* Updated Slovak translation
+
+**Version 1.99.25 BETA**
+
+* Fixed handling for automated export, thanks @[jpeg729](https://github.com/jpeg729) ([issue](https://github.com/M66B/XPrivacy/issues/1211))
+	* See the [FAQ question 6](https://github.com/M66B/XPrivacy#FAQ6) for how to
+* Added function name to on demand restricting dialog
+* Moved database back to /data/xprivacy, see also the [FAQ question 6](https://github.com/M66B/XPrivacy#FAQ6)
+
+**Version 1.99.24 BETA**
+
+* Fixed accessing Google services ([issue](https://github.com/M66B/XPrivacy/issues/1206)) ([issue](https://github.com/M66B/XPrivacy/issues/1209))
+* Compatibility with LBE Security Master ([issue](https://github.com/M66B/XPrivacy/issues/1167))
+* Display message for *media* restrictions
+* Added *deny once* (this will be cached for 15 seconds)
+* Added restriction for *getAuthenticatorTypes* (accounts)
+* Added restrictions for *getCurrentSync*, *getCurrentSyncs* and *getSyncAdapterTypes* (accounts)
+* Added restriction for *onConfigurationChanged* ([issue](https://github.com/M66B/XPrivacy/issues/1201))
+* Restrict isolated processes (since JellyBean)
+* Disabled [largeHeap](http://developer.android.com/reference/android/R.attr.html#largeHeap) to conserve memory
+* Disabled [allowBackup](http://developer.android.com/reference/android/R.attr.html#allowBackup) for more privacy
+* Enable on demand restricting for new applications only ([issue](https://github.com/M66B/XPrivacy/issues/1208))
+* Updated Dutch translation
+* Updated Lithuanian translation
+
+**Version 1.99.23 BETA**
+
+* Prevent bootloops with not yet migrated restrictions
+* Fixed clearing restrictions / applying template for application groups ([issue](https://github.com/M66B/XPrivacy/issues/1202))
+* Added restriction for MCC/MNC found in configuration ([issue](https://github.com/M66B/XPrivacy/issues/1201))
+* Updated Lithuanian translation
+
+**Version 1.99.22 BETA**
+
+* Fixed crash on saving main settings
+* Fixed support info popup for method not found
+
+**Version 1.99.21 BETA**
+
+* Restricting on demand
+* Fixed erased settings staying cached
+* Faster sorting, thanks @[jpeg729](https://github.com/jpeg729)
+* Change state to gray when unrestricting ([issue](https://github.com/M66B/XPrivacy/issues/1190))
+* Updated Dutch translation
+* Updated French translation
+* Updated Lithuanian translation
+* Updated Slovak translation
+
+**Version 1.99.20 BETA**
+
+* Fixed restricting accounts in some situations
+* Added application sort, thanks @[jpeg729](https://github.com/jpeg729)
+* Saving tab state (category, filters), thanks @[jpeg729](https://github.com/jpeg729) ([issue](https://github.com/M66B/XPrivacy/issues/1035))
+* Restrict access to Gmail information ([issue](https://github.com/M66B/XPrivacy/issues/1080))
+* Added XPrivacy version and device name to export file name ([issue](https://github.com/M66B/XPrivacy/issues/1116))
+* Using zero altitude for fake locations ([issue](https://github.com/M66B/XPrivacy/issues/1179))
+* Updated Dutch translation
+* Updated French translation
+* Updated Lithuanian translation
+* Updated Polish translation
+
+**Version 1.99.19 BETA**
+
+* Fixed always randomizing application settings when global randomization enabled
+
+**Version 1.99.18 BETA**
+
+* Further simplify application specific settings: no check mark or empty value means use global value
+* Migration will no longer migrate empty values; existing empty values will be erased from the database
+* Display message *XPrivacy is incompatible with ...* (currently LBE Security Master only)
+
+**Version 1.99.17 BETA**
+
+* Fixed opening wrong application view from notification ([issue](https://github.com/M66B/XPrivacy/issues/717))
+* Run upgrade after migrate ([issue](https://github.com/M66B/XPrivacy/issues/1165))
+* Close application details view on removing the application
+* Added checks for LBE Security Master and for accessibility of the database
+
+**Version 1.99.16 BETA**
+
+* Fixed empty settings values ([issue](https://github.com/M66B/XPrivacy/issues/1164))
+* Added restriction for *NetworkInfo.getExtraInfo* ([issue](https://github.com/M66B/XPrivacy/issues/1175))
+* Updated Czech translation
+* Updated German translation
+
+**Version 1.99.15 BETA**
+
+* Fixed global application setting not sticking ([issue](https://github.com/M66B/XPrivacy/issues/1164))
+* Always allow randomization ([issue](https://github.com/M66B/XPrivacy/issues/1159))
+* Display application switch state as enabled/disabled in main list
+* Updated Chinese translation
+
+**Version 1.99.14 TEST**
+
+* Fixed randomize on boot setting being restored ([issue](https://github.com/M66B/XPrivacy/issues/1164))
+* Fixed crash on start in some situations ([issue](https://github.com/M66B/XPrivacy/issues/1168))
+* Fixed usage data vertical alignment
+* Updated Slovak translation
+
+**Version 1.99.13 TEST**
+
+* Updated German translation
+* Moved database back again due to permission problems ([issue](https://github.com/M66B/XPrivacy/issues/1160))
+
+**Version 1.99.12 TEST**
+
+* Show restrictions of system applications, even when disabled
+* Moved database back due to permission problems ([issue](https://github.com/M66B/XPrivacy/issues/1129))
+
+**Version 1.99.11 TEST**
+
+* Added a switch to enable/disable all application restrictions
+* Improved device registration procedure
+* Prevent pollution of usage data ([issue](https://github.com/M66B/XPrivacy/issues/1140))
+* Improved randomization of subscriber ID ([issue](https://github.com/M66B/XPrivacy/issues/1158))
+
+**Version 1.99.10 TEST**
+
+* Fixed usage data display for restriction categories
+* Fixed a bug in randomizing the GSF ID
+* Rewrote migration process, should solve continues migration and should be faster
+* Added setting to enable restriction of system components (Android), default **disabled**
+* Added setting to disable usage data collection, default enabled
+* Marked IPC functions as not dangerous
+* Updated Dutch translation
+* Updated Lithuanian translation
+* Updated Norwegian translation
+* Updated traditional Chinese translation
+
+**Version 1.99.9 TEST**
+
+* Fixed crash on rotation change
+* Added checks for all hooks
+
+**Version 1.99.8 TEST**
+
+* Batch set restrictions on fetch (performance)
+* Added service restriction cache again (performance)
+* Updated German translation
+* Updated Lithuanian translation
+
+**Version 1.99.7 TEST**
+
+* Attempt to fix update service dying
+* Fixed toggling category restrictions from application list
+* Fixed toggling function restrictions from application details view
+* Changed memory class for service settings cache to heap size >= 32MB
+
+**Version 1.99.6 TEST**
+
+* Fixed export progress, thanks @[jpeg729](https://github.com/jpeg729)
+* Fixed some settings not migrated correctly ([issue](https://github.com/M66B/XPrivacy/issues/1127))
+* Fixed allowing applications for *queryIntentActivities* ([issue](https://github.com/M66B/XPrivacy/issues/1147))
+* Corrected application name and version in update notifications, thanks @[jpeg729](https://github.com/jpeg729) ([issue](https://github.com/M66B/XPrivacy/issues/1112))
+* Added update service with progress notifications for migration, randomization and upgrade
+* Allowed secondary users to set restrictions
+* Kill application is not experimental anymore and can kill applications only
+* Moved privacy database to application data folder ([issue](https://github.com/M66B/XPrivacy/issues/1129))
+* Added dialog for export, import, submit, fetch and toggle, big thanks @[jpeg729](https://github.com/jpeg729)
+* Added caching before restriction database (will only be used if the heap size >= 64 MiB)
+* Show half check box for restricted categories with only dangerous functions
+* Updated Arabic translation
+* Updated Dutch translation
+* Updated French translation
+* Updated German translation
+* Updated Lithuanian translation
+* Updated Slovak translation
+
+**Version 1.99.5 EXPERIMENTAL**
+
+* Fixed deleting all usage data
+* Replaced Play service library by local interface definition (smaller application size)
+* Removed obsolete restriction GMS.connect
+* Guarantee migrate, upgrade, randomize threads keep running
+
+**Version 1.99.4 EXPERIMENTAL**
+
+* Fixed usage data in application list
+* Fixed setting *IPC*, *Storage* and *View* restrictions
+
+**Version 1.99.3 EXPERIMENTAL**
+
+* Fixed security exception reported with support info
+* Fixed restart required notification
+* Option to register device on custom e-mail address
+* Restored restrictions *getNetwork...* and *getSim...* ([issue](https://github.com/M66B/XPrivacy/issues/1125))
+* User defined dangerous functions, long press a function name to toggle ([issue](https://github.com/M66B/XPrivacy/issues/869))
+
+**Version 1.99.2 EXPERIMENTAL**
+
+* Removed restriction *getPackagesForUid*
+* Migrate on boot completed event and display notification migration completed
+* Attempt to fix security exception (based on received support info)
+* Moved meta.xml to Meta class
+* Cache permissions for better performance
+* Optimized usage data getting (should solve most of the performance issue)
+* Half check box for restricted IPC category (special case)
+* Use inbox style notifications ([issue](https://github.com/M66B/XPrivacy/issues/1112))
+
+**Version 1.99.1 EXPERIMENTAL**
+
+* **Redesigned restriction/settings engine/database**
+	* Existing settings will be migrated automatically
+	* No more missing and always up-to-date usage data
+	* Less processor and memory usage
+	* New features possible
 * Better method for hooking the bluetooth manager
 * Better method for hooking the package manager
-* Hook *getPackagesForUid*, *getPackagesHoldingPermissions* (JellyBean MR2) and *queryIntentContentProviders* (Kitkat)
+* Added restriction for *getPackagesForUid*, *getPackagesHoldingPermissions* (JellyBean MR2) and *queryIntentContentProviders* (Kitkat)
 * Lower case randomized Android ID
-* Redesigned restriction/settings engine/database
-	* Existing restrictions/settings will be migrated automatically
-	* No more missing usage data
-	* Always up-to-date usage data
-	* Less processor and memory usage
 * Simple registration procedure for submitting restrictions
 * Moved IPC to separate category
 * Replaced *getNetwork...* and *getSim...* by system property restrictions
@@ -34,8 +383,6 @@ Test and beta releases will have experimental functions enabled by default.
 * Updated Lithuanian translation
 * Updated Slovak translation
 * Updated Vietnamese translation
-
-[Open issues](https://github.com/M66B/XPrivacy/issues?state=open)
 
 **Version 1.11.13 EXPERIMENTAL**
 

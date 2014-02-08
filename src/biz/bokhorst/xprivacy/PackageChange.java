@@ -6,22 +6,13 @@ import android.app.PendingIntent;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
-import android.content.pm.ApplicationInfo;
-import android.content.pm.PackageInfo;
-import android.content.pm.PackageManager;
 import android.net.Uri;
 import android.support.v4.app.NotificationCompat;
-import android.text.TextUtils;
 import android.util.Log;
 
 public class PackageChange extends BroadcastReceiver {
-
 	@Override
 	public void onReceive(final Context context, Intent intent) {
-		// Check privacy service client
-		if (PrivacyService.getClient() == null)
-			return;
-
 		try {
 			// Check uri
 			Uri inputUri = Uri.parse(intent.getDataString());
@@ -32,56 +23,69 @@ public class PackageChange extends BroadcastReceiver {
 				NotificationManager notificationManager = (NotificationManager) context
 						.getSystemService(Context.NOTIFICATION_SERVICE);
 
-				Util.log(null, Log.INFO, "Package change action=" + intent.getAction() + " replacing=" + replacing
+				Util.log(null, Log.WARN, "Package change action=" + intent.getAction() + " replacing=" + replacing
 						+ " uid=" + uid);
 
 				// Check action
 				if (intent.getAction().equals(Intent.ACTION_PACKAGE_ADDED)) {
 					// Get data
 					ApplicationInfoEx appInfo = new ApplicationInfoEx(context, uid);
+					String packageName = inputUri.getSchemeSpecificPart();
 
 					// Default deny new user apps
-					if (!replacing) {
-						// Delete any existing restrictions
-						PrivacyManager.deleteRestrictions(uid, true);
-						PrivacyManager.deleteSettings(uid);
-						PrivacyManager.deleteUsage(uid);
+					if (PrivacyService.getClient() != null && appInfo.getPackageName().size() == 1) {
+						if (!replacing) {
+							// Delete existing restrictions
+							PrivacyManager.deleteRestrictions(uid, null);
+							PrivacyManager.deleteSettings(uid);
+							PrivacyManager.deleteUsage(uid);
 
-						// Restrict new non-system apps
-						if (!appInfo.isSystem())
-							for (String restrictionName : PrivacyManager.getRestrictions()) {
-								String templateName = PrivacyManager.cSettingTemplate + "." + restrictionName;
-								if (PrivacyManager.getSettingBool(null, 0, templateName, true, false))
-									PrivacyManager.setRestricted(null, uid, restrictionName, null, true, true);
+							boolean ondemand = PrivacyManager.getSettingBool(0, PrivacyManager.cSettingOnDemand, true,
+									false);
+
+							// Enable on demand
+							if (ondemand)
+								PrivacyManager.setSetting(uid, PrivacyManager.cSettingOnDemand, Boolean.toString(true));
+
+							// Restrict new non-system apps
+							if (!appInfo.isSystem()) {
+								for (String restrictionName : PrivacyManager.getRestrictions()) {
+									String templateName = PrivacyManager.cSettingTemplate + "." + restrictionName;
+									if (PrivacyManager.getSettingBool(0, templateName, !ondemand, false))
+										PrivacyManager.setRestriction(uid, restrictionName, null, true, false);
+								}
 							}
+						}
+
+						// Mark as new/changed
+						PrivacyManager.setSetting(uid, PrivacyManager.cSettingState,
+								Integer.toString(ActivityMain.STATE_ATTENTION));
+
 					}
 
 					// New/update notification
-					if (!replacing
-							|| PrivacyManager.getSettingBool(null, uid, PrivacyManager.cSettingNotify, true, false)) {
-						Intent resultIntent = new Intent(Intent.ACTION_MAIN);
+					boolean notify = PrivacyManager.getSettingBool(uid, PrivacyManager.cSettingNotify, true, false);
+					if (!replacing || notify) {
+						Intent resultIntent = new Intent(context, ActivityApp.class);
 						resultIntent.putExtra(ActivityApp.cUid, uid);
-						resultIntent.setClass(context.getApplicationContext(), ActivityApp.class);
 
 						// Build pending intent
 						PendingIntent pendingIntent = PendingIntent.getActivity(context, uid, resultIntent,
 								PendingIntent.FLAG_UPDATE_CURRENT);
 
 						// Build result intent settings
-						Intent resultIntentSettings = new Intent(Intent.ACTION_MAIN);
+						Intent resultIntentSettings = new Intent(context, ActivityApp.class);
 						resultIntentSettings.putExtra(ActivityApp.cUid, uid);
 						resultIntentSettings.putExtra(ActivityApp.cAction, ActivityApp.cActionSettings);
-						resultIntentSettings.setClass(context.getApplicationContext(), ActivityApp.class);
 
 						// Build pending intent settings
 						PendingIntent pendingIntentSettings = PendingIntent.getActivity(context, uid - 10000,
 								resultIntentSettings, PendingIntent.FLAG_UPDATE_CURRENT);
 
 						// Build result intent clear
-						Intent resultIntentClear = new Intent(Intent.ACTION_MAIN);
+						Intent resultIntentClear = new Intent(context, ActivityApp.class);
 						resultIntentClear.putExtra(ActivityApp.cUid, uid);
 						resultIntentClear.putExtra(ActivityApp.cAction, ActivityApp.cActionClear);
-						resultIntentClear.setClass(context.getApplicationContext(), ActivityApp.class);
 
 						// Build pending intent clear
 						PendingIntent pendingIntentClear = PendingIntent.getActivity(context, uid + 10000,
@@ -90,8 +94,8 @@ public class PackageChange extends BroadcastReceiver {
 						// Title
 						String title = String.format("%s %s %s",
 								context.getString(replacing ? R.string.msg_update : R.string.msg_new),
-								TextUtils.join(", ", appInfo.getApplicationName()),
-								TextUtils.join(", ", appInfo.getPackageVersionName(context)));
+								appInfo.getApplicationName(packageName),
+								appInfo.getPackageVersionName(context, packageName));
 						if (!replacing)
 							title = String.format("%s %s", title, context.getString(R.string.msg_applied));
 
@@ -114,17 +118,15 @@ public class PackageChange extends BroadcastReceiver {
 						Notification notification = notificationBuilder.build();
 						notificationManager.notify(appInfo.getUid(), notification);
 					}
-
-					// Mark as new/changed
-					PrivacyManager.setSetting(null, uid, PrivacyManager.cSettingState,
-							Integer.toString(ActivityMain.STATE_ATTENTION));
 				} else if (intent.getAction().equals(Intent.ACTION_PACKAGE_REPLACED)) {
 					// Notify reboot required
 					String packageName = inputUri.getSchemeSpecificPart();
 					if (packageName.equals(context.getPackageName())) {
-						// Update meta data
-						PrivacyManager.writeMetaData(context);
-						PrivacyManager.readMetaData();
+						// Start package update
+						Intent changeIntent = new Intent();
+						changeIntent.setClass(context, UpdateService.class);
+						changeIntent.putExtra(UpdateService.cAction, UpdateService.cActionUpdated);
+						context.startService(changeIntent);
 
 						// Build notification
 						NotificationCompat.Builder notificationBuilder = new NotificationCompat.Builder(context);
@@ -138,73 +140,21 @@ public class PackageChange extends BroadcastReceiver {
 						Notification notification = notificationBuilder.build();
 
 						// Notify
-						notificationManager.notify(0, notification);
-
-						// Upgrade restrictions
-						new Thread(new Runnable() {
-							public void run() {
-								upgradeRestrictions(context);
-							}
-						}).start();
+						notificationManager.notify(Util.NOTIFY_RESTART, notification);
 					}
 				} else if (intent.getAction().equals(Intent.ACTION_PACKAGE_REMOVED) && !replacing) {
 					// Package removed
 					notificationManager.cancel(uid);
-					PrivacyManager.deleteRestrictions(uid, true);
-					PrivacyManager.deleteSettings(uid);
-					PrivacyManager.deleteUsage(uid);
+
+					// Delete restrictions
+					ApplicationInfoEx appInfo = new ApplicationInfoEx(context, uid);
+					if (PrivacyService.getClient() != null && appInfo.getPackageName().size() == 0) {
+						PrivacyManager.deleteRestrictions(uid, null);
+						PrivacyManager.deleteSettings(uid);
+						PrivacyManager.deleteUsage(uid);
+					}
 				}
 			}
-		} catch (Throwable ex) {
-			Util.bug(null, ex);
-		}
-	}
-
-	private void upgradeRestrictions(Context context) {
-		try {
-			// Get old version
-			PackageManager pm = context.getPackageManager();
-			PackageInfo pInfo = pm.getPackageInfo(context.getPackageName(), 0);
-			Version sVersion = new Version(PrivacyManager.getSetting(null, 0, PrivacyManager.cSettingVersion, "0.0",
-					false));
-
-			// Upgrade
-			if (sVersion.compareTo(new Version("0.0")) != 0) {
-				Util.log(null, Log.WARN, "Starting upgrade from version " + sVersion + " to version "
-						+ pInfo.versionName);
-				boolean dangerous = PrivacyManager.getSettingBool(null, 0, PrivacyManager.cSettingDangerous, false,
-						false);
-
-				// All packages
-				for (ApplicationInfo aInfo : pm.getInstalledApplications(0))
-					for (String restrictionName : PrivacyManager.getRestrictions())
-						for (PrivacyManager.MethodDescription md : PrivacyManager.getMethods(restrictionName))
-							if (md.getFrom() != null)
-								if (sVersion.compareTo(md.getFrom()) < 0) {
-									// Disable new dangerous restrictions
-									if (!dangerous && md.isDangerous()) {
-										Util.log(null, Log.WARN, "Upgrading dangerous " + md + " from=" + md.getFrom()
-												+ " pkg=" + aInfo.packageName);
-										PrivacyManager.setRestricted(null, aInfo.uid, md.getRestrictionName(),
-												md.getName(), false, true);
-									}
-
-									// Restrict replaced methods
-									if (md.getReplaces() != null)
-										if (PrivacyManager.getRestricted(null, aInfo.uid, md.getRestrictionName(),
-												md.getReplaces(), false, false)) {
-											Util.log(null, Log.WARN, "Replaced " + md.getReplaces() + " by " + md
-													+ " from=" + md.getFrom() + " pkg=" + aInfo.packageName);
-											PrivacyManager.setRestricted(null, aInfo.uid, md.getRestrictionName(),
-													md.getName(), true, true);
-										}
-								}
-
-				Util.log(null, Log.WARN, "Upgrade done");
-			}
-
-			// Set new version
-			PrivacyManager.setSetting(null, 0, PrivacyManager.cSettingVersion, pInfo.versionName);
 		} catch (Throwable ex) {
 			Util.bug(null, ex);
 		}

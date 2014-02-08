@@ -24,11 +24,14 @@ public class XNfcAdapter extends XHook {
 		getDefaultAdapter, getNfcAdapter
 	};
 
-	// public static NfcAdapter getDefaultAdapter()
+	// public static NfcAdapter getDefaultAdapter() [deprecated]
 	// public static NfcAdapter getDefaultAdapter(Context context)
 	// public static synchronized NfcAdapter getNfcAdapter(Context context)
 	// frameworks/base/core/java/android/nfc/NfcAdapter.java
 	// http://developer.android.com/reference/android/nfc/NfcAdapter.html
+
+	// NfcManager.getDefaultAdapter calls NfcAdapter.getNfcAdapter
+	// http://developer.android.com/reference/android/nfc/NfcManager.html
 
 	public static List<XHook> getInstances() {
 		List<XHook> listHook = new ArrayList<XHook>();
@@ -42,6 +45,7 @@ public class XNfcAdapter extends XHook {
 		if (mMethod == Methods.getDefaultAdapter || mMethod == Methods.getNfcAdapter) {
 			if (isRestricted(param))
 				param.setResult(null);
+
 		} else
 			Util.log(this, Log.WARN, "Unknown method=" + param.method.getName());
 	}

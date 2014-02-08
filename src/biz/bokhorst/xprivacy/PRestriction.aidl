@@ -1,3 +1,3 @@
 package biz.bokhorst.xprivacy;
 
-parcelable ParcelableUsageData;
+parcelable PRestriction;

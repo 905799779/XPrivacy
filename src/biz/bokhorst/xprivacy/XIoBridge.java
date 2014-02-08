@@ -43,7 +43,7 @@ public class XIoBridge extends XHook {
 			String fileName = (String) param.args[0];
 			if (fileName != null && (fileName.startsWith(mFileName) || mFileName.contains("..."))) {
 				// Zygote, Android
-				if (Process.myUid() <= 0 || Util.getAppId(Process.myUid()) == PrivacyManager.cAndroidUid)
+				if (Process.myUid() <= 0 || Util.getAppId(Process.myUid()) == Process.SYSTEM_UID)
 					return;
 
 				// Allow command line
@@ -57,8 +57,15 @@ public class XIoBridge extends XHook {
 					if (fileName.startsWith(component[0]) && fileName.endsWith(component[1]))
 						if (isRestricted(param, mFileName))
 							param.setThrowable(new FileNotFoundException());
-				} else if (isRestricted(param, mFileName))
-					param.setThrowable(new FileNotFoundException());
+
+				} else if (mFileName.equals("/proc")) {
+					if (isRestrictedExtra(param, mFileName, fileName))
+						param.setThrowable(new FileNotFoundException());
+
+				} else {
+					if (isRestricted(param, mFileName))
+						param.setThrowable(new FileNotFoundException());
+				}
 			}
 		}
 	}

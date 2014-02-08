@@ -22,8 +22,12 @@ public class XBinder extends XHook {
 	private static int FLAG_XPRIVACY = 0x000000A0;
 	private static int BITS_MAGIC = 16;
 
+	public static List<String> cListService = Arrays.asList(new String[] { "account", "activity", "clipboard",
+			"connectivity", "location", "telephony.registry", "telephony.msim.registry", "package", "iphonesubinfo",
+			"iphonesubinfo_msim", "window", "wifi" });
+
 	// @formatter:off
-	public static List<String> cListService = Arrays.asList(new String[] {
+	public static List<String> cListDescription = Arrays.asList(new String[] {
 		"android.accounts.IAccountManager",
 		"android.app.IActivityManager",
 		"android.content.IClipboard",
@@ -31,8 +35,10 @@ public class XBinder extends XHook {
 		"android.location.ILocationManager",
 		// TODO: sensor interface
 		"com.android.internal.telephony.ITelephonyRegistry",
+		"com.android.internal.telephony.ITelephonyRegistryMSim",
 		"android.content.pm.IPackageManager",
 		"com.android.internal.telephony.IPhoneSubInfo",
+		"com.android.internal.telephony.msim.IPhoneSubInfoMSim",
 		"android.view.IWindowManager",
 		"android.net.wifi.IWifiManager"
 	});
@@ -74,11 +80,13 @@ public class XBinder extends XHook {
 
 	@Override
 	protected void before(MethodHookParam param) throws Throwable {
-		if (mMethod == Methods.execTransact) {
+		if (mMethod == Methods.execTransact)
 			checkIPC(param);
-		} else if (mMethod == Methods.transact) {
+
+		else if (mMethod == Methods.transact)
 			markIPC(param);
-		} else
+
+		else
 			Util.log(this, Log.WARN, "Unknown method=" + param.method.getName());
 	}
 
@@ -107,9 +115,9 @@ public class XBinder extends XHook {
 					// Get interface name
 					Binder binder = (Binder) param.thisObject;
 					String name = binder.getInterfaceDescriptor();
-					if (cListService.contains(name)) {
+					if (cListDescription.contains(name)) {
 						Util.log(this, Log.WARN, "restrict name=" + name + " uid=" + uid + " my=" + Process.myUid());
-						if (PrivacyManager.getRestricted(this, uid, PrivacyManager.cIPC, name, true, true)) {
+						if (getRestricted(uid, PrivacyManager.cIPC, name)) {
 							// Get reply parcel
 							Parcel reply = null;
 							try {

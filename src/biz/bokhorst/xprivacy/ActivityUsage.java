@@ -31,8 +31,6 @@ import android.widget.ImageView;
 import android.widget.ListView;
 import android.widget.TextView;
 
-import biz.bokhorst.xprivacy.PrivacyManager.UsageData;
-
 public class ActivityUsage extends Activity {
 	private int mThemeId;
 	private boolean mAll = true;
@@ -56,7 +54,7 @@ public class ActivityUsage extends Activity {
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
 		// Set theme
-		String themeName = PrivacyManager.getSetting(null, 0, PrivacyManager.cSettingTheme, "", false);
+		String themeName = PrivacyManager.getSetting(0, PrivacyManager.cSettingTheme, "", false);
 		mThemeId = (themeName.equals("Dark") ? R.style.CustomTheme : R.style.CustomTheme_Light);
 		setTheme(mThemeId);
 
@@ -81,12 +79,11 @@ public class ActivityUsage extends Activity {
 		lvUsage.setOnItemClickListener(new AdapterView.OnItemClickListener() {
 			@Override
 			public void onItemClick(AdapterView<?> adapter, View view, int position, long arg) {
-				PrivacyManager.UsageData usageData = mUsageAdapter.getItem(position);
+				PRestriction usageData = mUsageAdapter.getItem(position);
 				Intent intent = new Intent(ActivityUsage.this, ActivityApp.class);
-				intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-				intent.putExtra(ActivityApp.cUid, usageData.getUid());
-				intent.putExtra(ActivityApp.cRestrictionName, usageData.getRestrictionName());
-				intent.putExtra(ActivityApp.cMethodName, usageData.getMethodName());
+				intent.putExtra(ActivityApp.cUid, usageData.uid);
+				intent.putExtra(ActivityApp.cRestrictionName, usageData.restrictionName);
+				intent.putExtra(ActivityApp.cMethodName, usageData.methodName);
 				startActivity(intent);
 			}
 		});
@@ -142,37 +139,39 @@ public class ActivityUsage extends Activity {
 
 	// Tasks
 
-	private class UsageTask extends AsyncTask<Object, Object, List<PrivacyManager.UsageData>> {
+	private class UsageTask extends AsyncTask<Object, Object, List<PRestriction>> {
 		@Override
-		protected List<PrivacyManager.UsageData> doInBackground(Object... arg0) {
+		protected List<PRestriction> doInBackground(Object... arg0) {
 			long minTime = new Date().getTime() - 1000 * 60 * 60 * 24;
-			List<PrivacyManager.UsageData> listUsageData = new ArrayList<PrivacyManager.UsageData>();
-			for (PrivacyManager.UsageData usageData : PrivacyManager.getUsed(ActivityUsage.this, mUid))
-				if (usageData.getTimeStamp() > minTime)
+			List<PRestriction> listUsageData = new ArrayList<PRestriction>();
+			for (PRestriction usageData : PrivacyManager.getUsageList(ActivityUsage.this, mUid))
+				if (usageData.time > minTime)
 					listUsageData.add(usageData);
 			return listUsageData;
 		}
 
 		@Override
-		protected void onPostExecute(List<PrivacyManager.UsageData> listUsageData) {
-			super.onPostExecute(listUsageData);
+		protected void onPostExecute(List<PRestriction> listUsageData) {
+			if (!ActivityUsage.this.isFinishing()) {
+				mUsageAdapter = new UsageAdapter(ActivityUsage.this, R.layout.usageentry, listUsageData);
+				ListView lvUsage = (ListView) findViewById(R.id.lvUsage);
+				lvUsage.setAdapter(mUsageAdapter);
+				mUsageAdapter.getFilter().filter(Boolean.toString(mAll));
+			}
 
-			mUsageAdapter = new UsageAdapter(ActivityUsage.this, R.layout.usageentry, listUsageData);
-			ListView lvUsage = (ListView) findViewById(R.id.lvUsage);
-			lvUsage.setAdapter(mUsageAdapter);
-			mUsageAdapter.getFilter().filter(Boolean.toString(mAll));
+			super.onPostExecute(listUsageData);
 		}
 	}
 
 	// Adapters
 
-	private class UsageAdapter extends ArrayAdapter<PrivacyManager.UsageData> {
-		private List<PrivacyManager.UsageData> mListUsageData;
+	private class UsageAdapter extends ArrayAdapter<PRestriction> {
+		private List<PRestriction> mListUsageData;
 		private LayoutInflater mInflater = (LayoutInflater) getSystemService(Context.LAYOUT_INFLATER_SERVICE);
 
-		public UsageAdapter(Context context, int textViewResourceId, List<PrivacyManager.UsageData> objects) {
+		public UsageAdapter(Context context, int textViewResourceId, List<PRestriction> objects) {
 			super(context, textViewResourceId, objects);
-			mListUsageData = new ArrayList<PrivacyManager.UsageData>();
+			mListUsageData = new ArrayList<PRestriction>();
 			mListUsageData.addAll(objects);
 		}
 
@@ -199,9 +198,9 @@ public class ActivityUsage extends Activity {
 				boolean all = Boolean.parseBoolean((String) constraint);
 
 				// Match applications
-				List<PrivacyManager.UsageData> lstResult = new ArrayList<PrivacyManager.UsageData>();
-				for (PrivacyManager.UsageData usageData : UsageAdapter.this.mListUsageData) {
-					if (all ? true : usageData.getRestricted())
+				List<PRestriction> lstResult = new ArrayList<PRestriction>();
+				for (PRestriction usageData : UsageAdapter.this.mListUsageData) {
+					if (all ? true : usageData.restricted)
 						lstResult.add(usageData);
 				}
 
@@ -220,7 +219,7 @@ public class ActivityUsage extends Activity {
 				if (results.values == null)
 					notifyDataSetInvalidated();
 				else {
-					addAll((ArrayList<PrivacyManager.UsageData>) results.values);
+					addAll((ArrayList<PRestriction>) results.values);
 					notifyDataSetChanged();
 				}
 			}
@@ -249,10 +248,10 @@ public class ActivityUsage extends Activity {
 		private class HolderTask extends AsyncTask<Object, Object, Object> {
 			private int position;
 			private ViewHolder holder;
-			private UsageData usageData;
+			private PRestriction usageData;
 			private Drawable icon = null;
 
-			public HolderTask(int thePosition, ViewHolder theHolder, UsageData theUsageData) {
+			public HolderTask(int thePosition, ViewHolder theHolder, PRestriction theUsageData) {
 				position = thePosition;
 				holder = theHolder;
 				usageData = theUsageData;
@@ -262,8 +261,8 @@ public class ActivityUsage extends Activity {
 			protected Object doInBackground(Object... params) {
 				if (usageData != null) {
 					try {
-						PackageManager pm = holder.row.getContext().getPackageManager();
-						String[] packages = pm.getPackagesForUid(usageData.getUid());
+						PackageManager pm = ActivityUsage.this.getPackageManager();
+						String[] packages = pm.getPackagesForUid(usageData.uid);
 						if (packages != null && packages.length > 0) {
 							ApplicationInfo app = pm.getApplicationInfo(packages[0], 0);
 							icon = pm.getApplicationIcon(app);
@@ -298,17 +297,16 @@ public class ActivityUsage extends Activity {
 			}
 
 			// Get data
-			PrivacyManager.UsageData usageData = getItem(position);
+			PRestriction usageData = getItem(position);
 
 			// Build entry
-			Date date = new Date(usageData.getTimeStamp());
+			Date date = new Date(usageData.time);
 			SimpleDateFormat format = new SimpleDateFormat("HH:mm:ss", Locale.ROOT);
 			holder.tvTime.setText(format.format(date));
 			holder.imgIcon.setVisibility(View.INVISIBLE);
-			holder.imgRestricted.setVisibility(usageData.getRestricted() ? View.VISIBLE : View.INVISIBLE);
-			holder.tvApp.setText(Integer.toString(usageData.getUid()));
-			holder.tvRestriction.setText(String.format("%s/%s", usageData.getRestrictionName(),
-					usageData.getMethodName()));
+			holder.imgRestricted.setVisibility(usageData.restricted ? View.VISIBLE : View.INVISIBLE);
+			holder.tvApp.setText(Integer.toString(usageData.uid));
+			holder.tvRestriction.setText(String.format("%s/%s", usageData.restrictionName, usageData.methodName));
 
 			// Async update
 			new HolderTask(position, holder, usageData).executeOnExecutor(mExecutor, (Object) null);

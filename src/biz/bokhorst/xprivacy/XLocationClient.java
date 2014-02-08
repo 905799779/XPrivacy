@@ -29,7 +29,6 @@ public class XLocationClient extends XHook {
 	// @formatter:off
 
 	// void addGeofences(List<Geofence> geofences, PendingIntent pendingIntent, LocationClient.OnAddGeofencesResultListener listener)
-	// void connect()
 	// Location getLastLocation()
 	// void removeGeofences(List<String> geofenceRequestIds, LocationClient.OnRemoveGeofencesResultListener listener)
 	// void removeGeofences(PendingIntent pendingIntent, LocationClient.OnRemoveGeofencesResultListener listener)
@@ -43,49 +42,55 @@ public class XLocationClient extends XHook {
 	// @formatter:on
 
 	private enum Methods {
-		addGeofences, connect, getLastLocation, removeGeofences, removeLocationUpdates, requestLocationUpdates
+		addGeofences, getLastLocation, removeGeofences, removeLocationUpdates, requestLocationUpdates
 	};
 
 	public static List<XHook> getInstances() {
 		List<XHook> listHook = new ArrayList<XHook>();
-		listHook.add(new XLocationClient(Methods.addGeofences, PrivacyManager.cLocation));
-		listHook.add(new XLocationClient(Methods.connect, PrivacyManager.cLocation));
-		listHook.add(new XLocationClient(Methods.getLastLocation, PrivacyManager.cLocation));
-		listHook.add(new XLocationClient(Methods.removeGeofences, PrivacyManager.cLocation));
-		listHook.add(new XLocationClient(Methods.removeLocationUpdates, PrivacyManager.cLocation));
-		listHook.add(new XLocationClient(Methods.requestLocationUpdates, PrivacyManager.cLocation));
+		listHook.add(new XLocationClient(Methods.addGeofences, PrivacyManager.cLocation).optional());
+		listHook.add(new XLocationClient(Methods.getLastLocation, PrivacyManager.cLocation).optional());
+		listHook.add(new XLocationClient(Methods.removeGeofences, PrivacyManager.cLocation).optional());
+		listHook.add(new XLocationClient(Methods.removeLocationUpdates, null).optional());
+		listHook.add(new XLocationClient(Methods.requestLocationUpdates, PrivacyManager.cLocation).optional());
 		return listHook;
 	}
 
 	@Override
 	protected void before(MethodHookParam param) throws Throwable {
-		if (mMethod == Methods.addGeofences || mMethod == Methods.connect || mMethod == Methods.removeGeofences) {
+		if (mMethod == Methods.addGeofences || mMethod == Methods.removeGeofences) {
 			if (isRestricted(param))
 				param.setResult(null);
+
 		} else if (mMethod == Methods.getLastLocation) {
 			// Do nothing
+
 		} else if (mMethod == Methods.removeLocationUpdates) {
-			if (isRestricted(param))
-				removeLocationListener(param);
+			removeLocationListener(param);
+
 		} else if (mMethod == Methods.requestLocationUpdates) {
 			if (isRestricted(param))
 				replaceLocationListener(param);
+
 		} else
 			Util.log(this, Log.WARN, "Unknown method=" + param.method.getName());
 	}
 
 	@Override
 	protected void after(MethodHookParam param) throws Throwable {
-		if (mMethod == Methods.addGeofences || mMethod == Methods.connect || mMethod == Methods.removeGeofences) {
+		if (mMethod == Methods.addGeofences || mMethod == Methods.removeGeofences) {
 			// Do nothing
+
 		} else if (mMethod == Methods.getLastLocation) {
 			Location location = (Location) param.getResult();
 			if (location != null && isRestricted(param))
 				param.setResult(PrivacyManager.getDefacedLocation(Binder.getCallingUid(), location));
+
 		} else if (mMethod == Methods.removeLocationUpdates) {
 			// Do nothing
+
 		} else if (mMethod == Methods.requestLocationUpdates) {
 			// Do nothing
+
 		} else
 			Util.log(this, Log.WARN, "Unknown method=" + param.method.getName());
 	}
@@ -114,9 +119,7 @@ public class XLocationClient extends XHook {
 			LocationListener listener = (LocationListener) param.args[0];
 			synchronized (mListener) {
 				XLocationListener xlistener = mListener.get(listener);
-				if (xlistener == null)
-					Util.log(this, Log.WARN, "Not found count=" + mListener.size());
-				else {
+				if (xlistener != null) {
 					param.args[0] = xlistener;
 					mListener.remove(listener);
 				}

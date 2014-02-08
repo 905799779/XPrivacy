@@ -52,8 +52,14 @@ public class XTelephonyManager extends XHook {
 	// public String getLine1Number()
 	// public String getMsisdn()
 	// public List<NeighboringCellInfo> getNeighboringCellInfo()
+	// public String getNetworkCountryIso()
+	// public String getNetworkOperator()
+	// public String getNetworkOperatorName()
 	// public int getNetworkType()
 	// public int getPhoneType()
+	// public String getSimCountryIso()
+	// public String getSimOperator()
+	// public String getSimOperatorName()
 	// public static int getPhoneType(int networkMode)
 	// public String getSimSerialNumber()
 	// public String getSubscriberId()
@@ -71,8 +77,9 @@ public class XTelephonyManager extends XHook {
 		getIsimDomain, getIsimImpi, getIsimImpu,
 		getLine1AlphaTag, getLine1Number, getMsisdn,
 		getNeighboringCellInfo,
+		getNetworkCountryIso, getNetworkOperator, getNetworkOperatorName,
 		getNetworkType, getPhoneType,
-		getSimSerialNumber,
+		getSimCountryIso, getSimOperator, getSimOperatorName, getSimSerialNumber,
 		getSubscriberId,
 		getVoiceMailAlphaTag, getVoiceMailNumber,
 		listen
@@ -108,8 +115,14 @@ public class XTelephonyManager extends XHook {
 		listHook.add(new XTelephonyManager(Methods.listen, PrivacyManager.cPhone, className));
 
 		// No permissions required
+		listHook.add(new XTelephonyManager(Methods.getNetworkCountryIso, PrivacyManager.cPhone, className));
+		listHook.add(new XTelephonyManager(Methods.getNetworkOperator, PrivacyManager.cPhone, className));
+		listHook.add(new XTelephonyManager(Methods.getNetworkOperatorName, PrivacyManager.cPhone, className));
 		listHook.add(new XTelephonyManager(Methods.getNetworkType, PrivacyManager.cPhone, className));
 		listHook.add(new XTelephonyManager(Methods.getPhoneType, PrivacyManager.cPhone, className));
+		listHook.add(new XTelephonyManager(Methods.getSimCountryIso, PrivacyManager.cPhone, className));
+		listHook.add(new XTelephonyManager(Methods.getSimOperator, PrivacyManager.cPhone, className));
+		listHook.add(new XTelephonyManager(Methods.getSimOperatorName, PrivacyManager.cPhone, className));
 
 		return listHook;
 	}
@@ -121,19 +134,17 @@ public class XTelephonyManager extends XHook {
 				PhoneStateListener listener = (PhoneStateListener) param.args[0];
 				int event = (Integer) param.args[1];
 				if (listener != null)
-					if (isRestricted(param)) {
-						if (event == PhoneStateListener.LISTEN_NONE) {
-							// Remove
-							synchronized (mListener) {
-								XPhoneStateListener xlistener = mListener.get(listener);
-								if (xlistener == null)
-									Util.log(this, Log.WARN, "Not found count=" + mListener.size());
-								else {
-									param.args[0] = xlistener;
-									mListener.remove(listener);
-								}
+					if (event == PhoneStateListener.LISTEN_NONE) {
+						// Remove
+						synchronized (mListener) {
+							XPhoneStateListener xlistener = mListener.get(listener);
+							if (xlistener != null) {
+								param.args[0] = xlistener;
+								mListener.remove(listener);
 							}
-						} else {
+						}
+					} else if (isRestricted(param))
+						try {
 							// Replace
 							XPhoneStateListener xListener = new XPhoneStateListener(listener);
 							synchronized (mListener) {
@@ -141,8 +152,11 @@ public class XTelephonyManager extends XHook {
 								Util.log(this, Log.INFO, "Added count=" + mListener.size());
 							}
 							param.args[0] = xListener;
+						} catch (Throwable ignored) {
+							// Some implementations require a looper
+							// which is not according to the documentation
+							// and stock source code
 						}
-					}
 			}
 		} else if (mMethod == Methods.disableLocationUpdates || mMethod == Methods.enableLocationUpdates)
 			if (isRestricted(param))
@@ -156,21 +170,27 @@ public class XTelephonyManager extends XHook {
 			if (mMethod == Methods.getAllCellInfo) {
 				if (param.getResult() != null && isRestricted(param))
 					param.setResult(new ArrayList<CellInfo>());
+
 			} else if (mMethod == Methods.getCellLocation) {
 				if (param.getResult() != null && isRestricted(param))
 					param.setResult(CellLocation.getEmpty());
+
 			} else if (mMethod == Methods.getIsimImpu) {
 				if (param.getResult() != null && isRestricted(param))
 					param.setResult(PrivacyManager.getDefacedProp(Binder.getCallingUid(), mMethod.name()));
+
 			} else if (mMethod == Methods.getNeighboringCellInfo) {
 				if (param.getResult() != null && isRestricted(param))
 					param.setResult(new ArrayList<NeighboringCellInfo>());
+
 			} else if (mMethod == Methods.getNetworkType) {
 				if (isRestricted(param))
 					param.setResult(TelephonyManager.NETWORK_TYPE_UNKNOWN);
+
 			} else if (mMethod == Methods.getPhoneType) {
 				if (isRestricted(param))
 					param.setResult(TelephonyManager.PHONE_TYPE_GSM); // IMEI
+
 			} else {
 				if (param.getResult() != null && isRestricted(param))
 					param.setResult(PrivacyManager.getDefacedProp(Binder.getCallingUid(), mMethod.name()));

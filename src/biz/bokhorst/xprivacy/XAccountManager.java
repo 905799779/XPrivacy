@@ -9,7 +9,9 @@ import java.util.concurrent.TimeUnit;
 
 import android.accounts.Account;
 import android.accounts.AccountManager;
+import android.accounts.AccountManagerCallback;
 import android.accounts.AccountManagerFuture;
+import android.accounts.AuthenticatorDescription;
 import android.accounts.AuthenticatorException;
 import android.accounts.OnAccountsUpdateListener;
 import android.accounts.OperationCanceledException;
@@ -49,6 +51,7 @@ public class XAccountManager extends XHook {
 	// public Account[] getAccountsByType(String type)
 	// public Account[] getAccountsByTypeForPackage(String type, String packageName)
 	// public AccountManagerFuture<Account[]> getAccountsByTypeAndFeatures(final String type, final String[] features, AccountManagerCallback<Account[]> callback, Handler handler)
+	// public AuthenticatorDescription[] getAuthenticatorTypes()
 	// public AccountManagerFuture<Bundle> getAuthToken(final Account account, final String authTokenType, final Bundle options, final Activity activity, AccountManagerCallback<Bundle> callback, Handler handler)
 	// public AccountManagerFuture<Bundle> getAuthToken(final Account account, final String authTokenType, final boolean notifyAuthFailure, AccountManagerCallback<Bundle> callback, Handler handler)
 	// public AccountManagerFuture<Bundle> getAuthToken(final Account account, final String authTokenType, final Bundle options, final boolean notifyAuthFailure, AccountManagerCallback<Bundle> callback, Handler handler)
@@ -60,9 +63,16 @@ public class XAccountManager extends XHook {
 
 	// @formatter:on
 
+	// @formatter:off
 	private enum Methods {
-		addOnAccountsUpdatedListener, blockingGetAuthToken, getAccounts, getAccountsByType, getAccountsByTypeForPackage, getAccountsByTypeAndFeatures, getAuthToken, getAuthTokenByFeatures, hasFeatures, removeOnAccountsUpdatedListener
+		addOnAccountsUpdatedListener,
+		blockingGetAuthToken,
+		getAccounts, getAccountsByType, getAccountsByTypeForPackage, getAccountsByTypeAndFeatures, getAuthenticatorTypes,
+		getAuthToken, getAuthTokenByFeatures,
+		hasFeatures,
+		removeOnAccountsUpdatedListener
 	};
+	// @formatter:on
 
 	public static List<XHook> getInstances(Object instance) {
 		String className = instance.getClass().getName();
@@ -74,14 +84,16 @@ public class XAccountManager extends XHook {
 		listHook.add(new XAccountManager(Methods.getAccountsByTypeForPackage, PrivacyManager.cAccounts, className,
 				Build.VERSION_CODES.JELLY_BEAN_MR2));
 		listHook.add(new XAccountManager(Methods.getAccountsByTypeAndFeatures, PrivacyManager.cAccounts, className));
+		listHook.add(new XAccountManager(Methods.getAuthenticatorTypes, PrivacyManager.cAccounts, className));
 		listHook.add(new XAccountManager(Methods.getAuthToken, PrivacyManager.cAccounts, className));
 		listHook.add(new XAccountManager(Methods.getAuthTokenByFeatures, PrivacyManager.cAccounts, className));
 		listHook.add(new XAccountManager(Methods.hasFeatures, PrivacyManager.cAccounts, className));
-		listHook.add(new XAccountManager(Methods.removeOnAccountsUpdatedListener, PrivacyManager.cAccounts, className));
+		listHook.add(new XAccountManager(Methods.removeOnAccountsUpdatedListener, null, className));
 		return listHook;
 	}
 
 	@Override
+	@SuppressWarnings("unchecked")
 	protected void before(MethodHookParam param) throws Throwable {
 		if (mMethod == Methods.addOnAccountsUpdatedListener) {
 			if (param.args.length > 0 && param.args[0] != null)
@@ -95,58 +107,118 @@ public class XAccountManager extends XHook {
 					}
 					param.args[0] = xlistener;
 				}
+
 		} else if (mMethod == Methods.removeOnAccountsUpdatedListener) {
 			if (param.args.length > 0 && param.args[0] != null)
-				if (isRestricted(param)) {
-					synchronized (mListener) {
-						OnAccountsUpdateListener listener = (OnAccountsUpdateListener) param.args[0];
-						XOnAccountsUpdateListener xlistener = mListener.get(listener);
-						if (xlistener == null)
-							Util.log(this, Log.WARN, "Not found count=" + mListener.size());
-						else {
-							param.args[0] = xlistener;
-							mListener.remove(listener);
-						}
+				synchronized (mListener) {
+					OnAccountsUpdateListener listener = (OnAccountsUpdateListener) param.args[0];
+					XOnAccountsUpdateListener xlistener = mListener.get(listener);
+					if (xlistener != null) {
+						param.args[0] = xlistener;
+						mListener.remove(listener);
 					}
 				}
+
+		} else if (mMethod == Methods.getAccountsByTypeAndFeatures) {
+			if (param.args.length > 2 && param.args[2] != null)
+				if (isRestrictedExtra(param, (String) param.args[0])) {
+					AccountManagerCallback<Account[]> callback = (AccountManagerCallback<Account[]>) param.args[2];
+					param.args[2] = new XAccountManagerCallbackAccount(callback, Binder.getCallingUid());
+				}
+
+		} else if (mMethod == Methods.getAuthToken) {
+			if (param.args.length > 0) {
+				Account account = (Account) param.args[0];
+				for (int i = 0; i < param.args.length; i++)
+					if (param.args[i] instanceof AccountManagerCallback<?>)
+						if (isRestricted(param, account == null ? null : account.name)) {
+							AccountManagerCallback<Bundle> callback = (AccountManagerCallback<Bundle>) param.args[i];
+							param.args[i] = new XAccountManagerCallbackBundle(callback, Binder.getCallingUid());
+						}
+			}
+
+		} else if (mMethod == Methods.getAuthTokenByFeatures) {
+			if (param.args.length > 0)
+				for (int i = 0; i < param.args.length; i++)
+					if (param.args[i] instanceof AccountManagerCallback<?>)
+						if (isRestricted(param, (String) param.args[0])) {
+							AccountManagerCallback<Bundle> callback = (AccountManagerCallback<Bundle>) param.args[i];
+							param.args[i] = new XAccountManagerCallbackBundle(callback, Binder.getCallingUid());
+						}
+
+		} else if (mMethod == Methods.hasFeatures) {
+			if (param.args.length > 0) {
+				Account account = (Account) param.args[0];
+				for (int i = 0; i < param.args.length; i++)
+					if (param.args[i] instanceof AccountManagerCallback<?>)
+						if (isRestricted(param, account == null ? null : account.name)) {
+							AccountManagerCallback<Boolean> callback = (AccountManagerCallback<Boolean>) param.args[i];
+							param.args[i] = new XAccountManagerCallbackBoolean(callback);
+						}
+			}
 		}
 	}
 
-	@SuppressWarnings("unchecked")
 	@Override
+	@SuppressWarnings("unchecked")
 	protected void after(MethodHookParam param) throws Throwable {
 		if (mMethod != Methods.addOnAccountsUpdatedListener && mMethod != Methods.removeOnAccountsUpdatedListener) {
 			int uid = Binder.getCallingUid();
 			if (mMethod == Methods.blockingGetAuthToken) {
-				if (param.getResult() != null && isRestricted(param))
-					if (param.args.length > 0 && param.args[0] != null) {
-						Account account = (Account) param.args[0];
+				if (param.args.length > 0 && param.args[0] != null) {
+					Account account = (Account) param.args[0];
+					if (param.getResult() != null && isRestrictedExtra(param, account == null ? null : account.name))
 						if (!isAccountAllowed(account, uid))
 							param.setResult(null);
-					}
-			} else if (mMethod == Methods.getAccounts || mMethod == Methods.getAccountsByType
-					|| mMethod == Methods.getAccountsByTypeForPackage) {
+				}
+
+			} else if (mMethod == Methods.getAccounts) {
 				if (param.getResult() != null && isRestricted(param)) {
 					Account[] accounts = (Account[]) param.getResult();
 					param.setResult(filterAccounts(accounts, uid));
 				}
+
+			} else if (mMethod == Methods.getAccountsByType || mMethod == Methods.getAccountsByTypeForPackage) {
+				if (param.args.length > 0)
+					if (param.getResult() != null && isRestrictedExtra(param, (String) param.args[0])) {
+						Account[] accounts = (Account[]) param.getResult();
+						param.setResult(filterAccounts(accounts, uid));
+					}
+
 			} else if (mMethod == Methods.getAccountsByTypeAndFeatures) {
-				if (param.getResult() != null && isRestricted(param)) {
-					AccountManagerFuture<Account[]> future = (AccountManagerFuture<Account[]>) param.getResult();
-					param.setResult(new XFutureAccount(future, uid));
+				if (param.args.length > 0)
+					if (param.getResult() != null && isRestrictedExtra(param, (String) param.args[0])) {
+						AccountManagerFuture<Account[]> future = (AccountManagerFuture<Account[]>) param.getResult();
+						param.setResult(new XFutureAccount(future, uid));
+					}
+
+			} else if (mMethod == Methods.getAuthenticatorTypes) {
+				if (param.getResult() != null && isRestricted(param))
+					param.setResult(new AuthenticatorDescription[0]);
+
+			} else if (mMethod == Methods.getAuthToken) {
+				if (param.args.length > 0) {
+					Account account = (Account) param.args[0];
+					if (param.getResult() != null && isRestrictedExtra(param, account == null ? null : account.name)) {
+						AccountManagerFuture<Bundle> future = (AccountManagerFuture<Bundle>) param.getResult();
+						param.setResult(new XFutureBundle(future, uid));
+					}
 				}
-			} else if (mMethod == Methods.getAuthToken || mMethod == Methods.getAuthTokenByFeatures) {
-				if (param.getResult() != null && isRestricted(param)) {
+
+			} else if (mMethod == Methods.getAuthTokenByFeatures) {
+				if (param.getResult() != null && isRestricted(param, (String) param.args[0])) {
 					AccountManagerFuture<Bundle> future = (AccountManagerFuture<Bundle>) param.getResult();
 					param.setResult(new XFutureBundle(future, uid));
 				}
+
 			} else if (mMethod == Methods.hasFeatures) {
-				if (param.getResult() != null && isRestricted(param))
-					if (param.args.length > 0 && param.args[0] != null) {
-						Account account = (Account) param.args[0];
+				if (param.args.length > 0 && param.args[0] != null) {
+					Account account = (Account) param.args[0];
+					if (param.getResult() != null && isRestrictedExtra(param, account == null ? null : account.name))
 						if (!isAccountAllowed(account, uid))
 							param.setResult(new XFutureBoolean());
-					}
+				}
+
 			} else
 				Util.log(this, Log.WARN, "Unknown method=" + param.method.getName());
 		}
@@ -167,7 +239,7 @@ public class XAccountManager extends XHook {
 	private boolean isAccountAllowed(String accountName, String accountType, int uid) {
 		try {
 			String sha1 = Util.sha1(accountName + accountType);
-			if (PrivacyManager.getSettingBool(this, uid, PrivacyManager.cSettingAccount + sha1, false, true))
+			if (PrivacyManager.getSettingBool(uid, PrivacyManager.cSettingAccount + sha1, false, true))
 				return true;
 		} catch (Throwable ex) {
 			Util.bug(this, ex);
@@ -191,13 +263,15 @@ public class XAccountManager extends XHook {
 
 		@Override
 		public Account[] getResult() throws OperationCanceledException, IOException, AuthenticatorException {
-			return XAccountManager.this.filterAccounts(mFuture.getResult(), mUid);
+			Account[] account = mFuture.getResult();
+			return XAccountManager.this.filterAccounts(account, mUid);
 		}
 
 		@Override
 		public Account[] getResult(long timeout, TimeUnit unit) throws OperationCanceledException, IOException,
 				AuthenticatorException {
-			return XAccountManager.this.filterAccounts(mFuture.getResult(timeout, unit), mUid);
+			Account[] account = mFuture.getResult(timeout, unit);
+			return XAccountManager.this.filterAccounts(account, mUid);
 		}
 
 		@Override
@@ -301,6 +375,49 @@ public class XAccountManager extends XHook {
 		@Override
 		public void onAccountsUpdated(Account[] accounts) {
 			mListener.onAccountsUpdated(XAccountManager.this.filterAccounts(accounts, mUid));
+		}
+	}
+
+	private class XAccountManagerCallbackAccount implements AccountManagerCallback<Account[]> {
+		private AccountManagerCallback<Account[]> mCallback;
+		private int mUid;
+
+		public XAccountManagerCallbackAccount(AccountManagerCallback<Account[]> callback, int uid) {
+			mCallback = callback;
+			mUid = uid;
+		}
+
+		@Override
+		public void run(AccountManagerFuture<Account[]> future) {
+			mCallback.run(new XAccountManager.XFutureAccount(future, mUid));
+		}
+	}
+
+	private class XAccountManagerCallbackBundle implements AccountManagerCallback<Bundle> {
+		private AccountManagerCallback<Bundle> mCallback;
+		private int mUid;
+
+		public XAccountManagerCallbackBundle(AccountManagerCallback<Bundle> callback, int uid) {
+			mCallback = callback;
+			mUid = uid;
+		}
+
+		@Override
+		public void run(AccountManagerFuture<Bundle> future) {
+			mCallback.run(new XAccountManager.XFutureBundle(future, mUid));
+		}
+	}
+
+	private class XAccountManagerCallbackBoolean implements AccountManagerCallback<Boolean> {
+		private AccountManagerCallback<Boolean> mCallback;
+
+		public XAccountManagerCallbackBoolean(AccountManagerCallback<Boolean> callback) {
+			mCallback = callback;
+		}
+
+		@Override
+		public void run(AccountManagerFuture<Boolean> future) {
+			mCallback.run(new XAccountManager.XFutureBoolean());
 		}
 	}
 }

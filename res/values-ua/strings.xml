@@ -3,6 +3,7 @@
     <string name="app_notxposed" formatted="false">Не встановлено Xposed framework версії %d+</string>
     <string name="app_notenabled">Модуль XPrivacy не активован в Xposed installer</string>
     <string name="app_wrongandroid">Тільки для Android версії 4.0 і новіше</string>
+    <string name="app_incompatible" formatted="false">XPrivacy is incompatible with %s</string>
     <string name="app_version" formatted="false">Версія XPrivacy: %s (%d)</string>
     <string name="app_description">The ultimate privacy manager</string>
     <string name="app_xversion" formatted="false">Версія Xposed framework: %d</string>
@@ -21,11 +22,14 @@
     <string name="menu_about">Про програму</string>
     <string name="menu_help">Допомога</string>
     <string name="menu_select_all">Select all</string>
+    <string name="menu_sort">Sort</string>
+    <string name="menu_filter">Filter</string>
     <string name="menu_all">Виділити все</string>
     <string name="menu_restriction_all">Переключити довзоли</string>
     <string name="menu_clear_all">Очистити всі</string>
     <string name="menu_restrict_all">Заборонити всі</string>
     <string name="menu_clear_usage">Clear</string>
+    <string name="menu_clear_db">Clear all data</string>
     <string name="menu_usage_all">Переключити фільтр</string>
     <string name="menu_apply">Застосувати шаблон</string>
     <string name="menu_clear">Очистити</string>
@@ -37,6 +41,10 @@
     <string name="menu_applications">Оберіть дозволені програми</string>
     <string name="menu_contacts">Оберіть дозволені контакти</string>
     <string name="menu_tutorial">Навчання</string>
+    <string name="menu_exclude">Exclude</string>
+    <string name="menu_close">Close</string>
+    <string name="msg_abort">Aborting</string>
+    <string name="msg_aborted">Aborted</string>
     <string name="msg_new">Нове</string>
     <string name="msg_update">Оновити</string>
     <string name="msg_licensed" formatted="false">Власник ліцензіі: %s</string>
@@ -54,6 +62,14 @@
     <string name="msg_random_access">Випадкові значення при запиті</string>
     <string name="msg_random_boot">Випадкові значення після перезавантаження</string>
     <string name="msg_restart">Необхідне перезавантаження</string>
+    <string name="msg_register">Please register your device</string>
+    <string name="msg_registered">Check your e-mail to activate your device</string>
+    <string name="msg_service">Update service running</string>
+    <string name="msg_migrating" formatted="false">Migrating %s</string>
+    <string name="msg_randomizing" formatted="false">Randomizing %s</string>
+    <string name="msg_upgrading" formatted="false">Upgrading %s</string>
+    <string name="msg_support_info">An internal check failed, do you want to send the support info?</string>
+    <string name="msg_restrictedby">Restricted by XPrivacy</string>
     <string name="msg_first"><b>Велика увага була приділена розробці та тестуванню XPrivacy, 
 але не можна гарантувати, що вона буде працювати бездоганно на всіх пристроях та зі всімома програмами.
 \n\nВикористовуйте виключно на свій страх та ризик.</b>\n\nДив. також ліцензію:</string>
@@ -81,24 +97,33 @@
     <string name="restrict_view">Перегляд (браузер)</string>
     <string name="title_categories">Категорії</string>
     <string name="title_restrict">Позначте для заборони:</string>
-    <string name="title_filters">Фільтри</string>
-
-    <plurals name="title_active_filters">
-        <item quantity="one">1 активний фільтр</item>
-        <item quantity="few">%d активних фільтра</item>
-        <item quantity="other">%d активних фільтров</item>
-    </plurals>
-
     <string name="title_fused">що використовують дані</string>
     <string name="title_finternet">з доступом до Інтернету</string>
     <string name="title_fpermission">з дозволами</string>
     <string name="title_frestricted">заборонені</string>
     <string name="title_fuser">програми користувача</string>
+    <string name="title_fondemand">Filter by on-demand</string>
     <string name="title_fsystem">системні програми</string>
     <string name="title_fnot">Переключити</string>
+    <string name="title_sname">By name</string>
+    <string name="title_suid">By uid</string>
+    <string name="title_sinstalled">By date installed</string>
+    <string name="title_supdated">By date updated</string>
+    <string name="title_smodified">By date modified (XPrivacy)</string>
+    <string name="title_sinvert">Invert sort order</string>
+    <string name="title_attempt">Usage attempt of:</string>
+    <string name="title_category">Category:</string>
+    <string name="title_function">Function:</string>
+    <string name="title_parameters">Parameters:</string>
+    <string name="title_applycat">Apply to entire category</string>
+    <string name="title_once">Once for %1$s seconds</string>
+    <string name="title_allow">Allow</string>
+    <string name="title_deny">Deny</string>
+    <string name="title_pleasesubmit">Please submit your restrictions to help others</string>
     <string name="settings_serial">Серійний номер</string>
     <string name="settings_lat">Широта</string>
     <string name="settings_lon">Довгота</string>
+    <string name="settings_alt">Altitude</string>
     <string name="settings_mac">MAC-адреса</string>
     <string name="settings_ip">IP адреса</string>
     <string name="settings_phone">Номер телефону</string>
@@ -110,14 +135,18 @@
     <string name="settings_ua">User agent</string>
     <string name="settings_general">Загальне</string>
     <string name="settings_fake_data">Фальшиві дані</string>
-    <string name="settings_global">Використовувати загальні фальшиві дані</string>
     <string name="settings_notify">Оновити сповіщення</string>
+    <string name="settings_ondemand">Restrict on demand</string>
     <string name="settings_log">Отладочный лог (требует перезапуска)</string>
     <string name="settings_expert">Експертний режим</string>
     <string name="settings_dangerous">Заборона небезпечних функцій</string>
     <string name="settings_confidence">Максимальний інтервал отримання конфіденційних даних</string>
     <string name="settings_experimental">Експериментальні функціі (потрібне перезавантаження)</string>
     <string name="settings_https">Use secure connections</string>
+    <string name="settings_syscomponents">Restrict system components (Android) (requires restart)</string>
+    <string name="settings_usagedata">Show application usage data (requires restart)</string>
+    <string name="help_longpress">Long press name to select</string>
+    <string name="help_ondemand">restrictions will be asked</string>
     <string name="help_application">Програма</string>
     <string name="help_internet">запитує доступ до Інтернету</string>
     <string name="help_granted">має дозвол Android</string>
@@ -129,7 +158,7 @@
     <string name="help_attention">обмеження потребують уваги</string>
     <string name="help_restricted">обмеження змінені</string>
     <string name="help_shared">обмеження відправлені</string>
-    <string name="tutorial_mainheader">Оберіть категорію для обмежень; оберіть видимі програми з фільтрами</string>
+    <string name="tutorial_mainheader">Select the category to restrict</string>
     <string name="tutorial_mainlist">Натисніть чекбокс для застосування обмежень з обраної категоріі до програми\n
 \nПрограми будуть отримувати порожні або фальшиві дані для обраних категорій\n
 \nНатисніть іконку програми для детальних обмежень та налаштувань</string>
