@@ -41,14 +41,14 @@
             android:layout_height="3dip"
             android:layout_alignParentLeft="true"
             android:layout_alignParentTop="true"
-            android:background="?android:attr/colorActivatedHighlight" />
+            android:background="?attr/colorActivatedHighlight" />
     </RelativeLayout>
 
     <!-- Footer -->
 
     <LinearLayout
         android:id="@+id/llButtons"
-        style="?android:attr/buttonBarButtonStyle"
+        style="?attr/buttonBarButtonStyle"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_alignParentBottom="true"
@@ -56,7 +56,7 @@
 
         <Button
             android:id="@+id/btnCancel"
-            style="?android:attr/buttonBarButtonStyle"
+            style="?attr/buttonBarButtonStyle"
             android:layout_width="0dip"
             android:layout_height="wrap_content"
             android:layout_gravity="center_horizontal"
@@ -71,7 +71,7 @@
 
         <Button
             android:id="@+id/btnOk"
-            style="?android:attr/buttonBarButtonStyle"
+            style="?attr/buttonBarButtonStyle"
             android:layout_width="0dip"
             android:layout_height="wrap_content"
             android:layout_gravity="center_horizontal"

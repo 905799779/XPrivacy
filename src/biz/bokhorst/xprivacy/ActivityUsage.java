@@ -175,8 +175,8 @@ public class ActivityUsage extends Activity {
 			mListUsageData.addAll(objects);
 		}
 
-		public void addAll(Collection<? extends PrivacyManager.UsageData> values) {
-			for (PrivacyManager.UsageData value : values) {
+		public void addAll(Collection<? extends PRestriction> values) {
+			for (PRestriction value : values) {
 				add(value);
 			}
 		}

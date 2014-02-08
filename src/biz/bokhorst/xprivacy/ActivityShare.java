@@ -7,6 +7,7 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
@@ -510,6 +511,12 @@ public class ActivityShare extends Activity {
 			}
 
 			return convertView;
+		}
+
+		public void addAll(Collection<? extends AppHolder> values) {
+			for (AppHolder value : values) {
+				add(value);
+			}
 		}
 	}
 

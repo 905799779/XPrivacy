@@ -57,7 +57,6 @@ import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.PopupWindow;
 import android.widget.RelativeLayout;
-import android.widget.Switch;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -176,7 +175,7 @@ public class ActivityApp extends Activity {
 		});
 
 		// Display restriction state
-		Switch swEnabled = (Switch) findViewById(R.id.swEnable);
+		CompoundButton swEnabled = (CompoundButton) findViewById(R.id.swEnable);
 		swEnabled.setChecked(PrivacyManager.getSettingBool(mAppInfo.getUid(), PrivacyManager.cSettingRestricted, true,
 				false));
 		swEnabled.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
