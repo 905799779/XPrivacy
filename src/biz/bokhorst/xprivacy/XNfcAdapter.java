@@ -3,6 +3,7 @@ package biz.bokhorst.xprivacy;
 import java.util.ArrayList;
 import java.util.List;
 
+import android.os.Build;
 import android.util.Log;
 
 import de.robv.android.xposed.XC_MethodHook.MethodHookParam;
@@ -12,6 +13,11 @@ public class XNfcAdapter extends XHook {
 
 	protected XNfcAdapter(Methods method, String restrictionName) {
 		super(restrictionName, method.name(), null);
+		mMethod = method;
+	}
+
+	protected XNfcAdapter(Methods method, String restrictionName, int sdk) {
+		super(restrictionName, method.name(), null, sdk);
 		mMethod = method;
 	}
 
@@ -36,7 +42,8 @@ public class XNfcAdapter extends XHook {
 	public static List<XHook> getInstances() {
 		List<XHook> listHook = new ArrayList<XHook>();
 		listHook.add(new XNfcAdapter(Methods.getDefaultAdapter, PrivacyManager.cNfc));
-		listHook.add(new XNfcAdapter(Methods.getNfcAdapter, PrivacyManager.cNfc));
+		listHook.add(new XNfcAdapter(Methods.getNfcAdapter, PrivacyManager.cNfc,
+				Build.VERSION_CODES.ICE_CREAM_SANDWICH));
 		return listHook;
 	}
 

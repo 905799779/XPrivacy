@@ -5,6 +5,7 @@ import java.util.List;
 
 import android.content.SyncAdapterType;
 import android.content.SyncInfo;
+import android.os.Build;
 import android.util.Log;
 
 import de.robv.android.xposed.XC_MethodHook.MethodHookParam;
@@ -14,6 +15,11 @@ public class XContentResolver extends XHook {
 
 	private XContentResolver(Methods method, String restrictionName) {
 		super(restrictionName, method.name(), null);
+		mMethod = method;
+	}
+
+	private XContentResolver(Methods method, String restrictionName, int sdk) {
+		super(restrictionName, method.name(), null, sdk);
 		mMethod = method;
 	}
 
@@ -33,7 +39,8 @@ public class XContentResolver extends XHook {
 	public static List<XHook> getInstances() {
 		List<XHook> listHook = new ArrayList<XHook>();
 		listHook.add(new XContentResolver(Methods.getCurrentSync, PrivacyManager.cAccounts));
-		listHook.add(new XContentResolver(Methods.getCurrentSyncs, PrivacyManager.cAccounts));
+		listHook.add(new XContentResolver(Methods.getCurrentSyncs, PrivacyManager.cAccounts,
+				Build.VERSION_CODES.HONEYCOMB));
 		listHook.add(new XContentResolver(Methods.getSyncAdapterTypes, PrivacyManager.cAccounts));
 		return listHook;
 	}

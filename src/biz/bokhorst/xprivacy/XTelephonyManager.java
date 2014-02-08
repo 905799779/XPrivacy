@@ -99,12 +99,16 @@ public class XTelephonyManager extends XHook {
 		listHook.add(new XTelephonyManager(Methods.getDeviceId, PrivacyManager.cPhone, className));
 		listHook.add(new XTelephonyManager(Methods.getGroupIdLevel1, PrivacyManager.cPhone, className,
 				Build.VERSION_CODES.JELLY_BEAN_MR2));
-		listHook.add(new XTelephonyManager(Methods.getIsimDomain, PrivacyManager.cPhone, className));
-		listHook.add(new XTelephonyManager(Methods.getIsimImpi, PrivacyManager.cPhone, className));
-		listHook.add(new XTelephonyManager(Methods.getIsimImpu, PrivacyManager.cPhone, className));
+		listHook.add(new XTelephonyManager(Methods.getIsimDomain, PrivacyManager.cPhone, className,
+				Build.VERSION_CODES.ICE_CREAM_SANDWICH));
+		listHook.add(new XTelephonyManager(Methods.getIsimImpi, PrivacyManager.cPhone, className,
+				Build.VERSION_CODES.ICE_CREAM_SANDWICH));
+		listHook.add(new XTelephonyManager(Methods.getIsimImpu, PrivacyManager.cPhone, className,
+				Build.VERSION_CODES.ICE_CREAM_SANDWICH));
 		listHook.add(new XTelephonyManager(Methods.getLine1AlphaTag, PrivacyManager.cPhone, className));
 		listHook.add(new XTelephonyManager(Methods.getLine1Number, PrivacyManager.cPhone, className));
-		listHook.add(new XTelephonyManager(Methods.getMsisdn, PrivacyManager.cPhone, className));
+		listHook.add(new XTelephonyManager(Methods.getMsisdn, PrivacyManager.cPhone, className,
+				Build.VERSION_CODES.ICE_CREAM_SANDWICH));
 		listHook.add(new XTelephonyManager(Methods.getNeighboringCellInfo, PrivacyManager.cLocation, className));
 		listHook.add(new XTelephonyManager(Methods.getSimSerialNumber, PrivacyManager.cPhone, className));
 		listHook.add(new XTelephonyManager(Methods.getSubscriberId, PrivacyManager.cPhone, className));
