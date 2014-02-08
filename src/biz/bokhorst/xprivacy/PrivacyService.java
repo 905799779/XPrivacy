@@ -26,7 +26,6 @@ import android.content.res.Resources;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteDoneException;
-import android.database.sqlite.SQLiteException;
 import android.database.sqlite.SQLiteStatement;
 import android.graphics.Paint;
 import android.graphics.Typeface;
@@ -42,7 +41,6 @@ import android.os.StrictMode;
 import android.os.StrictMode.ThreadPolicy;
 import android.text.TextUtils;
 import android.util.Log;
-import android.util.Pair;
 import android.view.ViewGroup;
 import android.view.WindowManager;
 import android.widget.CheckBox;
@@ -1495,7 +1493,7 @@ public class PrivacyService {
 						SQLiteDatabase db = SQLiteDatabase.openOrCreateDatabase(dbFile, null);
 
 						// Check database integrity
-						if (isDatabaseIntegrityOk(db))
+						if (Build.VERSION.SDK_INT < Build.VERSION_CODES.HONEYCOMB || db.isDatabaseIntegrityOk())
 							Util.log(null, Log.WARN, "Database integrity ok");
 						else {
 							// http://www.sqlite.org/howtocorrupt.html
@@ -1655,58 +1653,4 @@ public class PrivacyService {
 			}
 		}
 	};
-
-    /**
-     * Runs 'pragma integrity_check' on the given database (and all the attached databases)
-     * and returns true if the given database (and all its attached databases) pass integrity_check,
-     * false otherwise.
-     *<p>
-     * If the result is false, then this method logs the errors reported by the integrity_check
-     * command execution.
-     *<p>
-     * Note that 'pragma integrity_check' on a database can take a long time.
-     *
-     * @return true if the given database (and all its attached databases) pass integrity_check,
-     * false otherwise.
-     */
-    @SuppressLint("NewApi")
-    public static boolean isDatabaseIntegrityOk(SQLiteDatabase database) {
-        if (Build.VERSION.SDK_INT > Build.VERSION_CODES.GINGERBREAD_MR1) {
-            return database.isDatabaseIntegrityOk();
-        }
-        database.acquireReference();
-        try {
-            List<Pair<String, String>> attachedDbs = null;
-            try {
-                attachedDbs = database.getAttachedDbs();
-                if (attachedDbs == null) {
-                    throw new IllegalStateException("databaselist for: " + database.getPath() + " couldn't " +
-                            "be retrieved. probably because the database is closed");
-                }
-            } catch (SQLiteException e) {
-                // can't get attachedDb list. do integrity check on the main database
-                attachedDbs = new ArrayList<Pair<String, String>>();
-                attachedDbs.add(new Pair<String, String>("main", database.getPath()));
-            }
-
-            for (int i = 0; i < attachedDbs.size(); i++) {
-                Pair<String, String> p = attachedDbs.get(i);
-                SQLiteStatement prog = null;
-                try {
-                    prog = database.compileStatement("PRAGMA " + p.first + ".integrity_check(1);");
-                    String rslt = prog.simpleQueryForString();
-                    if (!rslt.equalsIgnoreCase("ok")) {
-                        // integrity_checker failed on main or attached databases
-                        Log.e("SQLiteDatabase", "PRAGMA integrity_check on " + p.second + " returned: " + rslt);
-                        return false;
-                    }
-                } finally {
-                    if (prog != null) prog.close();
-                }
-            }
-        } finally {
-            database.releaseReference();
-        }
-        return true;
-    }
 }
