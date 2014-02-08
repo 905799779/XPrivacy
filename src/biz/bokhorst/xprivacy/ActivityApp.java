@@ -312,9 +312,11 @@ public class ActivityApp extends Activity {
 		boolean appsRestricted = PrivacyManager.getRestrictionEx(mAppInfo.getUid(), PrivacyManager.cSystem, null).restricted;
 		boolean contactsRestricted = PrivacyManager.getRestrictionEx(mAppInfo.getUid(), PrivacyManager.cContacts, null).restricted;
 
-		menu.findItem(R.id.menu_accounts).setEnabled(accountsRestricted);
-		menu.findItem(R.id.menu_applications).setEnabled(appsRestricted);
-		menu.findItem(R.id.menu_contacts).setEnabled(contactsRestricted);
+		if (PrivacyService.checkClient()) {
+			menu.findItem(R.id.menu_accounts).setEnabled(accountsRestricted);
+			menu.findItem(R.id.menu_applications).setEnabled(appsRestricted);
+			menu.findItem(R.id.menu_contacts).setEnabled(contactsRestricted);
+		}
 
 		return super.onPrepareOptionsMenu(menu);
 	}

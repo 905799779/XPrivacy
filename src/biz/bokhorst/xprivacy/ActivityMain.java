@@ -388,9 +388,11 @@ public class ActivityMain extends Activity implements OnItemSelectedListener {
 	public boolean onPrepareOptionsMenu(Menu menu) {
 		boolean mounted = Environment.MEDIA_MOUNTED.equals(Environment.getExternalStorageState());
 
-		menu.findItem(R.id.menu_export).setEnabled(mounted);
-		menu.findItem(R.id.menu_import).setEnabled(mounted);
-		menu.findItem(R.id.menu_pro).setVisible(!Util.isProEnabled() && Util.hasProLicense(this) == null);
+		if (PrivacyService.checkClient()) {
+			menu.findItem(R.id.menu_export).setEnabled(mounted);
+			menu.findItem(R.id.menu_import).setEnabled(mounted);
+			menu.findItem(R.id.menu_pro).setVisible(!Util.isProEnabled() && Util.hasProLicense(this) == null);
+		}
 
 		// Update filter count
 
@@ -436,7 +438,8 @@ public class ActivityMain extends Activity implements OnItemSelectedListener {
 			canvas.drawText(text, bitmap.getWidth() - paint.measureText(text), bitmap.getHeight(), paint);
 
 			MenuItem fMenu = menu.findItem(R.id.menu_filter);
-			fMenu.setIcon(new BitmapDrawable(getResources(), bitmap));
+			if (fMenu != null)
+				fMenu.setIcon(new BitmapDrawable(getResources(), bitmap));
 		}
 
 		return super.onPrepareOptionsMenu(menu);
