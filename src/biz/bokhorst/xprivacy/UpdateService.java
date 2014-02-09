@@ -59,7 +59,7 @@ public class UpdateService extends Service {
 			builder.setWhen(System.currentTimeMillis());
 			builder.setAutoCancel(false);
 			builder.setOngoing(true);
-			PendingIntent pi = PendingIntent.getActivity(this, 0, new Intent(), 0);
+			PendingIntent pi = PendingIntent.getActivity(UpdateService.this, 0, new Intent(), 0);
 			builder.setContentIntent(pi);
 			Notification notification = builder.build();
 			startForeground(Util.NOTIFY_SERVICE, notification);
