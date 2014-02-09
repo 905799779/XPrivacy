@@ -105,6 +105,7 @@ public class ActivityApp extends Activity {
 	public void onCreate(Bundle savedInstanceState) {
 		// Check privacy service client
 		if (!PrivacyService.checkClient()) {
+			super.onCreate(savedInstanceState);
 			setContentView(R.layout.reboot);
 			return;
 		}
