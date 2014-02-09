@@ -105,7 +105,7 @@ public class XContentProvider extends XHook {
 						"com.android.providers.contacts.ContactsProvider2", "content://com.android." + uri));
 
 			listHook.add(new XContentProvider(PrivacyManager.cPhone, "BlurCallLogProvider",
-					"com.motorola.blur.providers.contacts.BlurCallLogProvider"));
+					"com.motorola.blur.providers.contacts.BlurCallLogProvider").optional());
 		}
 
 		// E-mail provider

@@ -15,11 +15,17 @@ Test and beta releases will have experimental functions enabled by default.
 
 **Next release**
 
-* Updated Lithuanian translation
+[Open issues](https://github.com/M66B/XPrivacy/issues?state=open)
+
+**Version 1.99.37 BETA**
+
+* Fixed all issues reported with the support info
+* Fixed layout of on demand restricting dialog for long functions/parameters
 * Increased on demand restricting timeout to 20 seconds ([issue](/../../issues/1293))
 * When registering, nicely ask for e-mail address
-
-[Open issues](https://github.com/M66B/XPrivacy/issues?state=open)
+* Better protection of IPCs
+* Updated German translation
+* Updated Lithuanian translation
 
 **Version 1.99.36 BETA**
 

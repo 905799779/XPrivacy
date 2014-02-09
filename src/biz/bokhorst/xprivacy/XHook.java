@@ -1,7 +1,6 @@
 package biz.bokhorst.xprivacy;
 
 import android.os.Binder;
-import android.os.Build;
 
 import de.robv.android.xposed.XC_MethodHook.MethodHookParam;
 
@@ -17,8 +16,7 @@ public abstract class XHook {
 		mRestrictionName = restrictionName;
 		mMethodName = methodName;
 		mSpecifier = specifier;
-		mSdk = Build.VERSION_CODES.GINGERBREAD_MR1;
-		PrivacyManager.registerHook(restrictionName, getSpecifier(), mSdk);
+		mSdk = 0;
 	}
 
 	protected XHook(String restrictionName, String methodName, String specifier, int sdk) {
@@ -26,7 +24,6 @@ public abstract class XHook {
 		mMethodName = methodName;
 		mSpecifier = specifier;
 		mSdk = sdk;
-		PrivacyManager.registerHook(restrictionName, getSpecifier(), sdk);
 	}
 
 	protected XHook optional() {

@@ -7,7 +7,6 @@ import java.util.List;
 import android.annotation.SuppressLint;
 import android.content.Intent;
 import android.net.Uri;
-import android.os.Build;
 import android.provider.MediaStore;
 import android.util.Log;
 
@@ -21,6 +20,9 @@ public class XActivity extends XHook {
 		super(restrictionName, method.name(), actionName);
 		mMethod = method;
 		mActionName = actionName;
+		if (method == Methods.startActivities || method == Methods.startActivityFromFragment) {
+			optional();
+		}
 	}
 
 	private XActivity(Methods method, String restrictionName, String actionName, int sdk) {
@@ -56,36 +58,27 @@ public class XActivity extends XHook {
 		getSystemService, startActivities, startActivity, startActivityForResult, startActivityFromChild, startActivityFromFragment, startActivityIfNeeded
 	};
 
-	private static XActivity newXActivity(Methods method, String restrictionName, String actionName) {
-		if (method == Methods.startActivities || method == Methods.startActivityFromFragment) {
-			return new XActivity(method, restrictionName, actionName, Build.VERSION_CODES.HONEYCOMB);
-		} else {
-			return new XActivity(method, restrictionName, actionName);
-		}
-	}
-
 	@SuppressLint("InlinedApi")
 	public static List<XHook> getInstances() {
 		List<XHook> listHook = new ArrayList<XHook>();
-		listHook.add(new XActivity(Methods.getSystemService, null, null));
+		listHook.add(new XActivity(Methods.getSystemService, null, null, 1));
 
 		List<Methods> startMethods = new ArrayList<Methods>(Arrays.asList(Methods.values()));
 		startMethods.remove(Methods.getSystemService);
 
 		// Intent send: browser
 		for (Methods activity : startMethods)
-			listHook.add(newXActivity(activity, PrivacyManager.cView, Intent.ACTION_VIEW));
+			listHook.add(new XActivity(activity, PrivacyManager.cView, Intent.ACTION_VIEW));
 
 		// Intent send: call
 		for (Methods activity : startMethods)
-			listHook.add(newXActivity(activity, PrivacyManager.cCalling, Intent.ACTION_CALL));
+			listHook.add(new XActivity(activity, PrivacyManager.cCalling, Intent.ACTION_CALL));
 
 		// Intent send: media
 		for (Methods activity : startMethods) {
-			listHook.add(newXActivity(activity, PrivacyManager.cMedia, MediaStore.ACTION_IMAGE_CAPTURE));
-			listHook.add(new XActivity(activity, PrivacyManager.cMedia, MediaStore.ACTION_IMAGE_CAPTURE_SECURE,
-					Build.VERSION_CODES.JELLY_BEAN_MR1));
-			listHook.add(newXActivity(activity, PrivacyManager.cMedia, MediaStore.ACTION_VIDEO_CAPTURE));
+			listHook.add(new XActivity(activity, PrivacyManager.cMedia, MediaStore.ACTION_IMAGE_CAPTURE));
+			listHook.add(new XActivity(activity, PrivacyManager.cMedia, MediaStore.ACTION_IMAGE_CAPTURE_SECURE));
+			listHook.add(new XActivity(activity, PrivacyManager.cMedia, MediaStore.ACTION_VIDEO_CAPTURE));
 		}
 
 		return listHook;

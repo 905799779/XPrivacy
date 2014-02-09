@@ -1,6 +1,5 @@
 package biz.bokhorst.xprivacy;
 
-import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -17,10 +16,9 @@ import de.robv.android.xposed.XC_MethodHook.MethodHookParam;
 public class XBinder extends XHook {
 	private Methods mMethod;
 
-	private static byte mMagic = 0;
-	private static boolean mMagical = false;
-	private static int FLAG_XPRIVACY = 0x000000A0;
-	private static int BITS_MAGIC = 16;
+	private static long mToken = 0;
+	private static int BITS_TOKEN = 8;
+	private static int MASK_TOKEN = 0xFFFFFF;
 
 	public static List<String> cListService = Arrays.asList(new String[] { "account", "activity", "clipboard",
 			"connectivity", "location", "telephony.registry", "telephony.msim.registry", "package", "iphonesubinfo",
@@ -44,8 +42,8 @@ public class XBinder extends XHook {
 	});
 	// @formatter:on
 
-	private XBinder(Methods method, String restrictionName) {
-		super(restrictionName, method.name(), null);
+	private XBinder(Methods method, String restrictionName, int sdk) {
+		super(restrictionName, method.name(), null, sdk);
 		mMethod = method;
 	}
 
@@ -55,6 +53,12 @@ public class XBinder extends XHook {
 
 	public boolean isVisible() {
 		return (mMethod != Methods.execTransact);
+	}
+
+	@Override
+	public void setSecret(String secret) {
+		super.setSecret(secret);
+		mToken = (secret.hashCode() & MASK_TOKEN);
 	}
 
 	// @formatter:off
@@ -73,8 +77,8 @@ public class XBinder extends XHook {
 
 	public static List<XHook> getInstances() {
 		List<XHook> listHook = new ArrayList<XHook>();
-		listHook.add(new XBinder(Methods.execTransact, null)); // Binder
-		listHook.add(new XBinder(Methods.transact, null)); // BinderProxy
+		listHook.add(new XBinder(Methods.execTransact, null, 1)); // Binder
+		listHook.add(new XBinder(Methods.transact, null, 1)); // BinderProxy
 		return listHook;
 	}
 
@@ -93,25 +97,22 @@ public class XBinder extends XHook {
 	private void markIPC(MethodHookParam param) {
 		int flags = (Integer) param.args[3];
 		if (flags != 0 && flags != IBinder.FLAG_ONEWAY)
-			Util.log(this, Log.WARN, "flags=" + Integer.toHexString(flags));
-		flags |= FLAG_XPRIVACY;
-		flags |= getMagic() << BITS_MAGIC;
+			Util.log(this, Log.ERROR, "flags=" + Integer.toHexString(flags));
+		flags |= (mToken << BITS_TOKEN);
 		param.args[3] = flags;
-		// Interface name is not always available
 	}
 
 	private void checkIPC(MethodHookParam param) {
 		// Entry point from android_util_Binder.cpp's onTransact
 		int flags = (Integer) param.args[3];
-		byte magic = (byte) (flags >> BITS_MAGIC);
-		boolean flagged = ((flags & FLAG_XPRIVACY) != 0);
+		long token = (flags >> BITS_TOKEN) & MASK_TOKEN;
 		flags &= IBinder.FLAG_ONEWAY;
 		param.args[3] = flags;
 
 		try {
 			if (Process.myUid() > 0) {
 				int uid = Binder.getCallingUid();
-				if (PrivacyManager.isApplication(uid) && !(flagged && magic == getMagic())) {
+				if (token != mToken && PrivacyManager.isApplication(uid)) {
 					// Get interface name
 					Binder binder = (Binder) param.thisObject;
 					String name = binder.getInterfaceDescriptor();
@@ -145,20 +146,6 @@ public class XBinder extends XHook {
 		} catch (Throwable ex) {
 			Util.bug(this, ex);
 		}
-	}
-
-	private static byte getMagic() {
-		if (!mMagical) {
-			// Proguard will generate new names for each release
-			for (Field field : XBinder.class.getDeclaredFields())
-				for (byte b : field.getName().getBytes())
-					mMagic ^= b;
-			for (Method method : XBinder.class.getDeclaredMethods())
-				for (byte b : method.getName().getBytes())
-					mMagic ^= b;
-			mMagical = true;
-		}
-		return mMagic;
 	}
 
 	@Override
