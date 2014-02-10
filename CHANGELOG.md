@@ -17,6 +17,24 @@ Test and beta releases will have experimental functions enabled by default.
 
 [Open issues](https://github.com/M66B/XPrivacy/issues?state=open)
 
+**Version 1.99.39 BETA**
+
+* Fixed allowing contacts in some situations ([issue](/../../issues/1155))
+* Fixed checkbox logic when *Restrict dangerous functions* was not set, thanks @[jpeg729](https://github.com/jpeg729)
+* Attempt to fix keyboard interfering with on demand restricting dialog (reported on XDA)
+* Improved performance
+* Updated German translation
+
+**Version 1.99.38 TEST**
+
+* Fixed allowing contacts in some situations ([issue](/../../issues/1155))
+* Show URI for content providers
+* Added restriction for ICC provider (SIM contacts)
+* Added restriction for profile provider (contacts)
+* Added restriction for contacts provider (fallback)
+* Option to disable asking per function, thanks @[jpeg729](https://github.com/jpeg729)
+* Updated Arabic translation
+
 **Version 1.99.37 BETA**
 
 * Fixed all issues reported with the support info

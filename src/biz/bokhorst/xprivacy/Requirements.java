@@ -11,7 +11,6 @@ import java.util.List;
 import java.util.Map;
 
 import android.app.AlertDialog;
-import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.pm.ApplicationInfo;
@@ -27,7 +26,7 @@ public class Requirements {
 	private static String[] cIncompatible = new String[] { "com.lbe.security" };
 
 	@SuppressWarnings("unchecked")
-	public static void check(final Context context) {
+	public static void check(final ActivityBase context) {
 		// Check Android version
 		if (Build.VERSION.SDK_INT != Build.VERSION_CODES.ICE_CREAM_SANDWICH_MR1
 				&& Build.VERSION.SDK_INT != Build.VERSION_CODES.GINGERBREAD_MR1
@@ -38,7 +37,7 @@ public class Requirements {
 			AlertDialog.Builder alertDialogBuilder = new AlertDialog.Builder(context);
 			alertDialogBuilder.setTitle(R.string.app_name);
 			alertDialogBuilder.setMessage(R.string.app_wrongandroid);
-			alertDialogBuilder.setIcon(Util.getThemed(context, R.attr.icon_launcher));
+			alertDialogBuilder.setIcon(context.getThemed(R.attr.icon_launcher));
 			alertDialogBuilder.setPositiveButton(context.getString(android.R.string.ok),
 					new DialogInterface.OnClickListener() {
 						@Override
@@ -60,7 +59,7 @@ public class Requirements {
 			AlertDialog.Builder alertDialogBuilder = new AlertDialog.Builder(context);
 			alertDialogBuilder.setTitle(R.string.app_name);
 			alertDialogBuilder.setMessage(msg);
-			alertDialogBuilder.setIcon(Util.getThemed(context, R.attr.icon_launcher));
+			alertDialogBuilder.setIcon(context.getThemed(R.attr.icon_launcher));
 			alertDialogBuilder.setPositiveButton(context.getString(android.R.string.ok),
 					new DialogInterface.OnClickListener() {
 						@Override
@@ -90,7 +89,7 @@ public class Requirements {
 			AlertDialog.Builder alertDialogBuilder = new AlertDialog.Builder(context);
 			alertDialogBuilder.setTitle(R.string.app_name);
 			alertDialogBuilder.setMessage(R.string.app_notenabled);
-			alertDialogBuilder.setIcon(Util.getThemed(context, R.attr.icon_launcher));
+			alertDialogBuilder.setIcon(context.getThemed(R.attr.icon_launcher));
 			alertDialogBuilder.setPositiveButton(context.getString(android.R.string.ok),
 					new DialogInterface.OnClickListener() {
 						@Override
@@ -111,7 +110,7 @@ public class Requirements {
 			AlertDialog.Builder alertDialogBuilder = new AlertDialog.Builder(context);
 			alertDialogBuilder.setTitle(R.string.app_name);
 			alertDialogBuilder.setMessage(R.string.app_wrongenabler);
-			alertDialogBuilder.setIcon(Util.getThemed(context, R.attr.icon_launcher));
+			alertDialogBuilder.setIcon(context.getThemed(R.attr.icon_launcher));
 			alertDialogBuilder.setPositiveButton(context.getString(android.R.string.ok),
 					new DialogInterface.OnClickListener() {
 						@Override
@@ -134,7 +133,7 @@ public class Requirements {
 				AlertDialog.Builder alertDialogBuilder = new AlertDialog.Builder(context);
 				alertDialogBuilder.setTitle(R.string.app_name);
 				alertDialogBuilder.setMessage(String.format(context.getString(R.string.app_incompatible), name));
-				alertDialogBuilder.setIcon(Util.getThemed(context, R.attr.icon_launcher));
+				alertDialogBuilder.setIcon(context.getThemed(R.attr.icon_launcher));
 				alertDialogBuilder.setPositiveButton(context.getString(android.R.string.ok),
 						new DialogInterface.OnClickListener() {
 							@Override
@@ -310,14 +309,14 @@ public class Requirements {
 		}
 	}
 
-	private static void reportClass(final Class<?> clazz, final Context context) {
+	private static void reportClass(final Class<?> clazz, final ActivityBase context) {
 		String msg = String.format("Incompatible %s", clazz.getName());
 		Util.log(null, Log.WARN, msg);
 
 		AlertDialog.Builder alertDialogBuilder = new AlertDialog.Builder(context);
 		alertDialogBuilder.setTitle(R.string.app_name);
 		alertDialogBuilder.setMessage(msg);
-		alertDialogBuilder.setIcon(Util.getThemed(context, R.attr.icon_launcher));
+		alertDialogBuilder.setIcon(context.getThemed(R.attr.icon_launcher));
 		alertDialogBuilder.setPositiveButton(context.getString(android.R.string.ok),
 				new DialogInterface.OnClickListener() {
 					@Override
@@ -336,7 +335,7 @@ public class Requirements {
 		alertDialog.show();
 	}
 
-	private static void sendClassInfo(Class<?> clazz, Context context) {
+	private static void sendClassInfo(Class<?> clazz, ActivityBase context) {
 		StringBuilder sb = new StringBuilder();
 		sb.append(clazz.getName());
 		sb.append("\r\n");
@@ -359,12 +358,12 @@ public class Requirements {
 		sendSupportInfo(sb.toString(), context);
 	}
 
-	public static void sendSupportInfo(final String text, final Context context) {
+	public static void sendSupportInfo(final String text, final ActivityBase context) {
 		if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.ICE_CREAM_SANDWICH_MR1) {
 			AlertDialog.Builder alertDialogBuilder = new AlertDialog.Builder(context);
 			alertDialogBuilder.setTitle(R.string.app_name);
 			alertDialogBuilder.setMessage(R.string.msg_support_info);
-			alertDialogBuilder.setIcon(Util.getThemed(context, R.attr.icon_launcher));
+			alertDialogBuilder.setIcon(context.getThemed(R.attr.icon_launcher));
 			alertDialogBuilder.setPositiveButton(context.getString(android.R.string.ok),
 					new DialogInterface.OnClickListener() {
 						@Override

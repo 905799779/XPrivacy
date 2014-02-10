@@ -432,7 +432,7 @@ Please press *OK* to send me the support information so I can look into it.
 <a name="FAQ9"></a>
 **(9) What is the procedure to update a ROM?**
 
-Assuming you don't wish to wipe data and that Xposed and XPrivacye are already installed before updating the ROM, the best procedure to update a ROM is:
+Assuming you don't wish to wipe data and that Xposed and XPrivacy are already installed before updating the ROM, the best procedure to update a ROM is:
 
 1. Export XPrivacy settings
 1. Enable flight mode
@@ -447,7 +447,7 @@ Assuming you don't wish to wipe data and that Xposed and XPrivacye are already i
 1. Disable flight mode
 1. Fake network type (Wi-Fi, mobile)
 
-If you skip the export, clear, or import steps above, some system applications can end up with the wrong restrictions because the the ROM update might have changed these applications' UID's.
+If you skip the export, clear, or import steps above, some system applications can end up with the wrong restrictions because the ROM update might have changed these applications' UID's.
 
 To import and export XPrivacy's data, you need the [pro version](http://www.xprivacy.eu/).
 
@@ -540,7 +540,7 @@ No, because it's too difficult to implement something like XPrivacy on these OS'
 * network type (mobile, Wi-Fi, etc.)
 * synchronization state
 * screen locking
-* sisplay settings
+* display settings
 * Wi-Fi settings
 * Bluetooth settings
 * shortcuts
@@ -614,12 +614,7 @@ The hardware MAC address can be changed on some devices, but this is device-depe
 The same applies to the IMEI number, additionally complicated by legal issues in most countries.
 
 <a name="FAQ34"></a>
-**(34) Why do I need to register to submit restrictions?**
-
-To prevent a malicious application maker from automatically submitting a lot of *allow* restrictions to outvote the other users.
-
-<a name="FAQ35"></a>
-**(35) What is the logic behind on demand restricting?**
+**(34) What is the logic behind on demand restricting?**
 
 * The on demand restricting dialog will appear if:
 	* On demand restricting is enabled in the main settings
@@ -639,6 +634,11 @@ To prevent a malicious application maker from automatically submitting a lot of 
 * The default after dialog timeout:
 	* for a user application the default is to deny temporarily
 	* for a system applications the default is to allow temporarily, unless *Restrict dangerous functions* is enabled
+
+<a name="FAQ46"></a>
+**(46) Why do I need to register to submit restrictions?**
+
+To prevent a malicious application maker from automatically submitting a lot of *allow* restrictions to outvote the other users.
 
 Support
 -------
@@ -670,7 +670,7 @@ If you have any question, you can leave a message in the [XDA XPrivacy forum thr
 It is okay to use my personal or XDA e-mail for things that cannot be shared in public,
 such as security reports.
 
-**There is no support for anything else than privacy, so not for game cheating, root cloacking, etc.**
+**There is no support for anything else than privacy, so not for game cheating, root cloaking, etc.**
 
 Changelog
 ---------
@@ -718,6 +718,7 @@ News
 * [XPrivacy Android - Schutz gegen Datensammler](http://www.kuketz-blog.de/xprivacy-android-schutz-gegen-datensammler/) (August 1, 2013)
 * [Black Duck Announces Open Source Rookies of the Year Winners](http://www.blackducksoftware.com/news/releases/black-duck-announces-open-source-rookies-year-winners) (January 28, 2014)
 * [The Open Source Rookies of the Year Awards](http://www.infoworld.com/d/open-source-software/the-open-source-rookies-of-the-year-awards-235116) (January 28, 2014)
+* [XPrivacy تطبيق](http://waleedhassan.wordpress.com/2014/01/31/xprivacy/) (January 31, 2014)
 
 Contributing
 ------------
@@ -754,7 +755,7 @@ Current translations:
 1. Polish (pl)
 1. Portuguese (pt)
 1. Romanian (ro)
-1. Rusian (ru)
+1. Russian (ru)
 1. Serbian (sr)
 1. Simplified Chinese (zh-rCN)
 1. Slovak (sk)
@@ -782,7 +783,7 @@ Using Eclipse:
 * Close Eclipse and copy the project from the temporary location over the imported project
 	* Make sure you copy all hidden files
 * Add the Xposed library to the build path as described [here](https://github.com/rovo89/XposedBridge/wiki/Development-tutorial#making-the-project-an-xposed-module)
-* Add the Google Play services library as decribed [here](https://developer.android.com/google/play-services/setup.html)
+* Add the Google Play services library as described [here](https://developer.android.com/google/play-services/setup.html)
 
 Testing:
 

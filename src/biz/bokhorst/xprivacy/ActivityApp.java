@@ -50,7 +50,6 @@ import android.view.Window;
 import android.view.WindowManager;
 import android.widget.BaseExpandableListAdapter;
 import android.widget.Button;
-import android.widget.CheckedTextView;
 import android.widget.CompoundButton;
 import android.widget.ExpandableListView;
 import android.widget.ImageView;
@@ -60,7 +59,7 @@ import android.widget.RelativeLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 
-public class ActivityApp extends Activity {
+public class ActivityApp extends ActivityBase {
 	private int mThemeId;
 	private ApplicationInfoEx mAppInfo = null;
 	private RestrictionAdapter mPrivacyListAdapter = null;
@@ -160,7 +159,7 @@ public class ActivityApp extends Activity {
 		// Background color
 		if (mAppInfo.isSystem()) {
 			LinearLayout llInfo = (LinearLayout) findViewById(R.id.llInfo);
-			llInfo.setBackgroundColor(getResources().getColor(Util.getThemed(this, R.attr.color_dangerous)));
+			llInfo.setBackgroundColor(getResources().getColor(getThemed(R.attr.color_dangerous)));
 		}
 
 		// Display app icon
@@ -237,7 +236,7 @@ public class ActivityApp extends Activity {
 		// Up navigation
 		getSupportActionBar().setDisplayHomeAsUpEnabled(true);
 
-		mCheck = Util.getTriStateCheckBox(this);
+		mCheck = getTriStateCheckBox();
 
 		// Tutorial
 		if (!PrivacyManager.getSettingBool(0, PrivacyManager.cSettingTutorialDetails, false, false)) {
@@ -434,7 +433,7 @@ public class ActivityApp extends Activity {
 		dialog.requestWindowFeature(Window.FEATURE_LEFT_ICON);
 		dialog.setTitle(R.string.menu_help);
 		dialog.setContentView(R.layout.help);
-		dialog.setFeatureDrawableResource(Window.FEATURE_LEFT_ICON, Util.getThemed(this, R.attr.icon_launcher));
+		dialog.setFeatureDrawableResource(Window.FEATURE_LEFT_ICON, getThemed(R.attr.icon_launcher));
 		ImageView imgHelpHalf = (ImageView) dialog.findViewById(R.id.imgHelpHalf);
 		imgHelpHalf.setImageBitmap(mCheck[1]);
 		dialog.setCancelable(true);
@@ -467,7 +466,7 @@ public class ActivityApp extends Activity {
 		AlertDialog.Builder alertDialogBuilder = new AlertDialog.Builder(ActivityApp.this);
 		alertDialogBuilder.setTitle(getString(restrict ? R.string.menu_apply : R.string.menu_clear_all));
 		alertDialogBuilder.setMessage(R.string.msg_sure);
-		alertDialogBuilder.setIcon(Util.getThemed(this, R.attr.icon_launcher));
+		alertDialogBuilder.setIcon(getThemed(R.attr.icon_launcher));
 		alertDialogBuilder.setPositiveButton(getString(android.R.string.ok), new DialogInterface.OnClickListener() {
 			@Override
 			public void onClick(DialogInterface dialog, int which) {
@@ -502,7 +501,7 @@ public class ActivityApp extends Activity {
 		AlertDialog.Builder alertDialogBuilder = new AlertDialog.Builder(ActivityApp.this);
 		alertDialogBuilder.setTitle(R.string.menu_clear_all);
 		alertDialogBuilder.setMessage(R.string.msg_sure);
-		alertDialogBuilder.setIcon(Util.getThemed(this, R.attr.icon_launcher));
+		alertDialogBuilder.setIcon(getThemed(R.attr.icon_launcher));
 		alertDialogBuilder.setPositiveButton(getString(android.R.string.ok), new DialogInterface.OnClickListener() {
 			@Override
 			public void onClick(DialogInterface dialog, int which) {
@@ -603,7 +602,7 @@ public class ActivityApp extends Activity {
 		AlertDialog.Builder alertDialogBuilder = new AlertDialog.Builder(ActivityApp.this);
 		alertDialogBuilder.setTitle(R.string.menu_app_kill);
 		alertDialogBuilder.setMessage(R.string.msg_sure);
-		alertDialogBuilder.setIcon(Util.getThemed(this, R.attr.icon_launcher));
+		alertDialogBuilder.setIcon(getThemed(R.attr.icon_launcher));
 		alertDialogBuilder.setPositiveButton(getString(android.R.string.ok), new DialogInterface.OnClickListener() {
 			@Override
 			public void onClick(DialogInterface dialog, int _which) {
@@ -656,7 +655,7 @@ public class ActivityApp extends Activity {
 				// Build dialog
 				AlertDialog.Builder alertDialogBuilder = new AlertDialog.Builder(ActivityApp.this);
 				alertDialogBuilder.setTitle(R.string.menu_accounts);
-				alertDialogBuilder.setIcon(Util.getThemed(ActivityApp.this, R.attr.icon_launcher));
+				alertDialogBuilder.setIcon(getThemed(R.attr.icon_launcher));
 				alertDialogBuilder.setMultiChoiceItems(mListAccount.toArray(new CharSequence[0]), mSelection,
 						new DialogInterface.OnMultiChoiceClickListener() {
 							public void onClick(DialogInterface dialog, int whichButton, boolean isChecked) {
@@ -731,7 +730,7 @@ public class ActivityApp extends Activity {
 				// Build dialog
 				AlertDialog.Builder alertDialogBuilder = new AlertDialog.Builder(ActivityApp.this);
 				alertDialogBuilder.setTitle(R.string.menu_applications);
-				alertDialogBuilder.setIcon(Util.getThemed(ActivityApp.this, R.attr.icon_launcher));
+				alertDialogBuilder.setIcon(getThemed(R.attr.icon_launcher));
 				alertDialogBuilder.setMultiChoiceItems(mApp, mSelection,
 						new DialogInterface.OnMultiChoiceClickListener() {
 							public void onClick(DialogInterface dialog, int whichButton, boolean isChecked) {
@@ -806,7 +805,7 @@ public class ActivityApp extends Activity {
 				// Build dialog
 				AlertDialog.Builder alertDialogBuilder = new AlertDialog.Builder(ActivityApp.this);
 				alertDialogBuilder.setTitle(R.string.menu_contacts);
-				alertDialogBuilder.setIcon(Util.getThemed(ActivityApp.this, R.attr.icon_launcher));
+				alertDialogBuilder.setIcon(getThemed(R.attr.icon_launcher));
 				alertDialogBuilder.setMultiChoiceItems(mListContact.toArray(new CharSequence[0]), mSelection,
 						new DialogInterface.OnMultiChoiceClickListener() {
 							public void onClick(DialogInterface dialog, int whichButton, boolean isChecked) {
@@ -900,7 +899,6 @@ public class ActivityApp extends Activity {
 			public ImageView imgInfo;
 			public TextView tvName;
 			public ImageView imgCBName;
-			public TextView tvOnDemand;
 			public RelativeLayout rlName;
 
 			public GroupViewHolder(View theRow, int thePosition) {
@@ -912,7 +910,6 @@ public class ActivityApp extends Activity {
 				imgInfo = (ImageView) row.findViewById(R.id.imgInfo);
 				tvName = (TextView) row.findViewById(R.id.tvName);
 				imgCBName = (ImageView) row.findViewById(R.id.imgCBName);
-				tvOnDemand = (TextView) row.findViewById(R.id.tvOnDemand);
 				rlName = (RelativeLayout) row.findViewById(R.id.rlName);
 			}
 		}
@@ -923,10 +920,7 @@ public class ActivityApp extends Activity {
 			private String restrictionName;
 			private boolean used;
 			private boolean permission;
-			private boolean crestricted;
-			private boolean allRestricted;
-			private boolean someRestricted;
-			private boolean asked;
+			private RState rstate;
 
 			public GroupHolderTask(int thePosition, GroupViewHolder theHolder, String theRestrictionName) {
 				position = thePosition;
@@ -940,23 +934,7 @@ public class ActivityApp extends Activity {
 					// Get info
 					used = (PrivacyManager.getUsage(mAppInfo.getUid(), restrictionName, null) != 0);
 					permission = PrivacyManager.hasPermission(ActivityApp.this, mAppInfo, restrictionName);
-					PRestriction query = PrivacyManager.getRestrictionEx(mAppInfo.getUid(), restrictionName, null);
-					crestricted = PrivacyManager.getRestrictionEx(mAppInfo.getUid(), restrictionName, null).restricted;
-
-					// Get all/some restricted
-					allRestricted = true;
-					someRestricted = false;
-					for (PRestriction restriction : PrivacyManager.getRestrictionList(mAppInfo.getUid(),
-							restrictionName)) {
-						allRestricted = (allRestricted && restriction.restricted);
-						someRestricted = (someRestricted || restriction.restricted);
-					}
-
-					if (PrivacyManager
-							.getSettingBool(-mAppInfo.getUid(), PrivacyManager.cSettingOnDemand, false, false))
-						asked = query.asked;
-					else
-						asked = true;
+					rstate = RState.get(mAppInfo.getUid(), restrictionName, null);
 
 					return holder;
 				}
@@ -972,47 +950,32 @@ public class ActivityApp extends Activity {
 					holder.imgGranted.setVisibility(permission ? View.VISIBLE : View.INVISIBLE);
 
 					// Display restriction
-					if (allRestricted)
-						holder.imgCBName.setImageBitmap(mCheck[2]); // Full
-					else if (someRestricted || crestricted)
+					if (!rstate.asked)
+						holder.imgCBName.setImageBitmap(mCheck[3]); // ?
+					else if (rstate.partial)
 						holder.imgCBName.setImageBitmap(mCheck[1]); // Half
+					else if (rstate.restricted)
+						holder.imgCBName.setImageBitmap(mCheck[2]); // Full
 					else
 						holder.imgCBName.setImageBitmap(mCheck[0]); // Off
 					holder.imgCBName.setVisibility(View.VISIBLE);
-
-					holder.tvOnDemand.setVisibility(asked ? View.INVISIBLE : View.VISIBLE);
 
 					// Listen for restriction changes
 					holder.rlName.setOnClickListener(new View.OnClickListener() {
 						@Override
 						public void onClick(View view) {
-							crestricted = PrivacyManager.getRestrictionEx(mAppInfo.getUid(), restrictionName, null).restricted;
-							crestricted = !crestricted;
+							// Set change
+							boolean ask = rstate.asked;
+							boolean restrict = ask ? !rstate.restricted : rstate.restricted;
+
 							List<Boolean> oldState = PrivacyManager.getRestartStates(mAppInfo.getUid(), restrictionName);
-							if (!crestricted)
+							if (!restrict)
 								PrivacyManager.deleteRestrictions(mAppInfo.getUid(), restrictionName);
-							PrivacyManager.setRestriction(mAppInfo.getUid(), restrictionName, null, crestricted, false);
+							PrivacyManager.setRestriction(mAppInfo.getUid(), restrictionName, null, restrict, !ask);
 							List<Boolean> newState = PrivacyManager.getRestartStates(mAppInfo.getUid(), restrictionName);
 
-							// Update all/some restricted
-							allRestricted = true;
-							someRestricted = false;
-							for (PRestriction restriction : PrivacyManager.getRestrictionList(mAppInfo.getUid(),
-									restrictionName)) {
-								allRestricted = (allRestricted && restriction.restricted);
-								someRestricted = (someRestricted || restriction.restricted);
-							}
-
-							// Display restriction
-							if (allRestricted)
-								holder.imgCBName.setImageBitmap(mCheck[2]); // Full
-							else if (someRestricted || crestricted)
-								holder.imgCBName.setImageBitmap(mCheck[1]); // Half
-							else
-								holder.imgCBName.setImageBitmap(mCheck[0]); // Off
-
 							// Refresh display
-							notifyDataSetChanged(); // Needed to update childs
+							notifyDataSetChanged(); // Needed to update children
 
 							// Notify restart
 							if (!newState.equals(oldState))
@@ -1040,8 +1003,8 @@ public class ActivityApp extends Activity {
 			final String restrictionName = (String) getGroup(groupPosition);
 
 			// Indicator state
-			holder.imgIndicator.setImageResource(Util.getThemed(ActivityApp.this,
-					isExpanded ? R.attr.icon_expander_maximized : R.attr.icon_expander_minimized));
+			holder.imgIndicator.setImageResource(getThemed(isExpanded ? R.attr.icon_expander_maximized
+					: R.attr.icon_expander_minimized));
 
 			// Disable indicator for empty groups
 			if (getChildrenCount(groupPosition) == 0)
@@ -1072,7 +1035,6 @@ public class ActivityApp extends Activity {
 
 			// Display restriction
 			holder.imgCBName.setVisibility(View.INVISIBLE);
-			holder.tvOnDemand.setVisibility(View.INVISIBLE);
 
 			// Async update
 			new GroupHolderTask(groupPosition, holder, restrictionName).executeOnExecutor(mExecutor, (Object) null);
@@ -1126,8 +1088,9 @@ public class ActivityApp extends Activity {
 			public ImageView imgUsed;
 			public ImageView imgGranted;
 			public ImageView imgInfo;
-			public CheckedTextView ctvMethodName;
-			private TextView tvOnDemand;
+			public TextView tvMethodName;
+			public ImageView imgCBMethodName;
+			public RelativeLayout rlMethodName;
 
 			private ChildViewHolder(View theRow, int gPosition, int cPosition) {
 				row = theRow;
@@ -1136,8 +1099,9 @@ public class ActivityApp extends Activity {
 				imgUsed = (ImageView) row.findViewById(R.id.imgUsed);
 				imgGranted = (ImageView) row.findViewById(R.id.imgGranted);
 				imgInfo = (ImageView) row.findViewById(R.id.imgInfo);
-				ctvMethodName = (CheckedTextView) row.findViewById(R.id.ctvMethodName);
-				tvOnDemand = (TextView) row.findViewById(R.id.tvOnDemand);
+				tvMethodName = (TextView) row.findViewById(R.id.tvMethodName);
+				imgCBMethodName = (ImageView) row.findViewById(R.id.imgCBMethodName);
+				rlMethodName = (RelativeLayout) row.findViewById(R.id.rlMethodName);
 			}
 		}
 
@@ -1148,10 +1112,9 @@ public class ActivityApp extends Activity {
 			private String restrictionName;
 			private Hook md;
 			private long lastUsage;
-			private boolean parentRestricted;
+			private PRestriction parent;
 			private boolean permission;
-			private boolean restricted;
-			private boolean asked;
+			private RState rstate;
 
 			public ChildHolderTask(int gPosition, int cPosition, ChildViewHolder theHolder, String theRestrictionName) {
 				groupPosition = gPosition;
@@ -1166,17 +1129,9 @@ public class ActivityApp extends Activity {
 					// Get info
 					md = (Hook) getChild(groupPosition, childPosition);
 					lastUsage = PrivacyManager.getUsage(mAppInfo.getUid(), restrictionName, md.getName());
-					parentRestricted = PrivacyManager.getRestrictionEx(mAppInfo.getUid(), restrictionName, null).restricted;
+					parent = PrivacyManager.getRestrictionEx(mAppInfo.getUid(), restrictionName, null);
 					permission = PrivacyManager.hasPermission(ActivityApp.this, mAppInfo, md);
-					PRestriction query = PrivacyManager.getRestrictionEx(mAppInfo.getUid(), restrictionName,
-							md.getName());
-					restricted = query.restricted;
-
-					if (PrivacyManager
-							.getSettingBool(-mAppInfo.getUid(), PrivacyManager.cSettingOnDemand, false, false))
-						asked = query.asked;
-					else
-						asked = true;
+					rstate = RState.get(mAppInfo.getUid(), restrictionName, md.getName());
 
 					return holder;
 				}
@@ -1190,28 +1145,36 @@ public class ActivityApp extends Activity {
 					if (lastUsage > 0) {
 						CharSequence sLastUsage = DateUtils.getRelativeTimeSpanString(lastUsage, new Date().getTime(),
 								DateUtils.SECOND_IN_MILLIS, 0);
-						holder.ctvMethodName.setText(String.format("%s (%s)", md.getName(), sLastUsage));
+						holder.tvMethodName.setText(String.format("%s (%s)", md.getName(), sLastUsage));
 					}
-					holder.ctvMethodName.setEnabled(parentRestricted);
-					holder.imgUsed.setImageResource(Util.getThemed(ActivityApp.this,
-							md.hasUsageData() ? R.attr.icon_used : R.attr.icon_used_grayed));
+					holder.tvMethodName.setEnabled(parent.restricted || !parent.asked);
+					holder.imgUsed.setImageResource(getThemed(md.hasUsageData() ? R.attr.icon_used
+							: R.attr.icon_used_grayed));
 					holder.imgUsed.setVisibility(lastUsage == 0 && md.hasUsageData() ? View.INVISIBLE : View.VISIBLE);
-					holder.ctvMethodName.setTypeface(null, lastUsage == 0 ? Typeface.NORMAL : Typeface.BOLD_ITALIC);
+					holder.tvMethodName.setTypeface(null, lastUsage == 0 ? Typeface.NORMAL : Typeface.BOLD_ITALIC);
 					holder.imgGranted.setVisibility(permission ? View.VISIBLE : View.INVISIBLE);
-					holder.ctvMethodName.setChecked(restricted);
 
-					holder.tvOnDemand.setVisibility(asked ? View.INVISIBLE : View.VISIBLE);
+					// Display restriction
+					if (!rstate.asked)
+						holder.imgCBMethodName.setImageBitmap(mCheck[3]); // ?
+					else if (rstate.partial)
+						holder.imgCBMethodName.setImageBitmap(mCheck[1]); // Half
+					else if (rstate.restricted)
+						holder.imgCBMethodName.setImageBitmap(mCheck[2]); // Full
+					else
+						holder.imgCBMethodName.setImageBitmap(mCheck[0]); // Off
+					holder.imgCBMethodName.setVisibility(View.VISIBLE);
 
 					// Listen for restriction changes
-					holder.ctvMethodName.setOnClickListener(new View.OnClickListener() {
+					holder.rlMethodName.setOnClickListener(new View.OnClickListener() {
 						@Override
 						public void onClick(View view) {
-							boolean restricted = PrivacyManager.getRestrictionEx(mAppInfo.getUid(), restrictionName,
-									md.getName()).restricted;
-							restricted = !restricted;
-							holder.ctvMethodName.setChecked(restricted);
-							PrivacyManager.setRestriction(mAppInfo.getUid(), restrictionName, md.getName(), restricted,
-									false);
+							// Set change
+							boolean ask = rstate.asked;
+							boolean restrict = ask ? !rstate.restricted : rstate.restricted;
+
+							PrivacyManager.setRestriction(mAppInfo.getUid(), restrictionName, md.getName(), restrict,
+									!ask);
 
 							// Refresh display
 							notifyDataSetChanged(); // Needed to update parent
@@ -1224,15 +1187,15 @@ public class ActivityApp extends Activity {
 					});
 
 					// Listen for long press
-					holder.ctvMethodName.setOnLongClickListener(new View.OnLongClickListener() {
+					holder.rlMethodName.setOnLongClickListener(new View.OnLongClickListener() {
 						@Override
 						public boolean onLongClick(View view) {
 							md.toggleDangerous();
 
 							// Reset background color
 							if (md.isDangerous())
-								holder.row.setBackgroundColor(getResources().getColor(
-										Util.getThemed(ActivityApp.this, R.attr.color_dangerous)));
+								holder.row.setBackgroundColor(getResources()
+										.getColor(getThemed(R.attr.color_dangerous)));
 							else
 								holder.row.setBackgroundColor(Color.TRANSPARENT);
 
@@ -1263,15 +1226,14 @@ public class ActivityApp extends Activity {
 
 			// Set background color
 			if (md.isDangerous())
-				holder.row.setBackgroundColor(getResources().getColor(
-						Util.getThemed(ActivityApp.this, R.attr.color_dangerous)));
+				holder.row.setBackgroundColor(getResources().getColor(getThemed(R.attr.color_dangerous)));
 			else
 				holder.row.setBackgroundColor(Color.TRANSPARENT);
 
 			// Display method name
-			holder.ctvMethodName.setText(md.getName());
-			holder.ctvMethodName.setEnabled(false);
-			holder.ctvMethodName.setTypeface(null, Typeface.NORMAL);
+			holder.tvMethodName.setText(md.getName());
+			holder.tvMethodName.setEnabled(false);
+			holder.tvMethodName.setTypeface(null, Typeface.NORMAL);
 
 			// Display if used
 			holder.imgUsed.setVisibility(View.INVISIBLE);
@@ -1315,8 +1277,7 @@ public class ActivityApp extends Activity {
 			}
 
 			// Display restriction
-			holder.ctvMethodName.setChecked(false);
-			holder.ctvMethodName.setClickable(false);
+			holder.tvMethodName.setClickable(false);
 
 			// Async update
 			new ChildHolderTask(groupPosition, childPosition, holder, restrictionName).executeOnExecutor(mExecutor,

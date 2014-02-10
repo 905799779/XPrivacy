@@ -67,7 +67,7 @@ import android.widget.Spinner;
 import android.widget.TextView;
 import android.widget.Toast;
 
-public class ActivityMain extends Activity implements OnItemSelectedListener {
+public class ActivityMain extends ActivityBase implements OnItemSelectedListener {
 	private int mThemeId;
 	private Spinner spRestriction = null;
 	private AppListAdapter mAppAdapter = null;
@@ -238,8 +238,7 @@ public class ActivityMain extends Activity implements OnItemSelectedListener {
 				String text = etFilter.getText().toString();
 				ImageView imgClear = (ImageView) findViewById(R.id.imgClear);
 				imgClear.setImageDrawable(getResources().getDrawable(
-						Util.getThemed(ActivityMain.this, text.equals("") ? R.attr.icon_clear_grayed
-								: R.attr.icon_clear)));
+						getThemed(text.equals("") ? R.attr.icon_clear_grayed : R.attr.icon_clear)));
 				applyFilter();
 			}
 
@@ -285,7 +284,7 @@ public class ActivityMain extends Activity implements OnItemSelectedListener {
 		}
 
 		// Build tri-state check box images
-		mCheck = Util.getTriStateCheckBox(this);
+		mCheck = getTriStateCheckBox();
 
 		// Tutorial
 		if (!PrivacyManager.getSettingBool(0, PrivacyManager.cSettingTutorialMain, false, false)) {
@@ -594,7 +593,7 @@ public class ActivityMain extends Activity implements OnItemSelectedListener {
 		AlertDialog.Builder alertDialogBuilder = new AlertDialog.Builder(ActivityMain.this);
 		alertDialogBuilder.setTitle(R.string.menu_clear_db);
 		alertDialogBuilder.setMessage(R.string.msg_sure);
-		alertDialogBuilder.setIcon(Util.getThemed(ActivityMain.this, R.attr.icon_launcher));
+		alertDialogBuilder.setIcon(getThemed(R.attr.icon_launcher));
 		alertDialogBuilder.setPositiveButton(getString(android.R.string.ok), new DialogInterface.OnClickListener() {
 			@Override
 			public void onClick(DialogInterface dialog, int which) {
@@ -639,7 +638,7 @@ public class ActivityMain extends Activity implements OnItemSelectedListener {
 		// Build dialog
 		AlertDialog.Builder alertDialogBuilder = new AlertDialog.Builder(this);
 		alertDialogBuilder.setTitle(R.string.menu_template);
-		alertDialogBuilder.setIcon(Util.getThemed(this, R.attr.icon_launcher));
+		alertDialogBuilder.setIcon(getThemed(R.attr.icon_launcher));
 		alertDialogBuilder.setMultiChoiceItems(options, selection, new DialogInterface.OnMultiChoiceClickListener() {
 			public void onClick(DialogInterface dialog, int whichButton, boolean isChecked) {
 				String templateName = PrivacyManager.cSettingTemplate + "." + listLocalizedTitle.get(whichButton);
@@ -687,7 +686,7 @@ public class ActivityMain extends Activity implements OnItemSelectedListener {
 				AlertDialog.Builder alertDialogBuilder = new AlertDialog.Builder(this);
 				alertDialogBuilder.setTitle(R.string.app_name);
 				alertDialogBuilder.setMessage(R.string.msg_select);
-				alertDialogBuilder.setIcon(Util.getThemed(this, R.attr.icon_launcher));
+				alertDialogBuilder.setIcon(getThemed(R.attr.icon_launcher));
 				alertDialogBuilder.setPositiveButton(getString(android.R.string.ok),
 						new DialogInterface.OnClickListener() {
 							@Override
@@ -707,7 +706,7 @@ public class ActivityMain extends Activity implements OnItemSelectedListener {
 				AlertDialog.Builder alertDialogBuilder = new AlertDialog.Builder(this);
 				alertDialogBuilder.setTitle(R.string.app_name);
 				alertDialogBuilder.setMessage(getString(R.string.msg_limit, ActivityShare.cSubmitLimit + 1));
-				alertDialogBuilder.setIcon(Util.getThemed(this, R.attr.icon_launcher));
+				alertDialogBuilder.setIcon(getThemed(R.attr.icon_launcher));
 				alertDialogBuilder.setPositiveButton(getString(android.R.string.ok),
 						new DialogInterface.OnClickListener() {
 							@Override
@@ -760,7 +759,7 @@ public class ActivityMain extends Activity implements OnItemSelectedListener {
 		dlgAbout.requestWindowFeature(Window.FEATURE_LEFT_ICON);
 		dlgAbout.setTitle(R.string.menu_about);
 		dlgAbout.setContentView(R.layout.about);
-		dlgAbout.setFeatureDrawableResource(Window.FEATURE_LEFT_ICON, Util.getThemed(this, R.attr.icon_launcher));
+		dlgAbout.setFeatureDrawableResource(Window.FEATURE_LEFT_ICON, getThemed(R.attr.icon_launcher));
 
 		// Show version
 		try {
@@ -795,7 +794,7 @@ public class ActivityMain extends Activity implements OnItemSelectedListener {
 		dialog.requestWindowFeature(Window.FEATURE_LEFT_ICON);
 		dialog.setTitle(R.string.menu_help);
 		dialog.setContentView(R.layout.help);
-		dialog.setFeatureDrawableResource(Window.FEATURE_LEFT_ICON, Util.getThemed(this, R.attr.icon_launcher));
+		dialog.setFeatureDrawableResource(Window.FEATURE_LEFT_ICON, getThemed(R.attr.icon_launcher));
 		ImageView imgHelpHalf = (ImageView) dialog.findViewById(R.id.imgHelpHalf);
 		imgHelpHalf.setImageBitmap(mCheck[1]);
 		dialog.setCancelable(true);
@@ -837,7 +836,7 @@ public class ActivityMain extends Activity implements OnItemSelectedListener {
 		// Build dialog
 		AlertDialog.Builder alertDialogBuilder = new AlertDialog.Builder(ActivityMain.this);
 		alertDialogBuilder.setTitle(R.string.menu_sort);
-		alertDialogBuilder.setIcon(Util.getThemed(ActivityMain.this, R.attr.icon_launcher));
+		alertDialogBuilder.setIcon(getThemed(R.attr.icon_launcher));
 		alertDialogBuilder.setView(view);
 		alertDialogBuilder.setPositiveButton(ActivityMain.this.getString(android.R.string.ok),
 				new DialogInterface.OnClickListener() {
@@ -945,7 +944,7 @@ public class ActivityMain extends Activity implements OnItemSelectedListener {
 		// Build dialog
 		AlertDialog.Builder alertDialogBuilder = new AlertDialog.Builder(ActivityMain.this);
 		alertDialogBuilder.setTitle(R.string.menu_filter);
-		alertDialogBuilder.setIcon(Util.getThemed(ActivityMain.this, R.attr.icon_launcher));
+		alertDialogBuilder.setIcon(getThemed(R.attr.icon_launcher));
 		alertDialogBuilder.setView(view);
 		alertDialogBuilder.setPositiveButton(ActivityMain.this.getString(android.R.string.ok),
 				new DialogInterface.OnClickListener() {
@@ -1327,7 +1326,6 @@ public class ActivityMain extends Activity implements OnItemSelectedListener {
 			public ImageView imgFrozen;
 			public TextView tvName;
 			public ImageView imgCBName;
-			public TextView tvOnDemand;
 			public RelativeLayout rlName;
 
 			public ViewHolder(View theRow, int thePosition) {
@@ -1342,7 +1340,6 @@ public class ActivityMain extends Activity implements OnItemSelectedListener {
 				imgFrozen = (ImageView) row.findViewById(R.id.imgFrozen);
 				tvName = (TextView) row.findViewById(R.id.tvName);
 				imgCBName = (ImageView) row.findViewById(R.id.imgCBName);
-				tvOnDemand = (TextView) row.findViewById(R.id.tvOnDemand);
 				rlName = (RelativeLayout) row.findViewById(R.id.rlName);
 			}
 		}
@@ -1355,11 +1352,7 @@ public class ActivityMain extends Activity implements OnItemSelectedListener {
 			private boolean used;
 			private boolean enabled;
 			private boolean granted;
-			private List<String> listRestriction;
-			private boolean crestricted;
-			private boolean allRestricted;
-			private boolean someRestricted;
-			private boolean onDemand;
+			private RState rstate;
 
 			public HolderTask(int thePosition, ViewHolder theHolder, ApplicationInfoEx theAppInfo) {
 				position = thePosition;
@@ -1386,41 +1379,8 @@ public class ActivityMain extends Activity implements OnItemSelectedListener {
 						if (!PrivacyManager.hasPermission(ActivityMain.this, xAppInfo, mRestrictionName))
 							granted = false;
 
-					// Get restrictions
-					if (mRestrictionName == null)
-						listRestriction = PrivacyManager.getRestrictions();
-					else {
-						listRestriction = new ArrayList<String>();
-						listRestriction.add(mRestrictionName);
-					}
-
-					crestricted = false;
-					PRestriction query = null;
-					for (String restrictionName : listRestriction) {
-						query = PrivacyManager.getRestrictionEx(xAppInfo.getUid(), restrictionName, null);
-						if (query.restricted) {
-							crestricted = true;
-							break;
-						}
-					}
-
-					// Get all/some restricted
-					allRestricted = true;
-					someRestricted = false;
-					for (PRestriction restriction : PrivacyManager.getRestrictionList(xAppInfo.getUid(),
-							mRestrictionName)) {
-						allRestricted = (allRestricted && restriction.restricted);
-						someRestricted = (someRestricted || restriction.restricted);
-					}
-
-					// Get if on demand
-					onDemand = false;
-					if (PrivacyManager.getSettingBool(0, PrivacyManager.cSettingOnDemand, true, false)) {
-						onDemand = PrivacyManager.getSettingBool(-xAppInfo.getUid(), PrivacyManager.cSettingOnDemand,
-								false, false);
-						if (onDemand && mRestrictionName != null)
-							onDemand = !query.asked;
-					}
+					// Get restriction/ask state
+					rstate = RState.get(xAppInfo.getUid(), mRestrictionName, null);
 
 					return holder;
 				}
@@ -1432,21 +1392,20 @@ public class ActivityMain extends Activity implements OnItemSelectedListener {
 				if (holder.position == position && result != null) {
 					// Set background color
 					if (xAppInfo.isSystem())
-						holder.llAppType.setBackgroundColor(getResources().getColor(
-								Util.getThemed(ActivityMain.this, R.attr.color_dangerous)));
+						holder.llAppType.setBackgroundColor(getResources().getColor(getThemed(R.attr.color_dangerous)));
 					else
 						holder.llAppType.setBackgroundColor(Color.TRANSPARENT);
 
 					// Display state
 					if (state == STATE_ATTENTION)
 						holder.vwState.setBackgroundColor(getResources().getColor(
-								Util.getThemed(ActivityMain.this, R.attr.color_state_attention)));
+								getThemed(R.attr.color_state_attention)));
 					else if (state == STATE_SHARED)
-						holder.vwState.setBackgroundColor(getResources().getColor(
-								Util.getThemed(ActivityMain.this, R.attr.color_state_shared)));
+						holder.vwState
+								.setBackgroundColor(getResources().getColor(getThemed(R.attr.color_state_shared)));
 					else
 						holder.vwState.setBackgroundColor(getResources().getColor(
-								Util.getThemed(ActivityMain.this, R.attr.color_state_restricted)));
+								getThemed(R.attr.color_state_restricted)));
 
 					// Display icon
 					holder.imgIcon.setImageDrawable(xAppInfo.getIcon(ActivityMain.this));
@@ -1468,21 +1427,19 @@ public class ActivityMain extends Activity implements OnItemSelectedListener {
 							.setVisibility(xAppInfo.isFrozen(ActivityMain.this) ? View.VISIBLE : View.INVISIBLE);
 
 					// Display restriction
-					if (allRestricted)
-						holder.imgCBName.setImageBitmap(mCheck[2]); // Full
-					else if (someRestricted || crestricted)
+					if (!rstate.asked)
+						holder.imgCBName.setImageBitmap(mCheck[3]); // ?
+					else if (rstate.partial)
 						holder.imgCBName.setImageBitmap(mCheck[1]); // Half
+					else if (rstate.restricted)
+						holder.imgCBName.setImageBitmap(mCheck[2]); // Full
 					else
 						holder.imgCBName.setImageBitmap(mCheck[0]); // Off
 					holder.imgCBName.setVisibility(View.VISIBLE);
 
-					// Display on demand state
-					holder.tvOnDemand.setVisibility(onDemand ? View.VISIBLE : View.INVISIBLE);
-
 					// Display enabled state
 					holder.tvName.setEnabled(enabled);
 					holder.imgCBName.setEnabled(enabled);
-					holder.tvOnDemand.setEnabled(enabled);
 					holder.rlName.setEnabled(enabled);
 
 					// Display selection
@@ -1515,11 +1472,11 @@ public class ActivityMain extends Activity implements OnItemSelectedListener {
 						@Override
 						public void onClick(final View view) {
 							// Process click
-							if (mRestrictionName == null && someRestricted) {
+							if (mRestrictionName == null && rstate.restricted != false) {
 								AlertDialog.Builder alertDialogBuilder = new AlertDialog.Builder(ActivityMain.this);
 								alertDialogBuilder.setTitle(R.string.menu_clear_all);
 								alertDialogBuilder.setMessage(R.string.msg_sure);
-								alertDialogBuilder.setIcon(Util.getThemed(ActivityMain.this, R.attr.icon_launcher));
+								alertDialogBuilder.setIcon(getThemed(R.attr.icon_launcher));
 								alertDialogBuilder.setPositiveButton(getString(android.R.string.ok),
 										new DialogInterface.OnClickListener() {
 											@Override
@@ -1531,17 +1488,13 @@ public class ActivityMain extends Activity implements OnItemSelectedListener {
 												PrivacyManager.setSetting(xAppInfo.getUid(),
 														PrivacyManager.cSettingOnDemand, Boolean.toString(true));
 
-												allRestricted = false;
-												someRestricted = false;
-												onDemand = true;
-
 												// Update visible state
-												holder.imgCBName.setImageBitmap(mCheck[0]); // Off
-												holder.tvOnDemand.setVisibility(View.VISIBLE);
-												holder.vwState.setBackgroundColor(getResources()
-														.getColor(
-																Util.getThemed(ActivityMain.this,
-																		R.attr.color_state_attention)));
+												holder.imgCBName.setImageBitmap(mCheck[3]); // ?
+												holder.vwState.setBackgroundColor(getResources().getColor(
+														getThemed(R.attr.color_state_attention)));
+
+												// Update stored state
+												rstate = RState.get(xAppInfo.getUid(), mRestrictionName, null);
 
 												// Notify restart
 												if (oldState.contains(true))
@@ -1558,39 +1511,47 @@ public class ActivityMain extends Activity implements OnItemSelectedListener {
 								AlertDialog alertDialog = alertDialogBuilder.create();
 								alertDialog.show();
 							} else {
-								// Update restriction
-								crestricted = false;
-								for (String restrictionName : listRestriction)
-									if (PrivacyManager.getRestrictionEx(xAppInfo.getUid(), restrictionName, null).restricted) {
-										crestricted = true;
-										break;
-									}
-								crestricted = !crestricted;
+								// Set change
+								boolean ask = rstate.asked;
+								boolean restrict = ask ? !rstate.restricted : rstate.restricted;
+
+								// Tweak to get to all three states when no
+								// category has been selected
+								if (mRestrictionName == null && !rstate.restricted && rstate.asked) {
+									restrict = true;
+									ask = false;
+								}
+
+								// Get restrictions to change
+								List<String> listRestriction;
+								if (mRestrictionName == null)
+									listRestriction = PrivacyManager.getRestrictions();
+								else {
+									listRestriction = new ArrayList<String>();
+									listRestriction.add(mRestrictionName);
+								}
 
 								List<Boolean> oldState = PrivacyManager.getRestartStates(xAppInfo.getUid(),
 										mRestrictionName);
+								if (mRestrictionName != null && !restrict)
+									PrivacyManager.deleteRestrictions(xAppInfo.getUid(), mRestrictionName);
 								for (String restrictionName : listRestriction)
-									PrivacyManager.setRestriction(xAppInfo.getUid(), restrictionName, null,
-											crestricted, false);
+									PrivacyManager.setRestriction(xAppInfo.getUid(), restrictionName, null, restrict,
+											!ask);
 								List<Boolean> newState = PrivacyManager.getRestartStates(xAppInfo.getUid(),
 										mRestrictionName);
 
-								// Update all/some restricted
-								allRestricted = true;
-								someRestricted = false;
-								for (PRestriction restriction : PrivacyManager.getRestrictionList(xAppInfo.getUid(),
-										mRestrictionName)) {
-									allRestricted = (allRestricted && restriction.restricted);
-									someRestricted = (someRestricted || restriction.restricted);
-								}
-
-								// Update visible state
-								if (allRestricted)
-									holder.imgCBName.setImageBitmap(mCheck[2]); // Full
-								else if (someRestricted || crestricted)
+								// Update restriction display
+								rstate = RState.get(xAppInfo.getUid(), mRestrictionName, null);
+								if (!rstate.asked)
+									holder.imgCBName.setImageBitmap(mCheck[3]); // ?
+								else if (rstate.partial)
 									holder.imgCBName.setImageBitmap(mCheck[1]); // Half
+								else if (rstate.restricted)
+									holder.imgCBName.setImageBitmap(mCheck[2]); // Full
 								else
 									holder.imgCBName.setImageBitmap(mCheck[0]); // Off
+								holder.imgCBName.setVisibility(View.VISIBLE);
 
 								// Notify restart
 								if (!newState.equals(oldState))
@@ -1602,13 +1563,13 @@ public class ActivityMain extends Activity implements OnItemSelectedListener {
 							state = xAppInfo.getState(ActivityMain.this);
 							if (state == STATE_ATTENTION)
 								holder.vwState.setBackgroundColor(getResources().getColor(
-										Util.getThemed(ActivityMain.this, R.attr.color_state_attention)));
+										getThemed(R.attr.color_state_attention)));
 							else if (state == STATE_SHARED)
 								holder.vwState.setBackgroundColor(getResources().getColor(
-										Util.getThemed(ActivityMain.this, R.attr.color_state_shared)));
+										getThemed(R.attr.color_state_shared)));
 							else
 								holder.vwState.setBackgroundColor(getResources().getColor(
-										Util.getThemed(ActivityMain.this, R.attr.color_state_restricted)));
+										getThemed(R.attr.color_state_restricted)));
 						}
 					});
 				}
@@ -1653,10 +1614,8 @@ public class ActivityMain extends Activity implements OnItemSelectedListener {
 			holder.imgInternet.setVisibility(View.INVISIBLE);
 			holder.imgFrozen.setVisibility(View.INVISIBLE);
 			holder.imgCBName.setVisibility(View.INVISIBLE);
-			holder.tvOnDemand.setVisibility(View.INVISIBLE);
 			holder.tvName.setEnabled(false);
 			holder.imgCBName.setEnabled(false);
-			holder.tvOnDemand.setEnabled(false);
 			holder.rlName.setEnabled(false);
 
 			// Async update

@@ -68,7 +68,7 @@ public class PrivacyService {
 	private static final String cTableUsage = "usage";
 	private static final String cTableSetting = "setting";
 
-	private static final int cCurrentVersion = 271;
+	private static final int cCurrentVersion = 273;
 	private static final String cServiceName = "xprivacy" + cCurrentVersion;
 
 	// TODO: define column names
@@ -156,8 +156,8 @@ public class PrivacyService {
 				mAddService.invoke(null, cServiceName, mPrivacyService);
 			}
 
-			mRegistered = true;
 			Util.log(null, Log.WARN, "Service registered name=" + cServiceName);
+			mRegistered = true;
 		} catch (Throwable ex) {
 			Util.bug(null, ex);
 		}
@@ -209,12 +209,33 @@ public class PrivacyService {
 		}
 	}
 
-	public static boolean isLoggingEnabled() throws RemoteException {
+	public static PRestriction getRestriction(final PRestriction restriction, boolean usage, String secret)
+			throws RemoteException {
 		if (mRegistered)
-			return Boolean.parseBoolean(mPrivacyService.getSetting(new PSetting(0, PrivacyManager.cSettingLog, Boolean
-					.toString(false))).value);
-		else
-			return PrivacyManager.getSettingBool(0, PrivacyManager.cSettingLog, false, true);
+			return mPrivacyService.getRestriction(restriction, usage, secret);
+		else {
+			IPrivacyService client = getClient();
+			if (client == null) {
+				Log.w("XPrivacy", "No client for " + restriction);
+				PRestriction result = new PRestriction(restriction);
+				result.restricted = false;
+				return result;
+			} else
+				return client.getRestriction(restriction, usage, secret);
+		}
+	}
+
+	public static PSetting getSetting(PSetting setting) throws RemoteException {
+		if (mRegistered)
+			return mPrivacyService.getSetting(setting);
+		else {
+			IPrivacyService client = getClient();
+			if (client == null) {
+				Log.w("XPrivacy", "No client for " + setting + " uid=" + Process.myUid() + " pid=" + Process.myPid());
+				return setting;
+			} else
+				return client.getSetting(setting);
+		}
 	}
 
 	private static final IPrivacyService.Stub mPrivacyService = new IPrivacyService.Stub() {
@@ -413,7 +434,8 @@ public class PrivacyService {
 				if (restriction.methodName != null) {
 					hook = PrivacyManager.getHook(restriction.restrictionName, restriction.methodName);
 					if (hook == null)
-						Util.log(null, Log.ERROR, "Hook not found in service: " + restriction);
+						// Can happen after replacing apk
+						Util.log(null, Log.WARN, "Hook not found in service: " + restriction);
 				}
 
 				// Check for system component
@@ -484,7 +506,7 @@ public class PrivacyService {
 									// Method can be excepted
 									if (mresult.restricted)
 										mresult.restricted = ((state & 1) == 0);
-									// Category takes precedence
+									// Category asked=true takes precedence
 									if (!mresult.asked)
 										mresult.asked = ((state & 2) != 0);
 									methodFound = true;
@@ -502,8 +524,10 @@ public class PrivacyService {
 					}
 
 					if (!methodFound && hook != null && hook.isDangerous())
-						if (!getSettingBool(0, PrivacyManager.cSettingDangerous, false))
+						if (!getSettingBool(0, PrivacyManager.cSettingDangerous, false)) {
 							mresult.restricted = false;
+							mresult.asked = true;
+						}
 
 					// Fallback
 					if (!mresult.restricted && usage && PrivacyManager.isApplication(restriction.uid)
@@ -554,26 +578,28 @@ public class PrivacyService {
 							mExecutor.execute(new Runnable() {
 								public void run() {
 									try {
-										SQLiteDatabase db = getDatabase();
+										if (XActivityManagerService.canWriteUsageData()) {
+											SQLiteDatabase db = getDatabase();
 
-										mLock.writeLock().lock();
-										db.beginTransaction();
-										try {
-											ContentValues values = new ContentValues();
-											values.put("uid", restriction.uid);
-											values.put("restriction", restriction.restrictionName);
-											values.put("method", restriction.methodName);
-											values.put("restricted", mresult.restricted);
-											values.put("time", new Date().getTime());
-											db.insertWithOnConflict(cTableUsage, null, values,
-													SQLiteDatabase.CONFLICT_REPLACE);
-
-											db.setTransactionSuccessful();
-										} finally {
+											mLock.writeLock().lock();
+											db.beginTransaction();
 											try {
-												db.endTransaction();
+												ContentValues values = new ContentValues();
+												values.put("uid", restriction.uid);
+												values.put("restriction", restriction.restrictionName);
+												values.put("method", restriction.methodName);
+												values.put("restricted", mresult.restricted);
+												values.put("time", new Date().getTime());
+												db.insertWithOnConflict(cTableUsage, null, values,
+														SQLiteDatabase.CONFLICT_REPLACE);
+
+												db.setTransactionSuccessful();
 											} finally {
-												mLock.writeLock().unlock();
+												try {
+													db.endTransaction();
+												} finally {
+													mLock.writeLock().unlock();
+												}
 											}
 										}
 									} catch (Throwable ex) {
@@ -595,17 +621,22 @@ public class PrivacyService {
 			try {
 				enforcePermission();
 
+				PRestriction query;
 				if (selector.restrictionName == null)
 					for (String sRestrictionName : PrivacyManager.getRestrictions()) {
 						PRestriction restriction = new PRestriction(selector.uid, sRestrictionName, null, false);
-						restriction.restricted = getRestriction(restriction, false, null).restricted;
+						query = getRestriction(restriction, false, null);
+						restriction.restricted = query.restricted;
+						restriction.asked = query.asked;
 						result.add(restriction);
 					}
 				else
 					for (Hook md : PrivacyManager.getHooks(selector.restrictionName)) {
 						PRestriction restriction = new PRestriction(selector.uid, selector.restrictionName,
 								md.getName(), false);
-						restriction.restricted = getRestriction(restriction, false, null).restricted;
+						query = getRestriction(restriction, false, null);
+						restriction.restricted = query.restricted;
+						restriction.asked = query.asked;
 						result.add(restriction);
 					}
 			} catch (Throwable ex) {
@@ -1124,6 +1155,8 @@ public class PrivacyService {
 											dangerous, result, context, latch);
 									AlertDialog alertDialog = builder.create();
 									alertDialog.getWindow().setType(WindowManager.LayoutParams.TYPE_SYSTEM_DIALOG);
+									alertDialog.getWindow().setSoftInputMode(
+											WindowManager.LayoutParams.SOFT_INPUT_STATE_ALWAYS_HIDDEN);
 									alertDialog.setCancelable(false);
 									alertDialog.setCanceledOnTouchOutside(false);
 									alertDialog.show();
@@ -1301,7 +1334,7 @@ public class PrivacyService {
 					argument.setText(restriction.extra);
 					argument.setTypeface(null, Typeface.BOLD);
 					argument.setSingleLine(true);
-					argument.setEllipsize(TextUtils.TruncateAt.END);
+					argument.setEllipsize(TextUtils.TruncateAt.MIDDLE);
 					row3.addView(argument, cellParams1);
 				}
 

@@ -29,6 +29,9 @@ public class XActivity extends XHook {
 		super(restrictionName, method.name(), actionName, sdk);
 		mMethod = method;
 		mActionName = actionName;
+		if (method == Methods.startActivities || method == Methods.startActivityFromFragment) {
+			optional();
+		}
 	}
 
 	public String getClassName() {

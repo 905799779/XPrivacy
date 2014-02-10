@@ -75,7 +75,7 @@ import android.widget.TextView;
 import android.widget.EditText;
 import android.widget.Toast;
 
-public class ActivityShare extends Activity {
+public class ActivityShare extends ActivityBase {
 	private int mThemeId;
 	private int mActionId;
 	private AppListAdapter mAppAdapter;
@@ -475,8 +475,7 @@ public class ActivityShare extends Activity {
 
 			// Set background color
 			if (xApp.appInfo.isSystem())
-				holder.row.setBackgroundColor(getResources().getColor(
-						Util.getThemed(ActivityShare.this, R.attr.color_dangerous)));
+				holder.row.setBackgroundColor(getResources().getColor(getThemed(R.attr.color_dangerous)));
 			else
 				holder.row.setBackgroundColor(Color.TRANSPARENT);
 
@@ -1522,7 +1521,7 @@ public class ActivityShare extends Activity {
 		}
 	}
 
-	public static boolean registerDevice(final Context context) {
+	public static boolean registerDevice(final ActivityBase context) {
 		if (Util.hasProLicense(context) == null
 				&& !PrivacyManager.getSettingBool(0, PrivacyManager.cSettingRegistered, false, false)) {
 			// Get accounts
@@ -1542,7 +1541,7 @@ public class ActivityShare extends Activity {
 			// Build dialog
 			AlertDialog.Builder alertDialogBuilder = new AlertDialog.Builder(context);
 			alertDialogBuilder.setTitle(R.string.msg_register);
-			alertDialogBuilder.setIcon(Util.getThemed(context, R.attr.icon_launcher));
+			alertDialogBuilder.setIcon(context.getThemed(R.attr.icon_launcher));
 			alertDialogBuilder.setView(view);
 			alertDialogBuilder.setPositiveButton(context.getString(android.R.string.ok),
 					new DialogInterface.OnClickListener() {
@@ -1572,9 +1571,9 @@ public class ActivityShare extends Activity {
 
 	@SuppressLint("DefaultLocale")
 	private static class RegisterTask extends AsyncTask<String, String, Throwable> {
-		private Context mContext;
+		private ActivityBase mContext;
 
-		public RegisterTask(Context context) {
+		public RegisterTask(ActivityBase context) {
 			mContext = context;
 		}
 
@@ -1640,7 +1639,7 @@ public class ActivityShare extends Activity {
 				AlertDialog.Builder alertDialogBuilder = new AlertDialog.Builder(mContext);
 				alertDialogBuilder.setTitle(R.string.app_name);
 				alertDialogBuilder.setMessage(message);
-				alertDialogBuilder.setIcon(Util.getThemed(mContext, R.attr.icon_launcher));
+				alertDialogBuilder.setIcon(mContext.getThemed(R.attr.icon_launcher));
 				alertDialogBuilder.setPositiveButton(mContext.getString(android.R.string.ok),
 						new DialogInterface.OnClickListener() {
 							@Override
