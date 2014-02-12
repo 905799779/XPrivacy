@@ -18,6 +18,12 @@ public class XClipboardManager extends XHook {
 		mClassName = className;
 	}
 
+	private XClipboardManager(Methods method, String restrictionName, String className, int sdk) {
+		super(restrictionName, method.name(), null, sdk);
+		mMethod = method;
+		mClassName = className;
+	}
+
 	public String getClassName() {
 		String className;
 		if (Build.VERSION.SDK_INT > Build.VERSION_CODES.GINGERBREAD_MR1) {
@@ -50,20 +56,30 @@ public class XClipboardManager extends XHook {
 		String className = (instance == null ? null : instance.getClass().getName());
 		List<XHook> listHook = new ArrayList<XHook>();
 		for (Methods clip : Methods.values())
-			listHook.add(new XClipboardManager(clip, PrivacyManager.cClipboard, className));
+			if (clip == Methods.removePrimaryClipChangedListener)
+				listHook.add(new XClipboardManager(clip, null, className, 11));
+			else
+				listHook.add(new XClipboardManager(clip, PrivacyManager.cClipboard, className));
 		return listHook;
 	}
 
 	@Override
 	protected void before(MethodHookParam param) throws Throwable {
-		if (mMethod == Methods.addPrimaryClipChangedListener || mMethod == Methods.removePrimaryClipChangedListener)
+		if (mMethod == Methods.addPrimaryClipChangedListener) {
 			if (isRestricted(param))
+				param.setResult(null);
+
+		} else if (mMethod == Methods.removePrimaryClipChangedListener)
+			if (isRestricted(param, PrivacyManager.cClipboard, "removePrimaryClipChangedListener"))
 				param.setResult(null);
 	}
 
 	@Override
 	protected void after(MethodHookParam param) throws Throwable {
-		if (mMethod == Methods.getPrimaryClip || mMethod == Methods.getPrimaryClipDescription
+		if (mMethod == Methods.addPrimaryClipChangedListener || mMethod == Methods.removePrimaryClipChangedListener)
+			;
+
+		else if (mMethod == Methods.getPrimaryClip || mMethod == Methods.getPrimaryClipDescription
 				|| mMethod == Methods.getText) {
 			if (param.getResult() != null && isRestricted(param))
 				param.setResult(null);

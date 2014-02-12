@@ -17,11 +17,23 @@ Test and beta releases will have experimental functions enabled by default.
 
 [Open issues](https://github.com/M66B/XPrivacy/issues?state=open)
 
+**Version 1.99.40 BETA**
+
+* Rewritten URI restrictions for better compatibility
+* Simplified restricting / allowing contacts
+* Added restriction for browser downloads
+* Added documentation for accounts, browser, calendar, calling, clipboard, contacts, dictionary and email
+* Added Kurdish translation
+* Updated traditional Chinese translation
+* Updated Norwegian translation
+* Updated Polish translation
+* Updated Ukrainian translation
+
 **Version 1.99.39 BETA**
 
 * Fixed allowing contacts in some situations ([issue](/../../issues/1155))
 * Fixed checkbox logic when *Restrict dangerous functions* was not set, thanks @[jpeg729](https://github.com/jpeg729)
-* Attempt to fix keyboard interfering with on demand restricting dialog (reported on XDA)
+* Fixed keyboard interfering with on demand restricting dialog (reported on XDA)
 * Improved performance
 * Updated German translation
 

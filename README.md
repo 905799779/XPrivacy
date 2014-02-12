@@ -3,6 +3,8 @@ XPrivacy
 
 The ultimate, yet easy to use, privacy manager for Android
 
+![Open source Rookie of the year](http://www.xprivacy.eu/open-source-rookie-of-the-year-resized.png)
+
 Index
 -----
 
@@ -89,6 +91,7 @@ For easy usage, data is restricted by category:
 <a name="browser"></a>
 * Browser
 	* return an empty bookmark list
+	* return an empty download list
 	* return empty search history
 <a name="calendar"></a>
 * Calendar
@@ -105,8 +108,9 @@ For easy usage, data is restricted by category:
 <a name="contacts"></a>
 * Contacts
 	* return an empty contact list
+		* content://com.android.contacts
+		* content://com.android.contacts/contacts
 		* content://com.android.contacts/data
-		* content://com.android.contacts/raw_contacts
 		* content://com.android.contacts/phone_lookup
 		* content://com.android.contacts/profile
 <a name="dictionary"></a>
@@ -115,6 +119,7 @@ For easy usage, data is restricted by category:
 <a name="email"></a>
 * E-mail
 	* return an empty list of accounts, e-mails, etc (provider)
+	* return an empty list of accounts, e-mails, etc (Gmail)
 <a name="identification"></a>
 * Identification
 	* return a fake Android ID
@@ -136,6 +141,19 @@ For easy usage, data is restricted by category:
 <a name="IPC"></a>
 * IPC
 	* Direct inter process calls
+		* android.accounts.IAccountManager
+		* android.app.IActivityManager
+		* android.content.IClipboard
+		* android.net.IConnectivityManager
+		* android.content.IContentService
+		* android.location.ILocationManager
+		* com.android.internal.telephony.ITelephonyRegistry
+		* com.android.internal.telephony.ITelephonyRegistryMSim
+		* android.content.pm.IPackageManager
+		* com.android.internal.telephony.IPhoneSubInfo
+		* com.android.internal.telephony.msim.IPhoneSubInfoMSim
+		* android.view.IWindowManager
+		* android.net.wifi.IWifiManager
 <a name="location"></a>
 * Location
 	* return a random or set location (also for Google Play services)
@@ -261,6 +279,8 @@ Limitations
 * You cannot restrict *system* fro XPrivacy because it is needed to get an application list.
 * You cannot restrict *view* for XPrivacy because it is needed to open links to the crowdsourced restrictions.
 * You cannot restrict *Configuration.MCC/MNC* on demand.
+* Allowing contacts mostly work, but there are a few corner cases where is doesn't ([issue](https://github.com/M66B/XPrivacy/issues/1155)).
+* Allowing contacts for SIM-contacts isn't supported (who is using these anyway these days?).
 
 You can still restrict the XPrivacy app's access to accounts, contacts, and other things.
 
@@ -302,7 +322,9 @@ because this could result in conflicts, and possibly leak data).
 If you want to uninstall XPrivacy, you have two options:
 
 1. Disable XPrivacy in the Xposed installer
-1. Uninstall Xposed using the Xposed installer
+1. Uninstall the XPrivacy application
+
+Don't forget to reboot.
 
 Upgrading
 ---------
@@ -667,6 +689,8 @@ If you have any question, you can leave a message in the [XDA XPrivacy forum thr
 
 **Do not use my personal or XDA e-mail for bug reports, feature requests or questions.**
 
+**I will not look into issues of applications that have to be paid for**
+
 It is okay to use my personal or XDA e-mail for things that cannot be shared in public,
 such as security reports.
 
@@ -739,7 +763,7 @@ Current translations:
 1. Dutch/Flemish (nl)
 1. English
 1. Estonian (ee)
-1. Farsi (fa)
+1. Farsi (Persian) (fa)
 1. Finnish (fi)
 1. French (fr)
 1. German (de)
@@ -750,6 +774,7 @@ Current translations:
 1. Irish (ga)
 1. Italian (it)
 1. Japanese (ja)
+1. Kurdish (ku-rIR, ku-rIQ)
 1. Lithuanian (lt)
 1. Norwegian (nb-rNO, nn-rNO, no-rNO)
 1. Polish (pl)
