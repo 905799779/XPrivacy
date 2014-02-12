@@ -21,7 +21,7 @@ public class XActivity extends XHook {
 		mMethod = method;
 		mActionName = actionName;
 		if (method == Methods.startActivities || method == Methods.startActivityFromFragment) {
-			optional();
+			setSdk(14);
 		}
 	}
 
@@ -30,7 +30,7 @@ public class XActivity extends XHook {
 		mMethod = method;
 		mActionName = actionName;
 		if (method == Methods.startActivities || method == Methods.startActivityFromFragment) {
-			optional();
+			setSdk(14);
 		}
 	}
 

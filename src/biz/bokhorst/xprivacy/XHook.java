@@ -57,6 +57,11 @@ public abstract class XHook {
 		return mSdk;
 	}
 
+	protected XHook setSdk(int sdk) {
+		mSdk = sdk;
+		return this;
+	}
+
 	abstract protected void before(MethodHookParam param) throws Throwable;
 
 	abstract protected void after(MethodHookParam param) throws Throwable;
