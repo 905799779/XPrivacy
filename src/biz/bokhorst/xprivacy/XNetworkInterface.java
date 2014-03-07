@@ -1,7 +1,5 @@
 package biz.bokhorst.xprivacy;
 
-import static de.robv.android.xposed.XposedHelpers.findField;
-
 import java.lang.reflect.Field;
 import java.net.InetAddress;
 import java.net.InterfaceAddress;
@@ -14,8 +12,6 @@ import java.util.List;
 
 import android.os.Binder;
 import android.util.Log;
-
-import de.robv.android.xposed.XC_MethodHook.MethodHookParam;
 
 public class XNetworkInterface extends XHook {
 	private Methods mMethod;
@@ -62,12 +58,12 @@ public class XNetworkInterface extends XHook {
 	}
 
 	@Override
-	protected void before(MethodHookParam param) throws Throwable {
+	protected void before(XParam param) throws Throwable {
 		// Do nothing
 	}
 
 	@Override
-	protected void after(MethodHookParam param) throws Throwable {
+	protected void after(XParam param) throws Throwable {
 		if (getRestrictionName().equals(PrivacyManager.cInternet)) {
 			// Internet: fake offline state
 			if (mMethod == Methods.getByInetAddress || mMethod == Methods.getByName
@@ -81,7 +77,7 @@ public class XNetworkInterface extends XHook {
 		} else if (getRestrictionName().equals(PrivacyManager.cNetwork)) {
 			// Network
 			NetworkInterface ni = (NetworkInterface) param.thisObject;
-			if (!ni.isLoopback())
+			if (ni != null)
 				if (param.getResult() != null && isRestricted(param))
 					if (mMethod == Methods.getHardwareAddress) {
 						String mac = (String) PrivacyManager.getDefacedProp(Binder.getCallingUid(), "MAC");
@@ -107,7 +103,8 @@ public class XNetworkInterface extends XHook {
 						for (InterfaceAddress address : listAddress) {
 							// address
 							try {
-								Field fieldAddress = findField(InterfaceAddress.class, "address");
+								Field fieldAddress = InterfaceAddress.class.getDeclaredField("address");
+								fieldAddress.setAccessible(true);
 								fieldAddress.set(address,
 										PrivacyManager.getDefacedProp(Binder.getCallingUid(), "InetAddress"));
 							} catch (Throwable ex) {
@@ -116,7 +113,9 @@ public class XNetworkInterface extends XHook {
 
 							// broadcastAddress
 							try {
-								Field fieldBroadcastAddress = findField(InterfaceAddress.class, "broadcastAddress");
+								Field fieldBroadcastAddress = InterfaceAddress.class
+										.getDeclaredField("broadcastAddress");
+								fieldBroadcastAddress.setAccessible(true);
 								fieldBroadcastAddress.set(address,
 										PrivacyManager.getDefacedProp(Binder.getCallingUid(), "InetAddress"));
 							} catch (Throwable ex) {

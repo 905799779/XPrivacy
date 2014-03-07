@@ -3,6 +3,7 @@ package biz.bokhorst.xprivacy;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileInputStream;
+import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -10,36 +11,32 @@ import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.io.UnsupportedEncodingException;
 import java.lang.reflect.Method;
-import java.lang.SecurityException;
-import java.net.SocketException;
-import java.net.SocketTimeoutException;
-import java.net.UnknownHostException;
-import javax.net.ssl.SSLPeerUnverifiedException;
+import java.nio.channels.FileChannel;
 import java.security.KeyFactory;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.security.PublicKey;
 import java.security.Signature;
 import java.security.spec.X509EncodedKeySpec;
-import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import android.annotation.SuppressLint;
 import android.content.Context;
 import android.content.Intent;
+import android.content.pm.ApplicationInfo;
 import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
 import android.content.pm.PackageManager.NameNotFoundException;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Environment;
-import android.os.NetworkOnMainThreadException;
 import android.os.Process;
 import android.os.RemoteException;
 import android.os.UserHandle;
 import android.util.Base64;
 import android.util.Log;
+import android.widget.Toast;
 
 public class Util {
 	private static boolean mPro = false;
@@ -78,8 +75,8 @@ public class Util {
 				Log.println(priority, String.format("XPrivacy/%s", hook.getClass().getSimpleName()), msg);
 
 		// Report to service
-		if (Process.myUid() > 0 && priority == Log.ERROR)
-			if (Process.myUid() == Process.SYSTEM_UID)
+		if (uid > 0 && priority == Log.ERROR)
+			if (PrivacyService.isRegistered())
 				PrivacyService.reportErrorInternal(msg);
 			else
 				try {
@@ -96,27 +93,27 @@ public class Util {
 			priority = Log.WARN;
 		else if (ex instanceof ActivityShare.AbortException)
 			priority = Log.WARN;
-		else if (ex instanceof IOException)
+		else if (ex instanceof ActivityShare.ServerException)
 			priority = Log.WARN;
-		else if (ex instanceof NetworkOnMainThreadException)
-			priority = Log.WARN;
-		else if (ex instanceof SecurityException)
-			priority = Log.WARN;
-		else if (ex instanceof SocketException)
-			priority = Log.WARN;
-		else if (ex instanceof SocketTimeoutException)
-			priority = Log.WARN;
-		else if (ex instanceof SSLPeerUnverifiedException)
-			priority = Log.WARN;
-		else if (ex instanceof UnknownHostException)
+		else if (ex instanceof NoClassDefFoundError)
 			priority = Log.WARN;
 		else
 			priority = Log.ERROR;
+
+		boolean xprivacy = false;
+		for (StackTraceElement frame : ex.getStackTrace())
+			if (frame.getClassName() != null && frame.getClassName().startsWith("biz.bokhorst.xprivacy")) {
+				xprivacy = true;
+				break;
+			}
+		if (!xprivacy)
+			priority = Log.WARN;
+
 		log(hook, priority, ex.toString() + " uid=" + Process.myUid() + "\n" + Log.getStackTraceString(ex));
 	}
 
-	public static void logStack(XHook hook) {
-		log(hook, Log.WARN, Log.getStackTraceString(new Exception("StackTrace")));
+	public static void logStack(XHook hook, int priority) {
+		log(hook, priority, Log.getStackTraceString(new Exception("StackTrace")));
 	}
 
 	public static int getXposedAppProcessVersion() {
@@ -177,9 +174,9 @@ public class Util {
 			// Verify license
 			boolean licensed = verifyData(bEmail, bSignature, getPublicKey(context));
 			if (licensed)
-				Util.log(null, Log.INFO, "Licensing: ok for " + name);
+				Util.log(null, Log.INFO, "Licensing: ok");
 			else
-				Util.log(null, Log.ERROR, "Licensing: invalid for " + name);
+				Util.log(null, Log.ERROR, "Licensing: invalid");
 
 			// Return result
 			if (licensed)
@@ -198,7 +195,7 @@ public class Util {
 				Method method = (Method) UserHandle.class.getDeclaredMethod("getAppId", int.class);
 				uid = (Integer) method.invoke(null, uid);
 			} catch (Throwable ex) {
-				Util.bug(null, ex);
+				Util.log(null, Log.WARN, ex.toString());
 			}
 		return uid;
 	}
@@ -212,7 +209,7 @@ public class Util {
 				Method method = (Method) UserHandle.class.getDeclaredMethod("getUserId", int.class);
 				userId = (Integer) method.invoke(null, uid);
 			} catch (Throwable ex) {
-				Util.bug(null, ex);
+				Util.log(null, Log.WARN, ex.toString());
 			}
 		return userId;
 	}
@@ -240,7 +237,7 @@ public class Util {
 		String importedLicense = getUserDataDirectory(Process.myUid()) + File.separator + LICENSE_FILE_NAME;
 
 		// Import license file
-		if (licenseFile.exists()) {
+		if (licenseFile.exists() && licenseFile.canRead()) {
 			try {
 				File out = new File(importedLicense);
 				Util.log(null, Log.WARN, "Licensing: importing " + out.getAbsolutePath());
@@ -258,6 +255,7 @@ public class Util {
 				setPermissions(out.getAbsolutePath(), 0700, Process.myUid(), Process.myUid());
 
 				licenseFile.delete();
+			} catch (FileNotFoundException ignored) {
 			} catch (Throwable ex) {
 				Util.bug(null, ex);
 			}
@@ -329,7 +327,10 @@ public class Util {
 	public static void viewUri(Context context, Uri uri) {
 		Intent infoIntent = new Intent(Intent.ACTION_VIEW);
 		infoIntent.setData(uri);
-		context.startActivity(infoIntent);
+		if (isIntentAvailable(context, infoIntent))
+			context.startActivity(infoIntent);
+		else
+			Toast.makeText(context, "View action not available", Toast.LENGTH_LONG).show();
 	}
 
 	public static boolean hasLBE() {
@@ -424,19 +425,39 @@ public class Util {
 		return sb.toString();
 	}
 
-	public static String md5(String string) throws NoSuchAlgorithmException, UnsupportedEncodingException {
-		byte[] bytes = MessageDigest.getInstance("MD5").digest(string.getBytes("UTF-8"));
+	public static String md5(String text) throws NoSuchAlgorithmException, UnsupportedEncodingException {
+		// MD5
+		String salt = PrivacyManager.getSetting(0, PrivacyManager.cSettingSalt, "", true);
+		byte[] bytes = MessageDigest.getInstance("MD5").digest((text + salt).getBytes("UTF-8"));
 		StringBuilder sb = new StringBuilder();
 		for (byte b : bytes)
 			sb.append(String.format("%02X", b));
 		return sb.toString();
 	}
 
-	public static boolean containsIgnoreCase(List<String> strings, String value) {
-		for (String string : strings)
-			if (string.equalsIgnoreCase(value))
-				return true;
-		return false;
+	@SuppressLint("DefaultLocale")
+	public static boolean hasValidFingerPrint(Context context) {
+		try {
+			PackageManager pm = context.getPackageManager();
+			String packageName = context.getPackageName();
+			PackageInfo packageInfo = pm.getPackageInfo(packageName, PackageManager.GET_SIGNATURES);
+			byte[] cert = packageInfo.signatures[0].toByteArray();
+			MessageDigest digest = MessageDigest.getInstance("SHA1");
+			byte[] bytes = digest.digest(cert);
+			StringBuilder sb = new StringBuilder();
+			for (int i = 0; i < bytes.length; ++i)
+				sb.append((Integer.toHexString((bytes[i] & 0xFF) | 0x100)).substring(1, 3).toLowerCase());
+			String calculated = sb.toString();
+			String expected = context.getString(R.string.fingerprint);
+			return calculated.equals(expected);
+		} catch (Throwable ex) {
+			bug(null, ex);
+			return false;
+		}
+	}
+
+	public static boolean isDebuggable(Context context) {
+		return ((context.getApplicationContext().getApplicationInfo().flags & ApplicationInfo.FLAG_DEBUGGABLE) != 0);
 	}
 
 	public static boolean isIntentAvailable(Context context, Intent intent) {
@@ -459,13 +480,32 @@ public class Util {
 	}
 
 	public static void copy(File src, File dst) throws IOException {
-		InputStream in = new FileInputStream(src);
-		OutputStream out = new FileOutputStream(dst);
-		byte[] buf = new byte[1024];
-		int len;
-		while ((len = in.read(buf)) > 0)
-			out.write(buf, 0, len);
-		in.close();
-		out.close();
+		FileInputStream inStream = null;
+		try {
+			inStream = new FileInputStream(src);
+			FileOutputStream outStream = null;
+			try {
+				outStream = new FileOutputStream(dst);
+				FileChannel inChannel = inStream.getChannel();
+				FileChannel outChannel = outStream.getChannel();
+				inChannel.transferTo(0, inChannel.size(), outChannel);
+			} finally {
+				if (outStream != null)
+					outStream.close();
+			}
+		} finally {
+			if (inStream != null)
+				inStream.close();
+		}
+	}
+
+	public static boolean move(File src, File dst) {
+		try {
+			copy(src, dst);
+		} catch (IOException ex) {
+			Util.bug(null, ex);
+			return false;
+		}
+		return src.delete();
 	}
 }

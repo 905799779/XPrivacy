@@ -8,6 +8,7 @@
     <string name="app_description">The ultimate privacy manager</string>
     <string name="app_xversion" formatted="false">Xposed framework versiyon: %d</string>
     <string name="app_copyright">Telif hakkı \u00A9 2013–2014, M. Bokhorst (M66B)</string>
+    <string name="app_licensed">Licensed, thanks for your support!</string>
     <string name="menu_usage">Kullanım</string>
     <string name="menu_refresh">Yenile</string>
     <string name="menu_settings">Ayarlar</string>
@@ -25,7 +26,7 @@
     <string name="menu_sort">Sort</string>
     <string name="menu_filter">Filter</string>
     <string name="menu_all">Tümü</string>
-    <string name="menu_restriction_all">Toggle restrictions</string>
+    <string name="menu_toggle">Toggle restrictions</string>
     <string name="menu_clear_all">Clear all</string>
     <string name="menu_restrict_all">Restrict all</string>
     <string name="menu_clear_usage">Clear</string>
@@ -40,6 +41,7 @@
     <string name="menu_accounts">İzin verilecek hesapları seç</string>
     <string name="menu_applications">Select applications to allow</string>
     <string name="menu_contacts">İzin verilecek kişileri seç</string>
+    <string name="menu_whitelists">Manage whitelists</string>
     <string name="menu_tutorial">Tutorial</string>
     <string name="menu_exclude">Exclude</string>
     <string name="menu_close">Close</string>
@@ -47,7 +49,6 @@
     <string name="msg_aborted">Aborted</string>
     <string name="msg_new">New</string>
     <string name="msg_update">Update</string>
-    <string name="msg_licensed" formatted="false">%s adına lisanslıdır.</string>
     <string name="msg_loading">Yükleniyor</string>
     <string name="msg_applying">Applying</string>
     <string name="msg_applied">Template applied</string>
@@ -95,8 +96,13 @@
     <string name="restrict_shell">Kabuk (komutlar, superuser)</string>
     <string name="restrict_system">Sistem (yüklü uygulamalar)</string>
     <string name="restrict_view">Göster (tarayıcı)</string>
-    <string name="title_categories">Categories</string>
+    <string name="whitelist_ipaddress">IP addresses</string>
+    <string name="whitelist_library">Native libraries</string>
+    <string name="whitelist_filename">File names</string>
+    <string name="whitelist_command">Shell commands</string>
+    <string name="whitelist_url">URLs</string>
     <string name="title_restrict">Engellemek için işaretle:</string>
+    <string name="title_check_whitelist">Check to allow:</string>
     <string name="title_fused">Filter on data usage</string>
     <string name="title_finternet">Filter on internet access</string>
     <string name="title_fpermission">Filter on permission</string>
@@ -117,9 +123,16 @@
     <string name="title_parameters">Parameters:</string>
     <string name="title_applycat">Apply to entire category</string>
     <string name="title_once">Once for %1$s seconds</string>
+    <string name="title_whitelist">Whitelist \'%s\'</string>
     <string name="title_allow">Allow</string>
     <string name="title_deny">Deny</string>
     <string name="title_pleasesubmit">Please submit your restrictions to help others</string>
+    <string name="title_permissions">Permissions</string>
+    <string name="title_set_restrict">Restrict</string>
+    <string name="title_template_category">Apply template (categories)</string>
+    <string name="title_template_full">Apply template (categories+functions)</string>
+    <string name="title_enable_ondemand">Enable on demand restricting</string>
+    <string name="title_disable_ondemand">Disable on demand restricting</string>
     <string name="settings_serial">Seri no</string>
     <string name="settings_lat">Enlem</string>
     <string name="settings_lon">Boylam</string>
@@ -145,6 +158,9 @@
     <string name="settings_https">Use secure connections</string>
     <string name="settings_syscomponents">Restrict system components (Android) (requires restart)</string>
     <string name="settings_usagedata">Show application usage data (requires restart)</string>
+    <string name="settings_parameters">Show parameters of usage data</string>
+    <string name="settings_cid">GSM Cell ID</string>
+    <string name="settings_lac">GSM LAC</string>
     <string name="help_longpress">Long press name to select</string>
     <string name="help_ondemand">restrictions will be asked</string>
     <string name="help_application">Uygulama</string>

@@ -6,8 +6,6 @@ import java.util.List;
 import android.os.Build;
 import android.util.Log;
 
-import de.robv.android.xposed.XC_MethodHook.MethodHookParam;
-
 public class XClipboardManager extends XHook {
 	private Methods mMethod;
 	private String mClassName;
@@ -64,18 +62,18 @@ public class XClipboardManager extends XHook {
 	}
 
 	@Override
-	protected void before(MethodHookParam param) throws Throwable {
+	protected void before(XParam param) throws Throwable {
 		if (mMethod == Methods.addPrimaryClipChangedListener) {
 			if (isRestricted(param))
 				param.setResult(null);
 
 		} else if (mMethod == Methods.removePrimaryClipChangedListener)
-			if (isRestricted(param, PrivacyManager.cClipboard, "removePrimaryClipChangedListener"))
+			if (isRestricted(param, PrivacyManager.cClipboard, "addPrimaryClipChangedListener"))
 				param.setResult(null);
 	}
 
 	@Override
-	protected void after(MethodHookParam param) throws Throwable {
+	protected void after(XParam param) throws Throwable {
 		if (mMethod == Methods.addPrimaryClipChangedListener || mMethod == Methods.removePrimaryClipChangedListener)
 			;
 

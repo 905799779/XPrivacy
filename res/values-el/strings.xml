@@ -2,12 +2,13 @@
 
     <string name="app_notxposed" formatted="false">Δεν έχει εγκατασταθεί η έκδοση %d+ του Xposed framework</string>
     <string name="app_notenabled">Το XPrivacy δεν είναι ενεργοποιημένο στο Xposed installer</string>
-    <string name="app_wrongandroid">Only for Android version 4.0+</string>
+    <string name="app_wrongandroid">Only for Android version 4.0.3+</string>
     <string name="app_incompatible" formatted="false">XPrivacy is incompatible with %s</string>
     <string name="app_version" formatted="false">Έκδοση XPrivacy: %s (%d)</string>
     <string name="app_description">The ultimate privacy manager</string>
     <string name="app_xversion" formatted="false">Έκδοση Xposed framework: %d</string>
     <string name="app_copyright">Copyright \u00A9 2013–2014 M. Bokhorst (M66B)</string>
+    <string name="app_licensed">Licensed, thanks for your support!</string>
     <string name="menu_usage">Χρήση</string>
     <string name="menu_refresh">Ανανέωση</string>
     <string name="menu_settings">Ρυθμίσεις</string>
@@ -25,7 +26,7 @@
     <string name="menu_sort">Sort</string>
     <string name="menu_filter">Filter</string>
     <string name="menu_all">Όλα</string>
-    <string name="menu_restriction_all">Toggle restrictions</string>
+    <string name="menu_toggle">Toggle restrictions</string>
     <string name="menu_clear_all">Clear all</string>
     <string name="menu_restrict_all">Restrict all</string>
     <string name="menu_clear_usage">Clear</string>
@@ -40,6 +41,7 @@
     <string name="menu_accounts">Επιλογή επιτρεπόμενων λογαριασμών</string>
     <string name="menu_applications">Select applications to allow</string>
     <string name="menu_contacts">Επιλογή επιτρεπόμενων επαφών</string>
+    <string name="menu_whitelists">Manage whitelists</string>
     <string name="menu_tutorial">Tutorial</string>
     <string name="menu_exclude">Exclude</string>
     <string name="menu_close">Close</string>
@@ -47,7 +49,6 @@
     <string name="msg_aborted">Aborted</string>
     <string name="msg_new">New</string>
     <string name="msg_update">Update</string>
-    <string name="msg_licensed" formatted="false">Άδεια για: %s</string>
     <string name="msg_loading">Φόρτωση</string>
     <string name="msg_applying">Applying</string>
     <string name="msg_applied">Template applied</string>
@@ -96,8 +97,13 @@
     <string name="restrict_shell">Shell (εντολές, superuser)</string>
     <string name="restrict_system">Σύστημα (εγκατεστημένες εφαρμογές)</string>
     <string name="restrict_view">Εμφάνιση (browser)</string>
-    <string name="title_categories">Categories</string>
+    <string name="whitelist_ipaddress">IP addresses</string>
+    <string name="whitelist_library">Native libraries</string>
+    <string name="whitelist_filename">File names</string>
+    <string name="whitelist_command">Shell commands</string>
+    <string name="whitelist_url">URLs</string>
     <string name="title_restrict">Επιλέξτε για περιορισμό:</string>
+    <string name="title_check_whitelist">Check to allow:</string>
     <string name="title_fused">Filter on data usage</string>
     <string name="title_finternet">Filter on internet access</string>
     <string name="title_fpermission">Filter on permission</string>
@@ -118,9 +124,16 @@
     <string name="title_parameters">Parameters:</string>
     <string name="title_applycat">Apply to entire category</string>
     <string name="title_once">Once for %1$s seconds</string>
+    <string name="title_whitelist">Whitelist \'%s\'</string>
     <string name="title_allow">Allow</string>
     <string name="title_deny">Deny</string>
     <string name="title_pleasesubmit">Please submit your restrictions to help others</string>
+    <string name="title_permissions">Permissions</string>
+    <string name="title_set_restrict">Restrict</string>
+    <string name="title_template_category">Apply template (categories)</string>
+    <string name="title_template_full">Apply template (categories+functions)</string>
+    <string name="title_enable_ondemand">Enable on demand restricting</string>
+    <string name="title_disable_ondemand">Disable on demand restricting</string>
     <string name="settings_serial">Σειριακός αριθμός</string>
     <string name="settings_lat">Γεωγρ. πλάτος</string>
     <string name="settings_lon">Γεωγρ. μήκος</string>
@@ -146,6 +159,9 @@
     <string name="settings_https">Use secure connections</string>
     <string name="settings_syscomponents">Restrict system components (Android) (requires restart)</string>
     <string name="settings_usagedata">Show application usage data (requires restart)</string>
+    <string name="settings_parameters">Show parameters of usage data</string>
+    <string name="settings_cid">GSM Cell ID</string>
+    <string name="settings_lac">GSM LAC</string>
     <string name="help_longpress">Long press name to select</string>
     <string name="help_ondemand">restrictions will be asked</string>
     <string name="help_application">Εφαρμογή</string>

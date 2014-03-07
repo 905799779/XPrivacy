@@ -8,6 +8,7 @@
     <string name="app_description">The ultimate privacy manager</string>
     <string name="app_xversion" formatted="false">Xposed framework na salin: %d</string>
     <string name="app_copyright">Ang karapatan \u00A9 2013–2014 nito ay pag-aari ni M. Bokhorst (M66B)</string>
+    <string name="app_licensed">Licensed, thanks for your support!</string>
     <string name="menu_usage">Kaalaman tungkol sa mga pahintulot na nagamit</string>
     <string name="menu_refresh">Paulitin ang nakatakdang kaalaman</string>
     <string name="menu_settings">Palitan ang paglalagay</string>
@@ -25,7 +26,7 @@
     <string name="menu_sort">Sort</string>
     <string name="menu_filter">Filter</string>
     <string name="menu_all">Kalahatan</string>
-    <string name="menu_restriction_all">Bigyan ng lahat o walang paghihigpit</string>
+    <string name="menu_toggle">Bigyan ng lahat o walang paghihigpit</string>
     <string name="menu_clear_all">Burahin lahat ng paghihigpit</string>
     <string name="menu_restrict_all">Pahigpitan lahat</string>
     <string name="menu_clear_usage">Burahin lahat nang nakatakdang kaalaman at ukol sa mga pahintulot na nagamit</string>
@@ -40,6 +41,7 @@
     <string name="menu_accounts">Piliin ang mga Accounts na may pahintulot</string>
     <string name="menu_applications">Piliin ang mga Applications na may pahintulot</string>
     <string name="menu_contacts">Piliin ang mga Contacts na may pahintulot</string>
+    <string name="menu_whitelists">Manage whitelists</string>
     <string name="menu_tutorial">Sangguni</string>
     <string name="menu_exclude">Exclude</string>
     <string name="menu_close">Close</string>
@@ -47,7 +49,6 @@
     <string name="msg_aborted">Aborted</string>
     <string name="msg_new">Bago</string>
     <string name="msg_update">Pabaguhin</string>
-    <string name="msg_licensed" formatted="false">Nakalisensya kay: %s</string>
     <string name="msg_loading">Naglo-load</string>
     <string name="msg_applying">Tinatakda</string>
     <string name="msg_applied">Nakahandang paghihigpit ay ngayon na nakatakda</string>
@@ -96,8 +97,13 @@
     <string name="restrict_shell">Sa Shell (commands, superuser)</string>
     <string name="restrict_system">Sa System (ukol sa nailagay mong Apps)</string>
     <string name="restrict_view">Pahintulot sa Pagpapakita (ng Browser)</string>
-    <string name="title_categories">Mga Pangkat</string>
+    <string name="whitelist_ipaddress">IP addresses</string>
+    <string name="whitelist_library">Native libraries</string>
+    <string name="whitelist_filename">File names</string>
+    <string name="whitelist_command">Shell commands</string>
+    <string name="whitelist_url">URLs</string>
     <string name="title_restrict">Lagyan ng Check para pahigpitan:</string>
+    <string name="title_check_whitelist">Check to allow:</string>
     <string name="title_fused">Bigyan ng Filter at ipakita lamang sa mga Kaalaman na Nagamit</string>
     <string name="title_finternet">Bigyan ng Filter at ipakita lamang sa Pagdaan ng Internet</string>
     <string name="title_fpermission">Bigyan ng Filter at ipakita lamang sa mga may Pahintulot</string>
@@ -118,9 +124,16 @@
     <string name="title_parameters">Parameters:</string>
     <string name="title_applycat">Apply to entire category</string>
     <string name="title_once">Once for %1$s seconds</string>
+    <string name="title_whitelist">Whitelist \'%s\'</string>
     <string name="title_allow">Allow</string>
     <string name="title_deny">Deny</string>
     <string name="title_pleasesubmit">Please submit your restrictions to help others</string>
+    <string name="title_permissions">Permissions</string>
+    <string name="title_set_restrict">Restrict</string>
+    <string name="title_template_category">Apply template (categories)</string>
+    <string name="title_template_full">Apply template (categories+functions)</string>
+    <string name="title_enable_ondemand">Enable on demand restricting</string>
+    <string name="title_disable_ondemand">Disable on demand restricting</string>
     <string name="settings_serial">Ang iyong Seryal#</string>
     <string name="settings_lat">Latitud</string>
     <string name="settings_lon">Longhitud</string>
@@ -146,6 +159,9 @@
     <string name="settings_https">Use secure connections</string>
     <string name="settings_syscomponents">Restrict system components (Android) (requires restart)</string>
     <string name="settings_usagedata">Show application usage data (requires restart)</string>
+    <string name="settings_parameters">Show parameters of usage data</string>
+    <string name="settings_cid">GSM Cell ID</string>
+    <string name="settings_lac">GSM LAC</string>
     <string name="help_longpress">Long press name to select</string>
     <string name="help_ondemand">restrictions will be asked</string>
     <string name="help_application">Mga Applications</string>

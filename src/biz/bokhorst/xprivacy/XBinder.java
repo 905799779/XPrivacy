@@ -6,19 +6,17 @@ import java.util.Arrays;
 import java.util.List;
 
 import android.os.Binder;
-import android.os.IBinder;
 import android.os.Parcel;
 import android.os.Process;
 import android.util.Log;
-
-import de.robv.android.xposed.XC_MethodHook.MethodHookParam;
 
 public class XBinder extends XHook {
 	private Methods mMethod;
 
 	private static long mToken = 0;
-	private static int BITS_TOKEN = 8;
-	private static int MASK_TOKEN = 0xFFFFFF;
+	private static int BITS_TOKEN = 16;
+	private static int FLAG_ALL = 0xFFFF;
+	private static int MASK_TOKEN = 0xFFFF;
 
 	// Service name should one-to-one correspond to a service descriptor
 	// TODO: sensor interface
@@ -100,7 +98,7 @@ public class XBinder extends XHook {
 	}
 
 	@Override
-	protected void before(MethodHookParam param) throws Throwable {
+	protected void before(XParam param) throws Throwable {
 		if (mMethod == Methods.execTransact)
 			checkIPC(param);
 
@@ -111,63 +109,56 @@ public class XBinder extends XHook {
 			Util.log(this, Log.WARN, "Unknown method=" + param.method.getName());
 	}
 
-	private void markIPC(MethodHookParam param) {
+	private void markIPC(XParam param) {
 		int flags = (Integer) param.args[3];
-		if (flags != 0 && flags != IBinder.FLAG_ONEWAY)
-			Util.log(this, Log.ERROR, "flags=" + Integer.toHexString(flags));
+		if ((flags & ~FLAG_ALL) != 0)
+			Util.log(this, Log.ERROR, "Unknown flags=" + Integer.toHexString(flags));
 		flags |= (mToken << BITS_TOKEN);
 		param.args[3] = flags;
 	}
 
-	private void checkIPC(MethodHookParam param) {
+	private void checkIPC(XParam param) throws Throwable {
 		// Entry point from android_util_Binder.cpp's onTransact
 		int flags = (Integer) param.args[3];
 		long token = (flags >> BITS_TOKEN) & MASK_TOKEN;
-		flags &= IBinder.FLAG_ONEWAY;
+		flags &= FLAG_ALL;
 		param.args[3] = flags;
 
-		try {
-			if (Process.myUid() > 0) {
-				int uid = Binder.getCallingUid();
-				if (token != mToken && PrivacyManager.isApplication(uid)) {
-					// Get interface name
-					Binder binder = (Binder) param.thisObject;
-					String descriptor = binder.getInterfaceDescriptor();
-					if (cServiceDescriptor.contains(descriptor)) {
-						Util.log(this, Log.WARN,
-								"restrict name=" + descriptor + " uid=" + uid + " my=" + Process.myUid());
-						if (getRestricted(uid, PrivacyManager.cIPC, descriptor)) {
-							// Get reply parcel
-							Parcel reply = null;
-							try {
-								// static protected final Parcel obtain(int obj)
-								// frameworks/base/core/java/android/os/Parcel.java
-								Method methodObtain = Parcel.class.getDeclaredMethod("obtain", int.class);
-								methodObtain.setAccessible(true);
-								reply = (Parcel) methodObtain.invoke(null, param.args[2]);
-							} catch (NoSuchMethodException ex) {
-								Util.bug(this, ex);
-							}
-
-							// Block IPC
-							if (reply == null)
-								Util.log(this, Log.ERROR, "reply is null uid=" + uid);
-							else {
-								reply.setDataPosition(0);
-								reply.writeException(new SecurityException("XPrivacy"));
-							}
-							param.setResult(true);
-						}
+		int uid = Binder.getCallingUid();
+		if (token != mToken && PrivacyManager.isApplication(uid)) {
+			// Get interface name
+			Binder binder = (Binder) param.thisObject;
+			String descriptor = (binder == null ? null : binder.getInterfaceDescriptor());
+			if (cServiceDescriptor.contains(descriptor)) {
+				Util.log(this, Log.WARN, "restrict name=" + descriptor + " uid=" + uid + " my=" + Process.myUid());
+				if (getRestricted(uid, PrivacyManager.cIPC, descriptor)) {
+					// Get reply parcel
+					Parcel reply = null;
+					try {
+						// static protected final Parcel obtain(int obj)
+						// frameworks/base/core/java/android/os/Parcel.java
+						Method methodObtain = Parcel.class.getDeclaredMethod("obtain", int.class);
+						methodObtain.setAccessible(true);
+						reply = (Parcel) methodObtain.invoke(null, param.args[2]);
+					} catch (NoSuchMethodException ex) {
+						Util.bug(this, ex);
 					}
+
+					// Block IPC
+					if (reply == null)
+						Util.log(this, Log.ERROR, "reply is null uid=" + uid);
+					else {
+						reply.setDataPosition(0);
+						reply.writeException(new SecurityException("XPrivacy"));
+					}
+					param.setResult(true);
 				}
 			}
-		} catch (Throwable ex) {
-			Util.bug(this, ex);
 		}
 	}
 
 	@Override
-	protected void after(MethodHookParam param) throws Throwable {
+	protected void after(XParam param) throws Throwable {
 		// Do nothing
 	}
 }

@@ -10,8 +10,6 @@ import android.net.Uri;
 import android.provider.MediaStore;
 import android.util.Log;
 
-import de.robv.android.xposed.XC_MethodHook.MethodHookParam;
-
 public class XActivity extends XHook {
 	private Methods mMethod;
 	private String mActionName;
@@ -89,7 +87,7 @@ public class XActivity extends XHook {
 
 	@Override
 	@SuppressLint("DefaultLocale")
-	protected void before(MethodHookParam param) throws Throwable {
+	protected void before(XParam param) throws Throwable {
 		// Get intent(s)
 		Intent[] intents = null;
 		if (mMethod == Methods.getSystemService) {
@@ -114,15 +112,9 @@ public class XActivity extends XHook {
 					boolean restricted = false;
 					if (mActionName.equals(Intent.ACTION_VIEW)) {
 						Uri uri = intent.getData();
-						if (uri != null) {
-							String scheme = uri.getScheme();
-							if (scheme != null) {
-								scheme = scheme.toLowerCase();
-								if (scheme.equals("http") || scheme.equals("https"))
-									if (isRestricted(param, mActionName))
-										restricted = true;
-							}
-						}
+						if (uri != null)
+							if (isRestrictedExtra(param, mActionName, uri.toString()))
+								restricted = true;
 					} else
 						restricted = isRestricted(param, mActionName);
 
@@ -137,7 +129,7 @@ public class XActivity extends XHook {
 	}
 
 	@Override
-	protected void after(MethodHookParam param) throws Throwable {
+	protected void after(XParam param) throws Throwable {
 		if (mMethod == Methods.getSystemService) {
 			if (param.args.length > 0 && param.args[0] != null) {
 				String name = (String) param.args[0];

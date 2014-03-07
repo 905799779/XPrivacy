@@ -11,8 +11,6 @@ import android.util.Log;
 
 import com.google.android.gms.location.LocationListener;
 
-import de.robv.android.xposed.XC_MethodHook.MethodHookParam;
-
 public class XLocationClient extends XHook {
 	private Methods mMethod;
 	private static final Map<LocationListener, XLocationListener> mListener = new WeakHashMap<LocationListener, XLocationListener>();
@@ -54,16 +52,20 @@ public class XLocationClient extends XHook {
 		List<XHook> listHook = new ArrayList<XHook>();
 		listHook.add(new XLocationClient(Methods.addGeofences, PrivacyManager.cLocation).optional());
 		listHook.add(new XLocationClient(Methods.getLastLocation, PrivacyManager.cLocation).optional());
-		listHook.add(new XLocationClient(Methods.removeGeofences, PrivacyManager.cLocation).optional());
+		listHook.add(new XLocationClient(Methods.removeGeofences, null, 1).optional());
 		listHook.add(new XLocationClient(Methods.removeLocationUpdates, null, 1).optional());
 		listHook.add(new XLocationClient(Methods.requestLocationUpdates, PrivacyManager.cLocation).optional());
 		return listHook;
 	}
 
 	@Override
-	protected void before(MethodHookParam param) throws Throwable {
-		if (mMethod == Methods.addGeofences || mMethod == Methods.removeGeofences) {
+	protected void before(XParam param) throws Throwable {
+		if (mMethod == Methods.addGeofences) {
 			if (isRestricted(param))
+				param.setResult(null);
+
+		} else if (mMethod == Methods.removeGeofences) {
+			if (isRestricted(param, PrivacyManager.cLocation, "addGeofences"))
 				param.setResult(null);
 
 		} else if (mMethod == Methods.getLastLocation) {
@@ -81,7 +83,7 @@ public class XLocationClient extends XHook {
 	}
 
 	@Override
-	protected void after(MethodHookParam param) throws Throwable {
+	protected void after(XParam param) throws Throwable {
 		if (mMethod == Methods.addGeofences || mMethod == Methods.removeGeofences) {
 			// Do nothing
 
@@ -100,16 +102,21 @@ public class XLocationClient extends XHook {
 			Util.log(this, Log.WARN, "Unknown method=" + param.method.getName());
 	}
 
-	private void replaceLocationListener(MethodHookParam param) throws Throwable {
+	private void replaceLocationListener(XParam param) throws Throwable {
 		if (param.args.length >= 2 && param.args[1] != null
 				&& LocationListener.class.isAssignableFrom(param.args[1].getClass())) {
 			if (!(param.args[1] instanceof XLocationListener)) {
 				LocationListener listener = (LocationListener) param.args[1];
 				if (listener != null) {
-					XLocationListener xListener = new XLocationListener(listener);
+					XLocationListener xListener;
 					synchronized (mListener) {
-						mListener.put(listener, xListener);
-						Util.log(this, Log.INFO, "Added count=" + mListener.size());
+						xListener = mListener.get(listener);
+						if (xListener == null) {
+							xListener = new XLocationListener(listener);
+							mListener.put(listener, xListener);
+							Util.log(this, Log.WARN,
+									"Added count=" + mListener.size() + " uid=" + Binder.getCallingUid());
+						}
 					}
 					param.args[1] = xListener;
 				}
@@ -118,7 +125,7 @@ public class XLocationClient extends XHook {
 			param.setResult(null);
 	}
 
-	private void removeLocationListener(MethodHookParam param) {
+	private void removeLocationListener(XParam param) {
 		if (param.args.length >= 1 && param.args[0] != null
 				&& LocationListener.class.isAssignableFrom(param.args[0].getClass())) {
 			LocationListener listener = (LocationListener) param.args[0];
@@ -126,7 +133,7 @@ public class XLocationClient extends XHook {
 				XLocationListener xlistener = mListener.get(listener);
 				if (xlistener != null) {
 					param.args[0] = xlistener;
-					mListener.remove(listener);
+					Util.log(this, Log.WARN, "Removed count=" + mListener.size() + " uid=" + Binder.getCallingUid());
 				}
 			}
 		} else

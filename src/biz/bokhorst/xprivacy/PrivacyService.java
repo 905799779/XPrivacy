@@ -1,6 +1,8 @@
 package biz.bokhorst.xprivacy;
 
 import java.io.File;
+import java.io.FileOutputStream;
+import java.io.OutputStreamWriter;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.Date;
@@ -11,6 +13,7 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Semaphore;
+import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
@@ -27,8 +30,6 @@ import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteDoneException;
 import android.database.sqlite.SQLiteStatement;
-import android.graphics.Paint;
-import android.graphics.Typeface;
 import android.os.Binder;
 import android.os.Build;
 import android.os.Environment;
@@ -41,14 +42,14 @@ import android.os.StrictMode;
 import android.os.StrictMode.ThreadPolicy;
 import android.text.TextUtils;
 import android.util.Log;
-import android.view.ViewGroup;
+import android.util.Patterns;
+import android.view.LayoutInflater;
+import android.view.View;
 import android.view.WindowManager;
 import android.widget.CheckBox;
+import android.widget.CompoundButton;
 import android.widget.ImageView;
-import android.widget.LinearLayout;
 import android.widget.ProgressBar;
-import android.widget.ScrollView;
-import android.widget.TableLayout;
 import android.widget.TableRow;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -68,45 +69,11 @@ public class PrivacyService {
 	private static final String cTableUsage = "usage";
 	private static final String cTableSetting = "setting";
 
-	private static final int cCurrentVersion = 274;
-	private static final String cServiceName = "xprivacy" + cCurrentVersion;
+	private static final int cCurrentVersion = 305;
+	private static final String cServiceName = "xprivacy305";
 
 	// TODO: define column names
-	// sqlite3 /data/xprivacy/xprivacy.db
-
-	public static void setupDatabase() {
-		// This is run from Zygote with root permissions
-		try {
-			File dbFile = getDbFile();
-
-			// Create database folder
-			dbFile.getParentFile().mkdirs();
-
-			// Set database file permissions
-			// Owner: rwx (system)
-			// Group: --- (system)
-			// World: ---
-			Util.setPermissions(dbFile.getParentFile().getAbsolutePath(), 0770, Process.SYSTEM_UID, Process.SYSTEM_UID);
-			File[] files = dbFile.getParentFile().listFiles();
-			if (files != null)
-				for (File file : files)
-					Util.setPermissions(file.getAbsolutePath(), 0770, Process.SYSTEM_UID, Process.SYSTEM_UID);
-
-			// Move database from app folder
-			File folder = new File(Environment.getDataDirectory() + File.separator + "data" + File.separator
-					+ PrivacyService.class.getPackage().getName());
-			File[] oldFiles = folder.listFiles();
-			if (oldFiles != null)
-				for (File file : oldFiles)
-					if (file.getName().startsWith("xprivacy.db")) {
-						File target = new File(dbFile.getParentFile() + File.separator + file.getName());
-						boolean status = file.renameTo(target);
-						Util.log(null, Log.WARN, "Moving " + file + " to " + target + " ok=" + status);
-					}
-		} catch (Throwable ex) {
-			Util.bug(null, ex);
-		}
-	}
+	// sqlite3 /data/system/xprivacy/xprivacy.db
 
 	public static void register(List<String> listError, String secret) {
 		// Store secret and errors
@@ -114,6 +81,28 @@ public class PrivacyService {
 		mListError.addAll(listError);
 
 		try {
+			// Register privacy service
+			// @formatter:off
+			// public static void addService(String name, IBinder service)
+			// public static void addService(String name, IBinder service, boolean allowIsolated)
+			// @formatter:on
+			Class<?> cServiceManager = Class.forName("android.os.ServiceManager");
+			if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN) {
+				Method mAddService = cServiceManager.getDeclaredMethod("addService", String.class, IBinder.class,
+						boolean.class);
+				mAddService.invoke(null, cServiceName, mPrivacyService, true);
+			} else {
+				Method mAddService = cServiceManager.getDeclaredMethod("addService", String.class, IBinder.class);
+				mAddService.invoke(null, cServiceName, mPrivacyService);
+			}
+
+			// This will and should open the database
+			mRegistered = true;
+			Util.log(null, Log.WARN, "Service registered name=" + cServiceName);
+
+			// Publish semaphore to activity manager service
+			XActivityManagerService.setSemaphore(mOndemandSemaphore);
+
 			// Get memory class to enable/disable caching
 			// http://stackoverflow.com/questions/2630158/detect-application-heap-size-in-android
 			int memoryClass = (int) (Runtime.getRuntime().maxMemory() / 1024L / 1024L);
@@ -135,32 +124,13 @@ public class PrivacyService {
 			});
 			mWorker.start();
 
-			// Hook into activity manager service
-			XActivityManagerService.setSemaphore(mOndemandSemaphore);
-			XPrivacy.hookAll(XActivityManagerService.getInstances(), secret);
-
-			// Register privacy service
-			// @formatter:off
-			// public static void addService(String name, IBinder service)
-			// public static void addService(String name, IBinder service, boolean allowIsolated)
-			// @formatter:on
-			Class<?> cServiceManager = Class.forName("android.os.ServiceManager");
-			if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN) {
-				Method mAddService = cServiceManager.getDeclaredMethod("addService", String.class, IBinder.class,
-						boolean.class);
-				Util.log(null, Log.WARN, "Invoking " + mAddService);
-				mAddService.invoke(null, cServiceName, mPrivacyService, true);
-			} else {
-				Method mAddService = cServiceManager.getDeclaredMethod("addService", String.class, IBinder.class);
-				Util.log(null, Log.WARN, "Invoking " + mAddService);
-				mAddService.invoke(null, cServiceName, mPrivacyService);
-			}
-
-			Util.log(null, Log.WARN, "Service registered name=" + cServiceName);
-			mRegistered = true;
 		} catch (Throwable ex) {
 			Util.bug(null, ex);
 		}
+	}
+
+	public static boolean isRegistered() {
+		return mRegistered;
 	}
 
 	public static boolean checkClient() {
@@ -187,20 +157,18 @@ public class PrivacyService {
 				Util.bug(null, ex);
 			}
 
-		// Disable disk strict mode
+		// Disable disk/network strict mode
+		// TODO: hook setThreadPolicy
 		try {
 			ThreadPolicy oldPolicy = StrictMode.getThreadPolicy();
-			ThreadPolicy newpolicy = new ThreadPolicy.Builder(oldPolicy).permitDiskReads().permitDiskWrites().build();
+			ThreadPolicy newpolicy = new ThreadPolicy.Builder(oldPolicy).permitDiskReads().permitDiskWrites()
+					.permitNetwork().build();
 			StrictMode.setThreadPolicy(newpolicy);
 		} catch (Throwable ex) {
 			Util.bug(null, ex);
 		}
 
 		return mClient;
-	}
-
-	private static File getDbFile() {
-		return new File(Environment.getDataDirectory() + File.separator + "xprivacy" + File.separator + "xprivacy.db");
 	}
 
 	public static void reportErrorInternal(String message) {
@@ -211,12 +179,13 @@ public class PrivacyService {
 
 	public static PRestriction getRestriction(final PRestriction restriction, boolean usage, String secret)
 			throws RemoteException {
-		if (mRegistered)
+		if (isRegistered())
 			return mPrivacyService.getRestriction(restriction, usage, secret);
 		else {
 			IPrivacyService client = getClient();
 			if (client == null) {
 				Log.w("XPrivacy", "No client for " + restriction);
+				Log.w("XPrivacy", Log.getStackTraceString(new Exception("StackTrace")));
 				PRestriction result = new PRestriction(restriction);
 				result.restricted = false;
 				return result;
@@ -226,12 +195,13 @@ public class PrivacyService {
 	}
 
 	public static PSetting getSetting(PSetting setting) throws RemoteException {
-		if (mRegistered)
+		if (isRegistered())
 			return mPrivacyService.getSetting(setting);
 		else {
 			IPrivacyService client = getClient();
 			if (client == null) {
 				Log.w("XPrivacy", "No client for " + setting + " uid=" + Process.myUid() + " pid=" + Process.myPid());
+				Log.w("XPrivacy", Log.getStackTraceString(new Exception("StackTrace")));
 				return setting;
 			} else
 				return client.getSetting(setting);
@@ -239,23 +209,36 @@ public class PrivacyService {
 	}
 
 	private static final IPrivacyService.Stub mPrivacyService = new IPrivacyService.Stub() {
-		private ReentrantReadWriteLock mLock = new ReentrantReadWriteLock(true);
-		private SQLiteDatabase mDatabase = null;
+		private SQLiteDatabase mDb = null;
+		private SQLiteDatabase mDbUsage = null;
 		private SQLiteStatement stmtGetRestriction = null;
 		private SQLiteStatement stmtGetSetting = null;
 		private SQLiteStatement stmtGetUsageRestriction = null;
 		private SQLiteStatement stmtGetUsageMethod = null;
+		private ReentrantReadWriteLock mLock = new ReentrantReadWriteLock(true);
+		private ReentrantReadWriteLock mLockUsage = new ReentrantReadWriteLock(true);
 
 		private boolean mSelectCategory = true;
 		private boolean mSelectOnce = false;
 
 		private Map<CSetting, CSetting> mSettingCache = new HashMap<CSetting, CSetting>();
+		private Map<CRestriction, CRestriction> mAskedOnceCache = new HashMap<CRestriction, CRestriction>();
 		private Map<CRestriction, CRestriction> mRestrictionCache = new HashMap<CRestriction, CRestriction>();
-
-		private ExecutorService mExecutor = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors());
 
 		private final int cMaxUsageData = 500; // entries
 		private final int cMaxOnDemandDialog = 20; // seconds
+
+		private ExecutorService mExecutor = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors(),
+				new PriorityThreadFactory());
+
+		final class PriorityThreadFactory implements ThreadFactory {
+			@Override
+			public Thread newThread(Runnable r) {
+				Thread t = new Thread(r);
+				t.setPriority(Thread.MIN_PRIORITY);
+				return t;
+			}
+		}
 
 		// Management
 
@@ -272,13 +255,14 @@ public class PrivacyService {
 			synchronized (mListError) {
 				int c = 0;
 				int i = 0;
-				while (i++ < mListError.size()) {
+				while (i < mListError.size()) {
 					String msg = mListError.get(i);
 					c += msg.length();
 					if (c < 5000)
 						listError.add(msg);
 					else
 						break;
+					i++;
 				}
 			}
 
@@ -290,7 +274,7 @@ public class PrivacyService {
 			if (!dbFile.canWrite())
 				listError.add("Database not writable");
 
-			SQLiteDatabase db = getDatabase();
+			SQLiteDatabase db = getDb();
 			if (db == null)
 				listError.add("Database not available");
 			else if (!db.isOpen())
@@ -318,13 +302,17 @@ public class PrivacyService {
 		}
 
 		private void setRestrictionInternal(PRestriction restriction) throws RemoteException {
-			try {
-				if (restriction.restrictionName == null) {
-					Util.log(null, Log.ERROR, "Set invalid restriction " + restriction);
-					return;
-				}
+			// Validate
+			if (restriction.restrictionName == null) {
+				Util.log(null, Log.ERROR, "Set invalid restriction " + restriction);
+				Util.logStack(null, Log.ERROR);
+				throw new RemoteException();
+			}
 
-				SQLiteDatabase db = getDatabase();
+			try {
+				SQLiteDatabase db = getDb();
+				if (db == null)
+					return;
 				// 0 not restricted, ask
 				// 1 restricted, ask
 				// 2 not restricted, asked
@@ -365,20 +353,12 @@ public class PrivacyService {
 				// Update cache
 				if (mUseCache)
 					synchronized (mRestrictionCache) {
-						if (restriction.methodName == null) {
-							// Clear method cache
-							synchronized (mRestrictionCache) {
-								for (Hook hook : PrivacyManager.getHooks(restriction.restrictionName)) {
-									CRestriction key = new CRestriction(new PRestriction(restriction.uid,
-											restriction.restrictionName, hook.getName()));
-									if (mRestrictionCache.containsKey(key))
-										mRestrictionCache.remove(key);
-								}
-							}
-						}
+						if (restriction.methodName == null || restriction.extra == null)
+							for (CRestriction key : new ArrayList<CRestriction>(mRestrictionCache.keySet()))
+								if (key.isSameMethod(restriction))
+									mRestrictionCache.remove(key);
 
-						// Update cache
-						CRestriction key = new CRestriction(restriction);
+						CRestriction key = new CRestriction(restriction, restriction.extra);
 						if (mRestrictionCache.containsKey(key))
 							mRestrictionCache.remove(key);
 						mRestrictionCache.put(key, key);
@@ -399,6 +379,8 @@ public class PrivacyService {
 		@Override
 		public PRestriction getRestriction(final PRestriction restriction, boolean usage, String secret)
 				throws RemoteException {
+			long start = System.currentTimeMillis();
+			boolean cached = false;
 			final PRestriction mresult = new PRestriction(restriction);
 
 			try {
@@ -417,16 +399,23 @@ public class PrivacyService {
 				// Check for self
 				if (Util.getAppId(restriction.uid) == getXUid()) {
 					if (PrivacyManager.cIdentification.equals(restriction.restrictionName)
-							&& "getString".equals(restriction.methodName))
+							&& "getString".equals(restriction.methodName)) {
+						mresult.asked = true;
 						return mresult;
-					if (PrivacyManager.cIPC.equals(restriction.restrictionName))
+					}
+					if (PrivacyManager.cIPC.equals(restriction.restrictionName)) {
+						mresult.asked = true;
 						return mresult;
-					else if (PrivacyManager.cStorage.equals(restriction.restrictionName))
+					} else if (PrivacyManager.cStorage.equals(restriction.restrictionName)) {
+						mresult.asked = true;
 						return mresult;
-					else if (PrivacyManager.cSystem.equals(restriction.restrictionName))
+					} else if (PrivacyManager.cSystem.equals(restriction.restrictionName)) {
+						mresult.asked = true;
 						return mresult;
-					else if (PrivacyManager.cView.equals(restriction.restrictionName))
+					} else if (PrivacyManager.cView.equals(restriction.restrictionName)) {
+						mresult.asked = true;
 						return mresult;
+					}
 				}
 
 				// Get meta data
@@ -448,9 +437,8 @@ public class PrivacyService {
 					return mresult;
 
 				// Check cache
-				boolean cached = false;
 				if (mUseCache) {
-					CRestriction key = new CRestriction(restriction);
+					CRestriction key = new CRestriction(restriction, restriction.extra);
 					synchronized (mRestrictionCache) {
 						if (mRestrictionCache.containsKey(key)) {
 							cached = true;
@@ -462,12 +450,13 @@ public class PrivacyService {
 				}
 
 				if (!cached) {
-					PRestriction cresult = new PRestriction(restriction);
-					cresult.methodName = null;
+					PRestriction cresult = new PRestriction(restriction.uid, restriction.restrictionName, null);
 					boolean methodFound = false;
 
 					// No permissions required
-					SQLiteDatabase db = getDatabase();
+					SQLiteDatabase db = getDb();
+					if (db == null)
+						return mresult;
 
 					// Precompile statement when needed
 					if (stmtGetRestriction == null) {
@@ -523,11 +512,28 @@ public class PrivacyService {
 						}
 					}
 
+					// Default dangerous
 					if (!methodFound && hook != null && hook.isDangerous())
 						if (!getSettingBool(0, PrivacyManager.cSettingDangerous, false)) {
 							mresult.restricted = false;
 							mresult.asked = true;
 						}
+
+					// Check whitelist
+					if (usage && hook != null && hook.whitelist() != null && restriction.extra != null) {
+						String value = getSetting(new PSetting(restriction.uid, hook.whitelist(), restriction.extra,
+								null)).value;
+						if (value == null) {
+							String xextra = getXExtra(restriction, hook);
+							if (xextra != null)
+								value = getSetting(new PSetting(restriction.uid, hook.whitelist(), xextra, null)).value;
+						}
+						if (value != null) {
+							// true means allow, false means block
+							mresult.restricted = !Boolean.parseBoolean(value);
+							mresult.asked = true;
+						}
+					}
 
 					// Fallback
 					if (!mresult.restricted && usage && PrivacyManager.isApplication(restriction.uid)
@@ -541,78 +547,94 @@ public class PrivacyService {
 
 					// Update cache
 					if (mUseCache) {
-						CRestriction ckey = new CRestriction(cresult);
-						CRestriction mkey = new CRestriction(mresult);
+						CRestriction key = new CRestriction(mresult, restriction.extra);
 						synchronized (mRestrictionCache) {
-							if (mRestrictionCache.containsKey(ckey))
-								mRestrictionCache.remove(ckey);
-							mRestrictionCache.put(ckey, ckey);
-							if (mRestrictionCache.containsKey(mkey))
-								mRestrictionCache.remove(mkey);
-							mRestrictionCache.put(mkey, mkey);
+							if (mRestrictionCache.containsKey(key))
+								mRestrictionCache.remove(key);
+							mRestrictionCache.put(key, key);
 						}
 					}
 				}
 
-				// Media: notify user
-				if (mresult.restricted && usage && hook != null && hook.shouldNotify())
+				// Ask to restrict
+				boolean ondemand = false;
+				if (!mresult.asked && usage && PrivacyManager.isApplication(restriction.uid))
+					ondemand = onDemandDialog(hook, restriction, mresult);
+
+				// Notify user
+				if (!ondemand && mresult.restricted && usage && hook != null && hook.shouldNotify())
 					notifyRestricted(restriction);
 
-				// Ask to restrict
-				if (!mresult.asked && usage && PrivacyManager.isApplication(restriction.uid))
-					onDemandDialog(hook, restriction, mresult);
-
-				// Log usage
+				// Store usage data
 				if (usage && hook != null && hook.hasUsageData())
-					if (getSettingBool(0, PrivacyManager.cSettingUsage, true)) {
-						// Check secret
-						boolean allowed = true;
-						if (Util.getAppId(Binder.getCallingUid()) != getXUid()) {
-							if (mSecret == null || !mSecret.equals(secret)) {
-								allowed = false;
-								Util.log(null, Log.WARN, "Invalid secret");
-							}
-						}
-
-						if (allowed) {
-							mExecutor.execute(new Runnable() {
-								public void run() {
-									try {
-										if (XActivityManagerService.canWriteUsageData()) {
-											SQLiteDatabase db = getDatabase();
-
-											mLock.writeLock().lock();
-											db.beginTransaction();
-											try {
-												ContentValues values = new ContentValues();
-												values.put("uid", restriction.uid);
-												values.put("restriction", restriction.restrictionName);
-												values.put("method", restriction.methodName);
-												values.put("restricted", mresult.restricted);
-												values.put("time", new Date().getTime());
-												db.insertWithOnConflict(cTableUsage, null, values,
-														SQLiteDatabase.CONFLICT_REPLACE);
-
-												db.setTransactionSuccessful();
-											} finally {
-												try {
-													db.endTransaction();
-												} finally {
-													mLock.writeLock().unlock();
-												}
-											}
-										}
-									} catch (Throwable ex) {
-										Util.bug(null, ex);
-									}
-								}
-							});
-						}
-					}
+					storeUsageData(restriction, secret, mresult);
 			} catch (Throwable ex) {
 				Util.bug(null, ex);
 			}
+
+			long ms = System.currentTimeMillis() - start;
+			Util.log(null, Log.INFO,
+					String.format("get service %s%s %d ms", restriction, (cached ? " (cached)" : ""), ms));
+
 			return mresult;
+		}
+
+		private void storeUsageData(final PRestriction restriction, String secret, final PRestriction mresult)
+				throws RemoteException {
+			// Check if enabled
+			if (getSettingBool(0, PrivacyManager.cSettingUsage, true)) {
+				// Check secret
+				boolean allowed = true;
+				if (Util.getAppId(Binder.getCallingUid()) != getXUid()) {
+					if (mSecret == null || !mSecret.equals(secret)) {
+						allowed = false;
+						Util.log(null, Log.WARN, "Invalid secret");
+					}
+				}
+
+				if (allowed) {
+					mExecutor.execute(new Runnable() {
+						public void run() {
+							try {
+								if (XActivityManagerService.canWriteUsageData()) {
+									SQLiteDatabase dbUsage = getDbUsage();
+									if (dbUsage == null)
+										return;
+
+									String extra = "";
+									if (restriction.extra != null)
+										if (getSettingBool(0, PrivacyManager.cSettingParameters, false))
+											extra = restriction.extra;
+
+									mLockUsage.writeLock().lock();
+									dbUsage.beginTransaction();
+									try {
+										ContentValues values = new ContentValues();
+										values.put("uid", restriction.uid);
+										values.put("restriction", restriction.restrictionName);
+										values.put("method", restriction.methodName);
+										values.put("restricted", mresult.restricted);
+										values.put("time", new Date().getTime());
+										values.put("extra", extra);
+										dbUsage.insertWithOnConflict(cTableUsage, null, values,
+												SQLiteDatabase.CONFLICT_REPLACE);
+
+										dbUsage.setTransactionSuccessful();
+									} finally {
+										try {
+											dbUsage.endTransaction();
+										} finally {
+											mLockUsage.writeLock().unlock();
+										}
+									}
+								}
+							} catch (Throwable ex) {
+								Util.bug(null, ex);
+							}
+						}
+					});
+				}
+			}
 		}
 
 		@Override
@@ -650,7 +672,9 @@ public class PrivacyService {
 		public void deleteRestrictions(int uid, String restrictionName) throws RemoteException {
 			try {
 				enforcePermission();
-				SQLiteDatabase db = getDatabase();
+				SQLiteDatabase db = getDb();
+				if (db == null)
+					return;
 
 				mLock.writeLock().lock();
 				db.beginTransaction();
@@ -671,11 +695,14 @@ public class PrivacyService {
 					}
 				}
 
-				// Clear cache
+				// Clear caches
 				if (mUseCache)
 					synchronized (mRestrictionCache) {
 						mRestrictionCache.clear();
 					}
+				synchronized (mAskedOnceCache) {
+					mAskedOnceCache.clear();
+				}
 			} catch (Throwable ex) {
 				Util.bug(null, ex);
 				throw new RemoteException();
@@ -689,20 +716,20 @@ public class PrivacyService {
 			long lastUsage = 0;
 			try {
 				enforcePermission();
-				SQLiteDatabase db = getDatabase();
+				SQLiteDatabase dbUsage = getDbUsage();
 
 				// Precompile statement when needed
 				if (stmtGetUsageRestriction == null) {
 					String sql = "SELECT MAX(time) FROM " + cTableUsage + " WHERE uid=? AND restriction=?";
-					stmtGetUsageRestriction = db.compileStatement(sql);
+					stmtGetUsageRestriction = dbUsage.compileStatement(sql);
 				}
 				if (stmtGetUsageMethod == null) {
 					String sql = "SELECT MAX(time) FROM " + cTableUsage + " WHERE uid=? AND restriction=? AND method=?";
-					stmtGetUsageMethod = db.compileStatement(sql);
+					stmtGetUsageMethod = dbUsage.compileStatement(sql);
 				}
 
-				mLock.readLock().lock();
-				db.beginTransaction();
+				mLockUsage.readLock().lock();
+				dbUsage.beginTransaction();
 				try {
 					for (PRestriction restriction : listRestriction) {
 						if (restriction.methodName == null)
@@ -728,12 +755,12 @@ public class PrivacyService {
 							}
 					}
 
-					db.setTransactionSuccessful();
+					dbUsage.setTransactionSuccessful();
 				} finally {
 					try {
-						db.endTransaction();
+						dbUsage.endTransaction();
 					} finally {
-						mLock.readLock().unlock();
+						mLockUsage.readLock().unlock();
 					}
 				}
 			} catch (Throwable ex) {
@@ -744,23 +771,37 @@ public class PrivacyService {
 		}
 
 		@Override
-		public List<PRestriction> getUsageList(int uid) throws RemoteException {
+		public List<PRestriction> getUsageList(int uid, String restrictionName) throws RemoteException {
 			List<PRestriction> result = new ArrayList<PRestriction>();
 			try {
 				enforcePermission();
-				SQLiteDatabase db = getDatabase();
+				SQLiteDatabase dbUsage = getDbUsage();
 
-				mLock.readLock().lock();
-				db.beginTransaction();
+				mLockUsage.readLock().lock();
+				dbUsage.beginTransaction();
 				try {
 					Cursor cursor;
-					if (uid == 0)
-						cursor = db.query(cTableUsage, new String[] { "uid", "restriction", "method", "restricted",
-								"time" }, null, new String[] {}, null, null, "time DESC LIMIT " + cMaxUsageData);
-					else
-						cursor = db.query(cTableUsage, new String[] { "uid", "restriction", "method", "restricted",
-								"time" }, "uid=?", new String[] { Integer.toString(uid) }, null, null,
-								"time DESC LIMIT " + cMaxUsageData);
+					if (uid == 0) {
+						if ("".equals(restrictionName))
+							cursor = dbUsage.query(cTableUsage, new String[] { "uid", "restriction", "method",
+									"restricted", "time", "extra" }, null, new String[] {}, null, null,
+									"time DESC LIMIT " + cMaxUsageData);
+						else
+							cursor = dbUsage.query(cTableUsage, new String[] { "uid", "restriction", "method",
+									"restricted", "time", "extra" }, "restriction=?", new String[] { restrictionName },
+									null, null, "time DESC LIMIT " + cMaxUsageData);
+					} else {
+						if ("".equals(restrictionName))
+							cursor = dbUsage.query(cTableUsage, new String[] { "uid", "restriction", "method",
+									"restricted", "time", "extra" }, "uid=?", new String[] { Integer.toString(uid) },
+									null, null, "time DESC LIMIT " + cMaxUsageData);
+						else
+							cursor = dbUsage.query(cTableUsage, new String[] { "uid", "restriction", "method",
+									"restricted", "time", "extra" }, "uid=? AND restriction=?",
+									new String[] { Integer.toString(uid), restrictionName }, null, null,
+									"time DESC LIMIT " + cMaxUsageData);
+					}
+
 					if (cursor == null)
 						Util.log(null, Log.WARN, "Database cursor null (usage data)");
 					else
@@ -772,18 +813,19 @@ public class PrivacyService {
 								data.methodName = cursor.getString(2);
 								data.restricted = (cursor.getInt(3) > 0);
 								data.time = cursor.getLong(4);
+								data.extra = cursor.getString(5);
 								result.add(data);
 							}
 						} finally {
 							cursor.close();
 						}
 
-					db.setTransactionSuccessful();
+					dbUsage.setTransactionSuccessful();
 				} finally {
 					try {
-						db.endTransaction();
+						dbUsage.endTransaction();
 					} finally {
-						mLock.readLock().unlock();
+						mLockUsage.readLock().unlock();
 					}
 				}
 			} catch (Throwable ex) {
@@ -797,23 +839,23 @@ public class PrivacyService {
 		public void deleteUsage(int uid) throws RemoteException {
 			try {
 				enforcePermission();
-				SQLiteDatabase db = getDatabase();
+				SQLiteDatabase dbUsage = getDbUsage();
 
-				mLock.writeLock().lock();
-				db.beginTransaction();
+				mLockUsage.writeLock().lock();
+				dbUsage.beginTransaction();
 				try {
 					if (uid == 0)
-						db.delete(cTableUsage, null, new String[] {});
+						dbUsage.delete(cTableUsage, null, new String[] {});
 					else
-						db.delete(cTableUsage, "uid=?", new String[] { Integer.toString(uid) });
+						dbUsage.delete(cTableUsage, "uid=?", new String[] { Integer.toString(uid) });
 					Util.log(null, Log.WARN, "Usage data deleted uid=" + uid);
 
-					db.setTransactionSuccessful();
+					dbUsage.setTransactionSuccessful();
 				} finally {
 					try {
-						db.endTransaction();
+						dbUsage.endTransaction();
 					} finally {
-						mLock.writeLock().unlock();
+						mLockUsage.writeLock().unlock();
 					}
 				}
 			} catch (Throwable ex) {
@@ -837,18 +879,21 @@ public class PrivacyService {
 
 		private void setSettingInternal(PSetting setting) throws RemoteException {
 			try {
-				SQLiteDatabase db = getDatabase();
+				SQLiteDatabase db = getDb();
+				if (db == null)
+					return;
 
 				mLock.writeLock().lock();
 				db.beginTransaction();
 				try {
 					if (setting.value == null)
-						db.delete(cTableSetting, "uid=? AND name=?", new String[] { Integer.toString(setting.uid),
-								setting.name });
+						db.delete(cTableSetting, "uid=? AND type=? AND name=?",
+								new String[] { Integer.toString(setting.uid), setting.type, setting.name });
 					else {
 						// Create record
 						ContentValues values = new ContentValues();
 						values.put("uid", setting.uid);
+						values.put("type", setting.type);
 						values.put("name", setting.name);
 						values.put("value", setting.value);
 
@@ -867,7 +912,7 @@ public class PrivacyService {
 
 				// Update cache
 				if (mUseCache) {
-					CSetting key = new CSetting(setting.uid, setting.name);
+					CSetting key = new CSetting(setting.uid, setting.type, setting.name);
 					key.setValue(setting.value);
 					synchronized (mSettingCache) {
 						if (mSettingCache.containsKey(key))
@@ -876,6 +921,23 @@ public class PrivacyService {
 							mSettingCache.put(key, key);
 					}
 				}
+
+				// Clear restrictions for white list
+				if (Meta.isWhitelist(setting.type))
+					for (String restrictionName : PrivacyManager.getRestrictions())
+						for (Hook hook : PrivacyManager.getHooks(restrictionName))
+							if (setting.type.equals(hook.whitelist())) {
+								PRestriction restriction = new PRestriction(setting.uid, hook.getRestrictionName(),
+										hook.getName());
+								Util.log(null, Log.WARN, "Clearing cache for " + restriction);
+								synchronized (mRestrictionCache) {
+									for (CRestriction key : new ArrayList<CRestriction>(mRestrictionCache.keySet()))
+										if (key.isSameMethod(restriction)) {
+											Util.log(null, Log.WARN, "Removing " + key);
+											mRestrictionCache.remove(key);
+										}
+								}
+							}
 			} catch (Throwable ex) {
 				Util.bug(null, ex);
 				throw new RemoteException();
@@ -892,13 +954,14 @@ public class PrivacyService {
 		@Override
 		@SuppressLint("DefaultLocale")
 		public PSetting getSetting(PSetting setting) throws RemoteException {
-			PSetting result = new PSetting(setting.uid, setting.name, setting.value);
+			PSetting result = new PSetting(setting.uid, setting.type, setting.name, setting.value);
+
 			try {
 				// No permissions enforced
 
 				// Check cache
 				if (mUseCache && setting.value != null) {
-					CSetting key = new CSetting(setting.uid, setting.name);
+					CSetting key = new CSetting(setting.uid, setting.type, setting.name);
 					synchronized (mSettingCache) {
 						if (mSettingCache.containsKey(key)) {
 							result.value = mSettingCache.get(key).getValue();
@@ -908,7 +971,9 @@ public class PrivacyService {
 				}
 
 				// No persmissions required
-				SQLiteDatabase db = getDatabase();
+				SQLiteDatabase db = getDb();
+				if (db == null)
+					return result;
 
 				// Fallback
 				if (!PrivacyManager.cSettingMigrated.equals(setting.name)
@@ -924,7 +989,7 @@ public class PrivacyService {
 
 				// Precompile statement when needed
 				if (stmtGetSetting == null) {
-					String sql = "SELECT value FROM " + cTableSetting + " WHERE uid=? AND name=?";
+					String sql = "SELECT value FROM " + cTableSetting + " WHERE uid=? AND type=? AND name=?";
 					stmtGetSetting = db.compileStatement(sql);
 				}
 
@@ -936,7 +1001,8 @@ public class PrivacyService {
 						synchronized (stmtGetSetting) {
 							stmtGetSetting.clearBindings();
 							stmtGetSetting.bindLong(1, setting.uid);
-							stmtGetSetting.bindString(2, setting.name);
+							stmtGetSetting.bindString(2, setting.type);
+							stmtGetSetting.bindString(3, setting.name);
 							String value = stmtGetSetting.simpleQueryForString();
 							if (value != null)
 								result.value = value;
@@ -955,7 +1021,7 @@ public class PrivacyService {
 
 				// Add to cache
 				if (mUseCache && result.value != null) {
-					CSetting key = new CSetting(setting.uid, setting.name);
+					CSetting key = new CSetting(setting.uid, setting.type, setting.name);
 					key.setValue(result.value);
 					synchronized (mSettingCache) {
 						if (mSettingCache.containsKey(key))
@@ -974,19 +1040,22 @@ public class PrivacyService {
 			List<PSetting> listSetting = new ArrayList<PSetting>();
 			try {
 				enforcePermission();
-				SQLiteDatabase db = getDatabase();
+				SQLiteDatabase db = getDb();
+				if (db == null)
+					return listSetting;
 
 				mLock.readLock().lock();
 				db.beginTransaction();
 				try {
-					Cursor cursor = db.query(cTableSetting, new String[] { "name", "value" }, "uid=?",
+					Cursor cursor = db.query(cTableSetting, new String[] { "type", "name", "value" }, "uid=?",
 							new String[] { Integer.toString(uid) }, null, null, null);
 					if (cursor == null)
 						Util.log(null, Log.WARN, "Database cursor null (settings)");
 					else
 						try {
 							while (cursor.moveToNext())
-								listSetting.add(new PSetting(uid, cursor.getString(0), cursor.getString(1)));
+								listSetting.add(new PSetting(uid, cursor.getString(0), cursor.getString(1), cursor
+										.getString(2)));
 						} finally {
 							cursor.close();
 						}
@@ -1010,7 +1079,9 @@ public class PrivacyService {
 		public void deleteSettings(int uid) throws RemoteException {
 			try {
 				enforcePermission();
-				SQLiteDatabase db = getDatabase();
+				SQLiteDatabase db = getDb();
+				if (db == null)
+					return;
 
 				mLock.writeLock().lock();
 				db.beginTransaction();
@@ -1042,19 +1113,22 @@ public class PrivacyService {
 		public void clear() throws RemoteException {
 			try {
 				enforcePermission();
-				SQLiteDatabase db = getDatabase();
+				SQLiteDatabase db = getDb();
+				SQLiteDatabase dbUsage = getDbUsage();
+				if (db == null || dbUsage == null)
+					return;
 
 				mLock.writeLock().lock();
 				db.beginTransaction();
 				try {
-					db.execSQL("DELETE FROM restriction");
-					db.execSQL("DELETE FROM setting");
-					db.execSQL("DELETE FROM usage");
+					db.execSQL("DELETE FROM " + cTableRestriction);
+					db.execSQL("DELETE FROM " + cTableSetting);
 					Util.log(null, Log.WARN, "Database cleared");
 
 					// Reset migrated
 					ContentValues values = new ContentValues();
 					values.put("uid", 0);
+					values.put("type", "");
 					values.put("name", PrivacyManager.cSettingMigrated);
 					values.put("value", Boolean.toString(true));
 					db.insertWithOnConflict(cTableSetting, null, values, SQLiteDatabase.CONFLICT_REPLACE);
@@ -1076,44 +1150,83 @@ public class PrivacyService {
 					synchronized (mSettingCache) {
 						mSettingCache.clear();
 					}
-					Util.log(null, Log.WARN, "Cache cleared");
 				}
+				synchronized (mAskedOnceCache) {
+					mAskedOnceCache.clear();
+				}
+				Util.log(null, Log.WARN, "Caches cleared");
+
+				mLockUsage.writeLock().lock();
+				dbUsage.beginTransaction();
+				try {
+					dbUsage.execSQL("DELETE FROM " + cTableUsage);
+					Util.log(null, Log.WARN, "Usage database cleared");
+
+					dbUsage.setTransactionSuccessful();
+				} finally {
+					try {
+						dbUsage.endTransaction();
+					} finally {
+						mLockUsage.writeLock().unlock();
+					}
+				}
+
 			} catch (Throwable ex) {
 				Util.bug(null, ex);
 				throw new RemoteException();
 			}
 		}
 
+		@Override
+		public void dump(int uid) throws RemoteException {
+			if (uid == 0) {
+
+			} else {
+				synchronized (mRestrictionCache) {
+					for (CRestriction crestriction : mRestrictionCache.keySet())
+						if (crestriction.getUid() == uid)
+							Util.log(null, Log.WARN, "Dump crestriction=" + crestriction);
+				}
+				synchronized (mAskedOnceCache) {
+					for (CRestriction crestriction : mAskedOnceCache.keySet())
+						if (crestriction.getUid() == uid && !crestriction.isExpired())
+							Util.log(null, Log.WARN, "Dump asked=" + crestriction);
+				}
+				synchronized (mSettingCache) {
+					for (CSetting csetting : mSettingCache.keySet())
+						if (csetting.getUid() == uid)
+							Util.log(null, Log.WARN, "Dump csetting=" + csetting);
+				}
+			}
+		}
+
 		// Helper methods
 
-		private void onDemandDialog(final Hook hook, final PRestriction restriction, final PRestriction result) {
-			// Neither category nor method is restricted and asked for
+		private boolean onDemandDialog(final Hook hook, final PRestriction restriction, final PRestriction result) {
 			try {
 				// Without handler nothing can be done
 				if (mHandler == null)
-					return;
+					return false;
 
+				// Check for exceptions
 				if (hook != null && !hook.canOnDemand())
-					return;
-
-				if (!XActivityManagerService.canOnDemand())
-					return;
+					return false;
 
 				// Check if enabled
 				if (!getSettingBool(0, PrivacyManager.cSettingOnDemand, true))
-					return;
+					return false;
 				if (!getSettingBool(restriction.uid, PrivacyManager.cSettingOnDemand, false))
-					return;
+					return false;
 
 				// Skip dangerous methods
 				final boolean dangerous = getSettingBool(0, PrivacyManager.cSettingDangerous, false);
-				if (!dangerous && hook != null && hook.isDangerous())
-					return;
+				if (!dangerous && hook != null && hook.isDangerous() && hook.whitelist() == null)
+					return false;
 
 				// Get am context
 				final Context context = getContext();
 				if (context == null)
-					return;
+					return false;
 
 				long token = 0;
 				try {
@@ -1124,22 +1237,51 @@ public class PrivacyService {
 
 					// Check if system application
 					if (!dangerous && appInfo.isSystem())
-						return;
+						return false;
+
+					// Check if activity manager agrees
+					if (!XActivityManagerService.canOnDemand())
+						return false;
 
 					// Go ask
 					Util.log(null, Log.WARN, "On demand " + restriction);
 					mOndemandSemaphore.acquireUninterruptibly();
 					try {
+						// Check if activity manager still agrees
+						if (!XActivityManagerService.canOnDemand())
+							return false;
+
 						Util.log(null, Log.WARN, "On demanding " + restriction);
 
 						// Check if not asked before
-						CRestriction key = new CRestriction(restriction);
+						CRestriction key = new CRestriction(restriction, restriction.extra);
 						synchronized (mRestrictionCache) {
 							if (mRestrictionCache.containsKey(key))
 								if (mRestrictionCache.get(key).asked) {
 									Util.log(null, Log.WARN, "Already asked " + restriction);
-									return;
+									return false;
 								}
+						}
+						synchronized (mAskedOnceCache) {
+							if (mAskedOnceCache.containsKey(key) && !mAskedOnceCache.get(key).isExpired()) {
+								Util.log(null, Log.WARN, "Already asked once " + restriction);
+								return false;
+							}
+						}
+
+						if (restriction.extra != null && hook != null && hook.whitelist() != null) {
+							CSetting skey = new CSetting(restriction.uid, hook.whitelist(), restriction.extra);
+							CSetting xkey = null;
+							String xextra = getXExtra(restriction, hook);
+							if (xextra != null)
+								xkey = new CSetting(restriction.uid, hook.whitelist(), xextra);
+							synchronized (mSettingCache) {
+								if (mSettingCache.containsKey(skey)
+										|| (xkey != null && mSettingCache.containsKey(xkey))) {
+									Util.log(null, Log.WARN, "Already asked " + skey);
+									return false;
+								}
+							}
 						}
 
 						final AlertDialogHolder holder = new AlertDialogHolder();
@@ -1154,7 +1296,8 @@ public class PrivacyService {
 									AlertDialog.Builder builder = getOnDemandDialogBuilder(restriction, hook, appInfo,
 											dangerous, result, context, latch);
 									AlertDialog alertDialog = builder.create();
-									alertDialog.getWindow().setType(WindowManager.LayoutParams.TYPE_SYSTEM_DIALOG);
+									alertDialog.getWindow().setType(WindowManager.LayoutParams.TYPE_PHONE);
+									alertDialog.getWindow().addFlags(WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN);
 									alertDialog.getWindow().setSoftInputMode(
 											WindowManager.LayoutParams.SOFT_INPUT_STATE_ALWAYS_HIDDEN);
 									alertDialog.setCancelable(false);
@@ -1163,9 +1306,11 @@ public class PrivacyService {
 									holder.dialog = alertDialog;
 
 									// Progress bar
-									final ProgressBar mProgress = (ProgressBar) alertDialog.findViewById(1966);
+									final ProgressBar mProgress = (ProgressBar) alertDialog
+											.findViewById(R.id.pbProgress);
 									mProgress.setMax(cMaxOnDemandDialog * 20);
 									mProgress.setProgress(cMaxOnDemandDialog * 20);
+
 									Runnable rProgress = new Runnable() {
 										@Override
 										public void run() {
@@ -1193,9 +1338,6 @@ public class PrivacyService {
 									AlertDialog dialog = holder.dialog;
 									if (dialog != null)
 										dialog.cancel();
-									// Deny once
-									result.restricted = dangerous
-											|| (!(hook != null && hook.isDangerous()) && !appInfo.isSystem());
 								}
 							});
 						}
@@ -1208,6 +1350,8 @@ public class PrivacyService {
 			} catch (Throwable ex) {
 				Util.bug(null, ex);
 			}
+
+			return true;
 		}
 
 		final class AlertDialogHolder {
@@ -1220,178 +1364,102 @@ public class PrivacyService {
 			// Get resources
 			String self = PrivacyService.class.getPackage().getName();
 			Resources resources = context.getPackageManager().getResourcesForApplication(self);
-			int hmargin = resources.getDimensionPixelSize(R.dimen.activity_horizontal_margin);
-			int vmargin = resources.getDimensionPixelSize(R.dimen.activity_vertical_margin);
-			float density = context.getResources().getDisplayMetrics().density;
 
-			// Build view
-			ScrollView scroll = new ScrollView(context);
-			ViewGroup.LayoutParams scrollParam = new ViewGroup.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT,
-					LinearLayout.LayoutParams.WRAP_CONTENT);
-			scroll.setLayoutParams(scrollParam);
-			scroll.setPadding(hmargin, vmargin, hmargin, vmargin);
+			// Reference views
+			View view = LayoutInflater.from(context.createPackageContext(self, 0)).inflate(R.layout.ondemand, null);
+			ImageView ivAppIcon = (ImageView) view.findViewById(R.id.ivAppIcon);
+			TextView tvUid = (TextView) view.findViewById(R.id.tvUid);
+			TextView tvAppName = (TextView) view.findViewById(R.id.tvAppName);
+			TextView tvAttempt = (TextView) view.findViewById(R.id.tvAttempt);
+			TextView tvCategory = (TextView) view.findViewById(R.id.tvCategory);
+			TextView tvFunction = (TextView) view.findViewById(R.id.tvFunction);
+			TextView tvParameters = (TextView) view.findViewById(R.id.tvParameters);
+			TableRow rowParameters = (TableRow) view.findViewById(R.id.rowParameters);
+			final CheckBox cbCategory = (CheckBox) view.findViewById(R.id.cbCategory);
+			final CheckBox cbOnce = (CheckBox) view.findViewById(R.id.cbOnce);
+			final CheckBox cbWhitelist = (CheckBox) view.findViewById(R.id.cbWhitelist);
+			final CheckBox cbWhitelistExtra = (CheckBox) view.findViewById(R.id.cbWhitelistExtra);
+
+			// Set values
 			if ((hook != null && hook.isDangerous()) || appInfo.isSystem())
-				scroll.setBackgroundColor(resources.getColor(R.color.color_dangerous_dark));
+				view.setBackgroundColor(resources.getColor(R.color.color_dangerous_dark));
 
-			// Container
-			LinearLayout llContainer = new LinearLayout(context);
-			llContainer.setOrientation(LinearLayout.VERTICAL);
-			LinearLayout.LayoutParams llContainerParams = new LinearLayout.LayoutParams(
-					LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT);
-			llContainer.setLayoutParams(llContainerParams);
+			ivAppIcon.setImageDrawable(appInfo.getIcon(context));
+			tvUid.setText(Integer.toString(appInfo.getUid()));
+			tvAppName.setText(TextUtils.join(", ", appInfo.getApplicationName()));
 
-			// Container for icon & message
-			LinearLayout llApplication = new LinearLayout(context);
-			llApplication.setOrientation(LinearLayout.HORIZONTAL);
-			LinearLayout.LayoutParams llApplicationParams = new LinearLayout.LayoutParams(
-					LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT);
-			llApplication.setLayoutParams(llApplicationParams);
-			{
-				// Application icon
-				ImageView ivApp = new ImageView(context);
-				ivApp.setImageDrawable(appInfo.getIcon(context));
-				LinearLayout.LayoutParams ivAppParams = new LinearLayout.LayoutParams(
-						LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT);
-				ivAppParams.height = (int) (density * 32);
-				ivAppParams.width = (int) (density * 32);
-				ivApp.setLayoutParams(ivAppParams);
-				llApplication.addView(ivApp);
+			String defaultAction = resources.getString(result.restricted ? R.string.title_deny : R.string.title_allow);
+			tvAttempt.setText(resources.getString(R.string.title_attempt) + " (" + defaultAction + ")");
 
-				// Application name
-				TextView tvApp = new TextView(context);
-				tvApp.setText(TextUtils.join(", ", appInfo.getApplicationName()));
-				tvApp.setTextAppearance(context, android.R.attr.textAppearanceMedium);
-				LinearLayout.LayoutParams tvAppParams = new LinearLayout.LayoutParams(
-						LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT);
-				tvAppParams.setMargins(hmargin / 2, 0, 0, 0);
-				tvApp.setLayoutParams(tvAppParams);
-				llApplication.addView(tvApp);
-			}
-			llContainer.addView(llApplication);
+			int catId = resources.getIdentifier("restrict_" + restriction.restrictionName, "string", self);
+			tvCategory.setText(resources.getString(catId));
+			tvFunction.setText(restriction.methodName);
+			if (restriction.extra == null)
+				rowParameters.setVisibility(View.GONE);
+			else
+				tvParameters.setText(restriction.extra);
 
-			// Attempt
-			TextView titleAttempt = new TextView(context);
-			titleAttempt.setText(resources.getString(R.string.title_attempt));
-			LinearLayout.LayoutParams tvAttemptParams = new LinearLayout.LayoutParams(
-					LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT);
-			tvAttemptParams.setMargins(0, vmargin / 2, 0, 0);
-			titleAttempt.setLayoutParams(tvAttemptParams);
-			titleAttempt.setPaintFlags(titleAttempt.getPaintFlags() | Paint.UNDERLINE_TEXT_FLAG);
-			llContainer.addView(titleAttempt);
-
-			// Table for restriction
-			TableLayout table = new TableLayout(context);
-			LinearLayout.LayoutParams llTableParams = new LinearLayout.LayoutParams(
-					LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
-			table.setLayoutParams(llTableParams);
-			table.setPadding(0, 0, 0, vmargin / 2);
-			table.setShrinkAllColumns(true);
-			{
-				TableRow row1 = new TableRow(context);
-				TableRow row2 = new TableRow(context);
-				TableRow row3 = new TableRow(context);
-
-				TableRow.LayoutParams cellParams0 = new TableRow.LayoutParams(TableRow.LayoutParams.WRAP_CONTENT,
-						TableRow.LayoutParams.WRAP_CONTENT);
-				TableRow.LayoutParams cellParams1 = new TableRow.LayoutParams(0, TableRow.LayoutParams.WRAP_CONTENT, 1);
-				cellParams1.setMargins(hmargin / 2, 0, 0, 0);
-
-				// Category
-				TextView titleCategory = new TextView(context);
-				titleCategory.setText(resources.getString(R.string.title_category));
-				titleCategory.setSingleLine(true);
-				row1.addView(titleCategory, cellParams0);
-
-				TextView category = new TextView(context);
-				int catId = resources.getIdentifier("restrict_" + restriction.restrictionName, "string", self);
-				category.setText(resources.getString(catId));
-				category.setTypeface(null, Typeface.BOLD);
-				category.setSingleLine(true);
-				category.setEllipsize(TextUtils.TruncateAt.END);
-				row1.addView(category, cellParams1);
-
-				// Method
-				TextView titleMethod = new TextView(context);
-				titleMethod.setText(resources.getString(R.string.title_function));
-				titleMethod.setSingleLine(true);
-				row2.addView(titleMethod, cellParams0);
-
-				TextView method = new TextView(context);
-				method.setText(restriction.methodName);
-				method.setTypeface(null, Typeface.BOLD);
-				method.setSingleLine(true);
-				method.setEllipsize(TextUtils.TruncateAt.START);
-				row2.addView(method, cellParams1);
-
-				// Arguments
-				if (restriction.extra != null) {
-					TextView titleArguments = new TextView(context);
-					titleArguments.setText(resources.getString(R.string.title_parameters));
-					titleArguments.setSingleLine(true);
-					row3.addView(titleArguments, cellParams0);
-
-					TextView argument = new TextView(context);
-					argument.setText(restriction.extra);
-					argument.setTypeface(null, Typeface.BOLD);
-					argument.setSingleLine(true);
-					argument.setEllipsize(TextUtils.TruncateAt.MIDDLE);
-					row3.addView(argument, cellParams1);
-				}
-
-				TableLayout.LayoutParams rowParams = new TableLayout.LayoutParams(
-						TableLayout.LayoutParams.WRAP_CONTENT, TableLayout.LayoutParams.WRAP_CONTENT);
-
-				table.addView(row1, rowParams);
-				table.addView(row2, rowParams);
-				if (restriction.extra != null)
-					table.addView(row3, rowParams);
-			}
-			llContainer.addView(table);
-
-			// Category check box
-			final CheckBox cbCategory = new CheckBox(context);
-			cbCategory.setText(resources.getString(R.string.title_applycat));
 			cbCategory.setChecked(mSelectCategory);
-			LinearLayout.LayoutParams llCategoryParams = new LinearLayout.LayoutParams(
-					LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT);
-			cbCategory.setLayoutParams(llCategoryParams);
-			llContainer.addView(cbCategory);
-
-			// Once check box
-			final CheckBox cbOnce = new CheckBox(context);
+			cbOnce.setChecked(mSelectOnce);
 			cbOnce.setText(String.format(resources.getString(R.string.title_once),
 					PrivacyManager.cRestrictionCacheTimeoutMs / 1000));
-			cbOnce.setChecked(mSelectOnce);
-			LinearLayout.LayoutParams llOnceParams = new LinearLayout.LayoutParams(
-					LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT);
-			cbOnce.setLayoutParams(llOnceParams);
-			llContainer.addView(cbOnce);
 
-			// Message
-			TextView tvPlease = new TextView(context);
-			tvPlease.setText(resources.getString(R.string.title_pleasesubmit));
-			tvPlease.setTypeface(null, Typeface.ITALIC);
-			LinearLayout.LayoutParams tvPleaseParams = new LinearLayout.LayoutParams(
-					LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT);
-			tvPlease.setLayoutParams(tvPleaseParams);
-			llContainer.addView(tvPlease);
+			if (hook != null && hook.whitelist() != null && restriction.extra != null) {
+				cbWhitelist.setText(resources.getString(R.string.title_whitelist, restriction.extra));
+				cbWhitelist.setVisibility(View.VISIBLE);
+				String xextra = getXExtra(restriction, hook);
+				if (xextra != null) {
+					cbWhitelistExtra.setText(resources.getString(R.string.title_whitelist, xextra));
+					cbWhitelistExtra.setVisibility(View.VISIBLE);
+				}
+			}
 
-			// Progress bar
-			ProgressBar pbProgress = new ProgressBar(context, null, android.R.attr.progressBarStyleHorizontal);
-			pbProgress.setId(1966);
-			pbProgress.setIndeterminate(false);
-			LinearLayout.LayoutParams llProgress = new LinearLayout.LayoutParams(
-					LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
-			llProgress.setMargins(0, vmargin, 0, 0);
-			pbProgress.setLayoutParams(llProgress);
-			llContainer.addView(pbProgress);
-
-			scroll.addView(llContainer);
+			// Category, once and whitelist exclude each other
+			cbCategory.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
+				@Override
+				public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
+					if (isChecked) {
+						cbOnce.setChecked(false);
+						cbWhitelist.setChecked(false);
+						cbWhitelistExtra.setChecked(false);
+					}
+				}
+			});
+			cbOnce.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
+				@Override
+				public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
+					if (isChecked) {
+						cbCategory.setChecked(false);
+						cbWhitelist.setChecked(false);
+						cbWhitelistExtra.setChecked(false);
+					}
+				}
+			});
+			cbWhitelist.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
+				@Override
+				public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
+					if (isChecked) {
+						cbCategory.setChecked(false);
+						cbOnce.setChecked(false);
+						cbWhitelistExtra.setChecked(false);
+					}
+				}
+			});
+			cbWhitelistExtra.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
+				@Override
+				public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
+					if (isChecked) {
+						cbCategory.setChecked(false);
+						cbOnce.setChecked(false);
+						cbWhitelist.setChecked(false);
+					}
+				}
+			});
 
 			// Ask
 			AlertDialog.Builder alertDialogBuilder = new AlertDialog.Builder(context);
 			alertDialogBuilder.setTitle(resources.getString(R.string.app_name));
-			alertDialogBuilder.setView(scroll);
+			alertDialogBuilder.setView(view);
 			alertDialogBuilder.setIcon(resources.getDrawable(R.drawable.ic_launcher));
 			alertDialogBuilder.setPositiveButton(resources.getString(R.string.title_deny),
 					new DialogInterface.OnClickListener() {
@@ -1401,8 +1469,12 @@ public class PrivacyService {
 							result.restricted = true;
 							mSelectCategory = cbCategory.isChecked();
 							mSelectOnce = cbOnce.isChecked();
-							if (cbOnce.isChecked())
-								Util.log(null, Log.WARN, "Deny once " + restriction);
+							if (cbWhitelist.isChecked())
+								onDemandWhitelist(restriction, null, result, hook);
+							else if (cbWhitelistExtra.isChecked())
+								onDemandWhitelist(restriction, getXExtra(restriction, hook), result, hook);
+							else if (cbOnce.isChecked())
+								onDemandOnce(restriction, result);
 							else
 								onDemandChoice(restriction, cbCategory.isChecked(), true);
 							latch.countDown();
@@ -1416,8 +1488,12 @@ public class PrivacyService {
 							result.restricted = false;
 							mSelectCategory = cbCategory.isChecked();
 							mSelectOnce = cbOnce.isChecked();
-							if (cbOnce.isChecked())
-								Util.log(null, Log.WARN, "Allow once " + restriction);
+							if (cbWhitelist.isChecked())
+								onDemandWhitelist(restriction, null, result, hook);
+							else if (cbWhitelistExtra.isChecked())
+								onDemandWhitelist(restriction, getXExtra(restriction, hook), result, hook);
+							else if (cbOnce.isChecked())
+								onDemandOnce(restriction, result);
 							else
 								onDemandChoice(restriction, cbCategory.isChecked(), false);
 							latch.countDown();
@@ -1426,14 +1502,59 @@ public class PrivacyService {
 			return alertDialogBuilder;
 		}
 
+		private String getXExtra(PRestriction restriction, Hook hook) {
+			if (hook != null)
+				if (hook.whitelist().equals(Meta.cTypeFilename)) {
+					String folder = new File(restriction.extra).getParent();
+					if (!TextUtils.isEmpty(folder))
+						return folder + File.separatorChar + "*";
+				} else if (hook.whitelist().equals(Meta.cTypeIPAddress)) {
+					int semi = restriction.extra.lastIndexOf(':');
+					String address = (semi >= 0 ? restriction.extra.substring(0, semi) : restriction.extra);
+					if (Patterns.IP_ADDRESS.matcher(address).matches()) {
+						int dot = address.lastIndexOf('.');
+						return address.substring(0, dot + 1) + '*'
+								+ (semi >= 0 ? restriction.extra.substring(semi) : "");
+					} else {
+						int dot = restriction.extra.indexOf('.');
+						if (dot > 0)
+							return '*' + restriction.extra.substring(dot);
+					}
+				}
+			return null;
+		}
+
+		private void onDemandWhitelist(final PRestriction restriction, String xextra, final PRestriction result,
+				Hook hook) {
+			try {
+				// Set the whitelist
+				Util.log(null, Log.WARN, (result.restricted ? "Black" : "White") + "listing " + restriction
+						+ " xextra=" + xextra);
+				setSettingInternal(new PSetting(restriction.uid, hook.whitelist(), (xextra == null ? restriction.extra
+						: xextra), Boolean.toString(!result.restricted)));
+			} catch (Throwable ex) {
+				Util.bug(null, ex);
+			}
+		}
+
+		private void onDemandOnce(final PRestriction restriction, final PRestriction result) {
+			Util.log(null, Log.WARN, (result.restricted ? "Deny" : "Allow") + " once " + restriction);
+			result.time = new Date().getTime() + PrivacyManager.cRestrictionCacheTimeoutMs;
+			CRestriction key = new CRestriction(restriction, restriction.extra);
+			synchronized (mAskedOnceCache) {
+				if (mAskedOnceCache.containsKey(key))
+					mAskedOnceCache.remove(key);
+				mAskedOnceCache.put(key, key);
+			}
+		}
+
 		private void onDemandChoice(PRestriction restriction, boolean category, boolean restrict) {
 			try {
 				PRestriction result = new PRestriction(restriction);
 
 				// Get current category restriction state
 				boolean prevRestricted = false;
-				CRestriction key = new CRestriction(restriction);
-				key.methodName = null;
+				CRestriction key = new CRestriction(restriction.uid, restriction.restrictionName, null, null);
 				synchronized (mRestrictionCache) {
 					if (mRestrictionCache.containsKey(key))
 						prevRestricted = mRestrictionCache.get(key).restricted;
@@ -1464,15 +1585,16 @@ public class PrivacyService {
 					result.methodName = restriction.methodName;
 					result.restricted = restrict;
 					result.asked = true;
+					result.extra = restriction.extra;
 					setRestrictionInternal(result);
 				}
 
 				// Mark state as changed
-				setSettingInternal(new PSetting(restriction.uid, PrivacyManager.cSettingState,
+				setSettingInternal(new PSetting(restriction.uid, "", PrivacyManager.cSettingState,
 						Integer.toString(ActivityMain.STATE_CHANGED)));
 
 				// Update modification time
-				setSettingInternal(new PSetting(restriction.uid, PrivacyManager.cSettingModifyTime,
+				setSettingInternal(new PSetting(restriction.uid, "", PrivacyManager.cSettingModifyTime,
 						Long.toString(System.currentTimeMillis())));
 			} catch (Throwable ex) {
 				Util.bug(null, ex);
@@ -1495,7 +1617,8 @@ public class PrivacyService {
 
 							// Notify user
 							String text = resources.getString(R.string.msg_restrictedby);
-							text += " (" + restriction.restrictionName + "/" + restriction.methodName + ")";
+							text += " (" + restriction.uid + " " + restriction.restrictionName + "/"
+									+ restriction.methodName + ")";
 							Toast.makeText(context, text, Toast.LENGTH_LONG).show();
 
 						} catch (NameNotFoundException ex) {
@@ -1508,7 +1631,11 @@ public class PrivacyService {
 		}
 
 		private boolean getSettingBool(int uid, String name, boolean defaultValue) throws RemoteException {
-			String value = getSetting(new PSetting(uid, name, Boolean.toString(defaultValue))).value;
+			return getSettingBool(uid, "", name, defaultValue);
+		}
+
+		private boolean getSettingBool(int uid, String type, String name, boolean defaultValue) throws RemoteException {
+			String value = getSetting(new PSetting(uid, type, name, Boolean.toString(defaultValue))).value;
 			return Boolean.parseBoolean(value);
 		}
 
@@ -1551,16 +1678,97 @@ public class PrivacyService {
 			return mXUid;
 		}
 
-		private SQLiteDatabase getDatabase() {
+		private File getDbFile() {
+			return new File(Environment.getDataDirectory() + File.separator + "system" + File.separator + "xprivacy"
+					+ File.separator + "xprivacy.db");
+		}
+
+		private File getDbUsageFile() {
+			return new File(Environment.getDataDirectory() + File.separator + "system" + File.separator + "xprivacy"
+					+ File.separator + "usage.db");
+		}
+
+		private void setupDatabase() {
+			try {
+				File dbFile = getDbFile();
+
+				// Create database folder
+				dbFile.getParentFile().mkdirs();
+
+				// Check database folder
+				if (dbFile.getParentFile().isDirectory())
+					Util.log(null, Log.WARN, "Database folder=" + dbFile.getParentFile());
+				else
+					Util.log(null, Log.ERROR, "Does not exist folder=" + dbFile.getParentFile());
+
+				// Move database from data/xprivacy folder
+				File folder = new File(Environment.getDataDirectory() + File.separator + "xprivacy");
+				if (folder.exists()) {
+					File[] oldFiles = folder.listFiles();
+					if (oldFiles != null)
+						for (File file : oldFiles)
+							if (file.getName().startsWith("xprivacy.db") || file.getName().startsWith("usage.db")) {
+								File target = new File(dbFile.getParentFile() + File.separator + file.getName());
+								boolean status = Util.move(file, target);
+								Util.log(null, Log.WARN, "Moved " + file + " to " + target + " ok=" + status);
+							}
+					folder.delete();
+				}
+
+				// Move database from data/application folder
+				folder = new File(Environment.getDataDirectory() + File.separator + "data" + File.separator
+						+ PrivacyService.class.getPackage().getName());
+				if (folder.exists()) {
+					File[] oldFiles = folder.listFiles();
+					if (oldFiles != null)
+						for (File file : oldFiles)
+							if (file.getName().startsWith("xprivacy.db")) {
+								File target = new File(dbFile.getParentFile() + File.separator + file.getName());
+								boolean status = Util.move(file, target);
+								Util.log(null, Log.WARN, "Moved " + file + " to " + target + " ok=" + status);
+							}
+					folder.delete();
+				}
+
+				// Set database file permissions
+				// Owner: rwx (system)
+				// Group: rwx (system)
+				// World: ---
+				Util.setPermissions(dbFile.getParentFile().getAbsolutePath(), 0770, Process.SYSTEM_UID,
+						Process.SYSTEM_UID);
+				File[] files = dbFile.getParentFile().listFiles();
+				if (files != null)
+					for (File file : files)
+						if (file.getName().startsWith("xprivacy.db") || file.getName().startsWith("usage.db"))
+							Util.setPermissions(file.getAbsolutePath(), 0770, Process.SYSTEM_UID, Process.SYSTEM_UID);
+
+			} catch (Throwable ex) {
+				Util.bug(null, ex);
+			}
+		}
+
+		private SQLiteDatabase getDb() {
 			synchronized (this) {
 				// Check current reference
-				if (mDatabase != null && !mDatabase.isOpen()) {
-					mDatabase = null;
+				if (mDb != null && !mDb.isOpen()) {
+					mDb = null;
 					Util.log(null, Log.ERROR, "Database not open");
 				}
 
-				if (mDatabase == null)
+				mLock.readLock().lock();
+				try {
+					if (mDb != null && mDb.getVersion() != 11) {
+						mDb = null;
+						Util.log(null, Log.ERROR, "Database wrong version=" + mDb.getVersion());
+					}
+				} finally {
+					mLock.readLock().unlock();
+				}
+
+				if (mDb == null)
 					try {
+						setupDatabase();
+
 						// Create/upgrade database when needed
 						File dbFile = getDbFile();
 						SQLiteDatabase db = SQLiteDatabase.openOrCreateDatabase(dbFile, null);
@@ -1607,6 +1815,8 @@ public class PrivacyService {
 							try {
 								ContentValues values = new ContentValues();
 								values.put("uid", 0);
+								if (db.getVersion() > 9)
+									values.put("type", "");
 								values.put("name", PrivacyManager.cSettingMigrated);
 								values.put("value", Boolean.toString(true));
 								db.insertWithOnConflict(cTableSetting, null, values, SQLiteDatabase.CONFLICT_REPLACE);
@@ -1623,11 +1833,11 @@ public class PrivacyService {
 
 						// Upgrade database if needed
 						if (db.needUpgrade(1)) {
+							Util.log(null, Log.WARN, "Creating database");
 							mLock.writeLock().lock();
 							db.beginTransaction();
 							try {
 								// http://www.sqlite.org/lang_createtable.html
-								Util.log(null, Log.WARN, "Creating database");
 								db.execSQL("CREATE TABLE restriction (uid INTEGER NOT NULL, restriction TEXT NOT NULL, method TEXT NOT NULL, restricted INTEGER NOT NULL)");
 								db.execSQL("CREATE TABLE setting (uid INTEGER NOT NULL, name TEXT NOT NULL, value TEXT)");
 								db.execSQL("CREATE TABLE usage (uid INTEGER NOT NULL, restriction TEXT NOT NULL, method TEXT NOT NULL, restricted INTEGER NOT NULL, time INTEGER NOT NULL)");
@@ -1646,11 +1856,14 @@ public class PrivacyService {
 
 						}
 
-						if (db.needUpgrade(2))
+						if (db.needUpgrade(2)) {
+							Util.log(null, Log.WARN, "Upgrading from version=" + db.getVersion());
 							// Old migrated indication
 							db.setVersion(2);
+						}
 
 						if (db.needUpgrade(3)) {
+							Util.log(null, Log.WARN, "Upgrading from version=" + db.getVersion());
 							mLock.writeLock().lock();
 							db.beginTransaction();
 							try {
@@ -1667,6 +1880,7 @@ public class PrivacyService {
 						}
 
 						if (db.needUpgrade(4)) {
+							Util.log(null, Log.WARN, "Upgrading from version=" + db.getVersion());
 							mLock.writeLock().lock();
 							db.beginTransaction();
 							try {
@@ -1683,6 +1897,7 @@ public class PrivacyService {
 						}
 
 						if (db.needUpgrade(5)) {
+							Util.log(null, Log.WARN, "Upgrading from version=" + db.getVersion());
 							mLock.writeLock().lock();
 							db.beginTransaction();
 							try {
@@ -1700,6 +1915,7 @@ public class PrivacyService {
 						}
 
 						if (db.needUpgrade(6)) {
+							Util.log(null, Log.WARN, "Upgrading from version=" + db.getVersion());
 							mLock.writeLock().lock();
 							db.beginTransaction();
 							try {
@@ -1715,14 +1931,243 @@ public class PrivacyService {
 							}
 						}
 
+						if (db.needUpgrade(7)) {
+							Util.log(null, Log.WARN, "Upgrading from version=" + db.getVersion());
+							mLock.writeLock().lock();
+							db.beginTransaction();
+							try {
+								db.execSQL("ALTER TABLE usage ADD COLUMN extra TEXT");
+								db.setVersion(7);
+								db.setTransactionSuccessful();
+							} finally {
+								try {
+									db.endTransaction();
+								} finally {
+									mLock.writeLock().unlock();
+								}
+							}
+						}
+
+						if (db.needUpgrade(8)) {
+							Util.log(null, Log.WARN, "Upgrading from version=" + db.getVersion());
+							mLock.writeLock().lock();
+							db.beginTransaction();
+							try {
+								db.execSQL("DROP INDEX idx_usage");
+								db.execSQL("CREATE UNIQUE INDEX idx_usage ON usage(uid, restriction, method, extra)");
+								db.setVersion(8);
+								db.setTransactionSuccessful();
+							} finally {
+								try {
+									db.endTransaction();
+								} finally {
+									mLock.writeLock().unlock();
+								}
+							}
+						}
+
+						if (db.needUpgrade(9)) {
+							Util.log(null, Log.WARN, "Upgrading from version=" + db.getVersion());
+							mLock.writeLock().lock();
+							db.beginTransaction();
+							try {
+								db.execSQL("DROP TABLE usage");
+								db.setVersion(9);
+								db.setTransactionSuccessful();
+							} finally {
+								try {
+									db.endTransaction();
+								} finally {
+									mLock.writeLock().unlock();
+								}
+							}
+						}
+
+						if (db.needUpgrade(10)) {
+							Util.log(null, Log.WARN, "Upgrading from version=" + db.getVersion());
+							mLock.writeLock().lock();
+							db.beginTransaction();
+							try {
+								db.execSQL("ALTER TABLE setting ADD COLUMN type TEXT");
+								db.execSQL("DROP INDEX idx_setting");
+								db.execSQL("CREATE UNIQUE INDEX idx_setting ON setting(uid, type, name)");
+								db.execSQL("UPDATE setting SET type=''");
+								db.setVersion(10);
+								db.setTransactionSuccessful();
+							} finally {
+								try {
+									db.endTransaction();
+								} finally {
+									mLock.writeLock().unlock();
+								}
+							}
+						}
+
+						if (db.needUpgrade(11)) {
+							Util.log(null, Log.WARN, "Upgrading from version=" + db.getVersion());
+							mLock.writeLock().lock();
+							db.beginTransaction();
+							try {
+								List<PSetting> listSetting = new ArrayList<PSetting>();
+								Cursor cursor = db.query(cTableSetting, new String[] { "uid", "name", "value" }, null,
+										null, null, null, null);
+								if (cursor != null)
+									try {
+										while (cursor.moveToNext()) {
+											int uid = cursor.getInt(0);
+											String name = cursor.getString(1);
+											String value = cursor.getString(2);
+											if (name.startsWith("Account.") || name.startsWith("Application.")
+													|| name.startsWith("Contact.") || name.startsWith("Template.")) {
+												int dot = name.indexOf('.');
+												String type = name.substring(0, dot);
+												listSetting
+														.add(new PSetting(uid, type, name.substring(dot + 1), value));
+												listSetting.add(new PSetting(uid, "", name, null));
+
+											} else if (name.startsWith("Whitelist.")) {
+												String[] component = name.split("\\.");
+												listSetting.add(new PSetting(uid, component[1], name.replace(
+														component[0] + "." + component[1] + ".", ""), value));
+												listSetting.add(new PSetting(uid, "", name, null));
+											}
+										}
+									} finally {
+										cursor.close();
+									}
+
+								for (PSetting setting : listSetting) {
+									Util.log(null, Log.WARN, "Converting " + setting);
+									if (setting.value == null)
+										db.delete(cTableSetting, "uid=? AND type=? AND name=?",
+												new String[] { Integer.toString(setting.uid), setting.type,
+														setting.name });
+									else {
+										// Create record
+										ContentValues values = new ContentValues();
+										values.put("uid", setting.uid);
+										values.put("type", setting.type);
+										values.put("name", setting.name);
+										values.put("value", setting.value);
+
+										// Insert/update record
+										db.insertWithOnConflict(cTableSetting, null, values,
+												SQLiteDatabase.CONFLICT_REPLACE);
+									}
+								}
+
+								db.setVersion(11);
+								db.setTransactionSuccessful();
+							} finally {
+								try {
+									db.endTransaction();
+								} finally {
+									mLock.writeLock().unlock();
+								}
+							}
+						}
+
+						Util.log(null, Log.WARN, "Running VACUUM");
+						mLock.writeLock().lock();
+						try {
+							db.execSQL("VACUUM");
+						} catch (Throwable ex) {
+							Util.bug(null, ex);
+						} finally {
+							mLock.writeLock().unlock();
+						}
+
 						Util.log(null, Log.WARN, "Database version=" + db.getVersion());
-						mDatabase = db;
+						mDb = db;
 					} catch (Throwable ex) {
-						mDatabase = null; // retry
+						mDb = null; // retry
+						Util.bug(null, ex);
+						try {
+							OutputStreamWriter outputStreamWriter = new OutputStreamWriter(new FileOutputStream(
+									"/cache/xprivacy.log", true));
+							outputStreamWriter.write(ex.toString());
+							outputStreamWriter.write("\n");
+							outputStreamWriter.write(Log.getStackTraceString(ex));
+							outputStreamWriter.write("\n");
+							outputStreamWriter.close();
+						} catch (Throwable exex) {
+							Util.bug(null, exex);
+						}
+					}
+
+				return mDb;
+			}
+		}
+
+		private SQLiteDatabase getDbUsage() {
+			synchronized (this) {
+				// Check current reference
+				if (mDbUsage != null && !mDbUsage.isOpen()) {
+					mDbUsage = null;
+					Util.log(null, Log.ERROR, "Usage database not open");
+				}
+
+				if (mDbUsage == null)
+					try {
+						// Create/upgrade database when needed
+						File dbUsageFile = getDbUsageFile();
+						SQLiteDatabase dbUsage = SQLiteDatabase.openOrCreateDatabase(dbUsageFile, null);
+
+						// Check database integrity
+						if (Build.VERSION.SDK_INT < Build.VERSION_CODES.HONEYCOMB || dbUsage.isDatabaseIntegrityOk())
+							Util.log(null, Log.WARN, "Usage database integrity ok");
+						else {
+							dbUsage.close();
+							dbUsageFile.delete();
+							new File(dbUsageFile + "-journal").delete();
+							dbUsage = SQLiteDatabase.openOrCreateDatabase(dbUsageFile, null);
+							Util.log(null, Log.ERROR, "Deleted corrupt usage data database");
+						}
+
+						// Upgrade database if needed
+						if (dbUsage.needUpgrade(1)) {
+							Util.log(null, Log.WARN, "Creating usage database");
+							mLockUsage.writeLock().lock();
+							dbUsage.beginTransaction();
+							try {
+								dbUsage.execSQL("CREATE TABLE usage (uid INTEGER NOT NULL, restriction TEXT NOT NULL, method TEXT NOT NULL, extra TEXT NOT NULL, restricted INTEGER NOT NULL, time INTEGER NOT NULL)");
+								dbUsage.execSQL("CREATE UNIQUE INDEX idx_usage ON usage(uid, restriction, method, extra)");
+								dbUsage.setVersion(1);
+								dbUsage.setTransactionSuccessful();
+							} finally {
+								try {
+									dbUsage.endTransaction();
+								} finally {
+									mLockUsage.writeLock().unlock();
+								}
+							}
+						}
+
+						Util.log(null, Log.WARN, "Running VACUUM");
+						mLockUsage.writeLock().lock();
+						try {
+							dbUsage.execSQL("VACUUM");
+						} catch (Throwable ex) {
+							Util.bug(null, ex);
+						} finally {
+							mLockUsage.writeLock().unlock();
+						}
+
+						Util.log(null, Log.WARN, "Changing to asynchronous mode");
+						try {
+							dbUsage.rawQuery("PRAGMA synchronous=OFF", null);
+						} catch (Throwable ex) {
+							Util.bug(null, ex);
+						}
+
+						Util.log(null, Log.WARN, "Usage database version=" + dbUsage.getVersion());
+						mDbUsage = dbUsage;
+					} catch (Throwable ex) {
+						mDbUsage = null; // retry
 						Util.bug(null, ex);
 					}
 
-				return mDatabase;
+				return mDbUsage;
 			}
 		}
 	};

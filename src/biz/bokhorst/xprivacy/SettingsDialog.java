@@ -39,9 +39,10 @@ public class SettingsDialog {
 
 		final CheckBox cbNotify = (CheckBox) dlgSettings.findViewById(R.id.cbNotify);
 		final CheckBox cbOnDemand = (CheckBox) dlgSettings.findViewById(R.id.cbOnDemand);
-
 		final CheckBox cbUsage = (CheckBox) dlgSettings.findViewById(R.id.cbUsage);
+		final CheckBox cbParameters = (CheckBox) dlgSettings.findViewById(R.id.cbParameters);
 		final CheckBox cbLog = (CheckBox) dlgSettings.findViewById(R.id.cbLog);
+
 		final CheckBox cbExpert = (CheckBox) dlgSettings.findViewById(R.id.cbExpert);
 		final CheckBox cbSystem = (CheckBox) dlgSettings.findViewById(R.id.cbSystem);
 		final CheckBox cbDangerous = (CheckBox) dlgSettings.findViewById(R.id.cbDangerous);
@@ -72,6 +73,8 @@ public class SettingsDialog {
 		final EditText etCountry = (EditText) dlgSettings.findViewById(R.id.etCountry);
 		final EditText etOperator = (EditText) dlgSettings.findViewById(R.id.etOperator);
 		final EditText etIccId = (EditText) dlgSettings.findViewById(R.id.etIccId);
+		final EditText etCid = (EditText) dlgSettings.findViewById(R.id.etCid);
+		final EditText etLac = (EditText) dlgSettings.findViewById(R.id.etLac);
 		final EditText etSubscriber = (EditText) dlgSettings.findViewById(R.id.etSubscriber);
 		final EditText etSSID = (EditText) dlgSettings.findViewById(R.id.etSSID);
 		final EditText etUa = (EditText) dlgSettings.findViewById(R.id.etUa);
@@ -94,7 +97,7 @@ public class SettingsDialog {
 		Button btnCancel = (Button) dlgSettings.findViewById(R.id.btnCancel);
 
 		final EditText[] edits = new EditText[] { etSerial, etLat, etLon, etAlt, etMac, etIP, etImei, etPhone, etId,
-				etGsfId, etAdId, etMcc, etMnc, etCountry, etOperator, etIccId, etSubscriber, etSSID, etUa };
+				etGsfId, etAdId, etMcc, etMnc, etCountry, etOperator, etIccId, etCid, etLac, etSubscriber, etSSID, etUa };
 
 		final CheckBox[] boxes = new CheckBox[] { cbSerial, cbLat, cbLon, cbAlt, cbMac, cbImei, cbPhone, cbId, cbGsfId,
 				cbAdId, cbCountry, cbSubscriber, cbSSID };
@@ -218,6 +221,7 @@ public class SettingsDialog {
 
 		// Get current values
 		boolean usage = PrivacyManager.getSettingBool(uid, PrivacyManager.cSettingUsage, true, false);
+		boolean parameters = PrivacyManager.getSettingBool(uid, PrivacyManager.cSettingParameters, false, false);
 		boolean log = PrivacyManager.getSettingBool(uid, PrivacyManager.cSettingLog, false, false);
 		boolean components = PrivacyManager.getSettingBool(uid, PrivacyManager.cSettingSystem, false, false);
 		boolean dangerous = PrivacyManager.getSettingBool(uid, PrivacyManager.cSettingDangerous, false, false);
@@ -254,6 +258,8 @@ public class SettingsDialog {
 
 			// Global settings
 			cbUsage.setChecked(usage);
+			cbParameters.setChecked(parameters);
+			cbParameters.setEnabled(Util.hasProLicense(context) != null);
 			cbLog.setChecked(log);
 			cbExpert.setChecked(expert);
 			if (expert) {
@@ -273,6 +279,7 @@ public class SettingsDialog {
 		} else {
 			// Disable global settings
 			cbUsage.setVisibility(View.GONE);
+			cbParameters.setVisibility(View.GONE);
 			cbLog.setVisibility(View.GONE);
 			cbExpert.setVisibility(View.GONE);
 			cbSystem.setVisibility(View.GONE);
@@ -285,7 +292,8 @@ public class SettingsDialog {
 			cbNotify.setChecked(notify);
 		}
 
-		if (uid == 0 || PrivacyManager.isApplication(uid))
+		boolean gondemand = PrivacyManager.getSettingBool(0, PrivacyManager.cSettingOnDemand, true, false);
+		if (uid == 0 || (PrivacyManager.isApplication(uid) && gondemand))
 			cbOnDemand.setChecked(ondemand);
 		else
 			cbOnDemand.setVisibility(View.GONE);
@@ -346,6 +354,8 @@ public class SettingsDialog {
 		etMnc.setText(PrivacyManager.getSetting(-uid, PrivacyManager.cSettingMnc, "", false));
 		etOperator.setText(PrivacyManager.getSetting(-uid, PrivacyManager.cSettingOperator, "", false));
 		etIccId.setText(PrivacyManager.getSetting(-uid, PrivacyManager.cSettingIccId, "", false));
+		etCid.setText(PrivacyManager.getSetting(-uid, PrivacyManager.cSettingCid, "", false));
+		etLac.setText(PrivacyManager.getSetting(-uid, PrivacyManager.cSettingLac, "", false));
 		etUa.setText(PrivacyManager.getSetting(-uid, PrivacyManager.cSettingUa, "", false));
 
 		// Handle search
@@ -379,7 +389,6 @@ public class SettingsDialog {
 					}
 				} catch (Throwable ex) {
 					Toast.makeText(context, ex.getMessage(), Toast.LENGTH_LONG).show();
-					Util.bug(null, ex);
 				}
 			}
 		});
@@ -425,6 +434,8 @@ public class SettingsDialog {
 				if (uid == 0) {
 					// Global settings
 					PrivacyManager.setSetting(uid, PrivacyManager.cSettingUsage, Boolean.toString(cbUsage.isChecked()));
+					PrivacyManager.setSetting(uid, PrivacyManager.cSettingParameters,
+							Boolean.toString(cbParameters.isChecked()));
 					PrivacyManager.setSetting(uid, PrivacyManager.cSettingLog, Boolean.toString(cbLog.isChecked()));
 					PrivacyManager.setSetting(uid, PrivacyManager.cSettingSystem,
 							Boolean.toString(cbSystem.isChecked()));
@@ -514,6 +525,8 @@ public class SettingsDialog {
 				PrivacyManager.setSetting(uid, PrivacyManager.cSettingCountry, getValue(cbCountry, etCountry));
 				PrivacyManager.setSetting(uid, PrivacyManager.cSettingOperator, getValue(null, etOperator));
 				PrivacyManager.setSetting(uid, PrivacyManager.cSettingIccId, getValue(null, etIccId));
+				PrivacyManager.setSetting(uid, PrivacyManager.cSettingCid, getValue(null, etCid));
+				PrivacyManager.setSetting(uid, PrivacyManager.cSettingLac, getValue(null, etLac));
 				PrivacyManager.setSetting(uid, PrivacyManager.cSettingSubscriber, getValue(cbSubscriber, etSubscriber));
 				PrivacyManager.setSetting(uid, PrivacyManager.cSettingSSID, getValue(cbSSID, etSSID));
 				PrivacyManager.setSetting(uid, PrivacyManager.cSettingUa, getValue(null, etUa));

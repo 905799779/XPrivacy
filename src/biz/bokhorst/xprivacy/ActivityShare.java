@@ -5,6 +5,8 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.net.SocketTimeoutException;
+import java.net.UnknownHostException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -14,10 +16,12 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
-import java.util.Map.Entry;
+import java.util.TreeMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadFactory;
+
+import javax.net.ssl.SSLException;
 import javax.xml.parsers.SAXParserFactory;
 
 import org.apache.http.HttpResponse;
@@ -25,6 +29,8 @@ import org.apache.http.HttpStatus;
 import org.apache.http.StatusLine;
 import org.apache.http.client.HttpClient;
 import org.apache.http.client.methods.HttpPost;
+import org.apache.http.conn.ConnectTimeoutException;
+import org.apache.http.conn.HttpHostConnectException;
 import org.apache.http.entity.ByteArrayEntity;
 import org.apache.http.impl.client.DefaultHttpClient;
 import org.apache.http.params.BasicHttpParams;
@@ -57,35 +63,34 @@ import android.os.Environment;
 import android.provider.ContactsContract;
 import android.provider.Settings.Secure;
 import android.util.Log;
+import android.util.Patterns;
 import android.util.SparseArray;
 import android.util.Xml;
-import android.view.ContextMenu;
 import android.view.LayoutInflater;
-import android.view.Menu;
-import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.Button;
+import android.widget.CheckBox;
 import android.widget.ImageView;
 import android.widget.ListView;
 import android.widget.ProgressBar;
+import android.widget.RadioButton;
+import android.widget.RadioGroup;
+import android.widget.RadioGroup.OnCheckedChangeListener;
 import android.widget.TextView;
 import android.widget.EditText;
 import android.widget.Toast;
 
 public class ActivityShare extends ActivityBase {
-	private int mThemeId;
 	private int mActionId;
 	private AppListAdapter mAppAdapter;
-	private SparseArray<AppHolder> mAppsByUid;
+	private SparseArray<AppState> mAppsByUid;
 	private boolean mRunning = false;
 	private boolean mAbort = false;
 	private int mProgressCurrent;
 	private int mProgressWidth = 0;
 	private String mFileName;
-	public boolean mSomeRestricted = false;
 	private boolean mInteractive = false;
 
 	private static final int STATE_WAITING = 0;
@@ -98,6 +103,7 @@ public class ActivityShare extends ActivityBase {
 	public static final String cUidList = "UidList";
 	public static final String cRestriction = "Restriction";
 	public static final String cInteractive = "Interactive";
+	public static final String cChoice = "Choice";
 	public static final String HTTP_BASE_URL = "http://crowd.xprivacy.eu/";
 	public static final String HTTPS_BASE_URL = "https://crowd.xprivacy.eu/";
 
@@ -109,6 +115,9 @@ public class ActivityShare extends ActivityBase {
 	public static final String ACTION_FETCH = "biz.bokhorst.xprivacy.action.FETCH";
 	public static final String ACTION_SUBMIT = "biz.bokhorst.xprivacy.action.SUBMIT";
 	public static final String ACTION_TOGGLE = "biz.bokhorst.xprivacy.action.TOGGLE";
+
+	public static final int CHOICE_CLEAR = 1;
+	public static final int CHOICE_TEMPLATE = 2;
 
 	public static final int TIMEOUT_MILLISEC = 45000;
 
@@ -128,12 +137,16 @@ public class ActivityShare extends ActivityBase {
 	protected void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
 
+		// Check privacy service client
+		if (!PrivacyService.checkClient())
+			return;
+
 		// Get data
 		final Bundle extras = getIntent().getExtras();
 		final String action = getIntent().getAction();
 		final int[] uids = (extras != null && extras.containsKey(cUidList) ? extras.getIntArray(cUidList) : new int[0]);
-		final String restriction = (extras != null ? extras.getString(cRestriction) : null);
-		// TODO: show localized restriction name
+		final String restrictionName = (extras != null ? extras.getString(cRestriction) : null);
+		int choice = (extras != null && extras.containsKey(cChoice) ? extras.getInt(cChoice) : -1);
 
 		// License check
 		if (action.equals(ACTION_IMPORT) || action.equals(ACTION_EXPORT)) {
@@ -160,18 +173,24 @@ public class ActivityShare extends ActivityBase {
 		if (extras != null && extras.containsKey(cInteractive) && extras.getBoolean(cInteractive, false))
 			mInteractive = true;
 
-		// Set theme
-		String themeName = PrivacyManager.getSetting(0, PrivacyManager.cSettingTheme, "", false);
-		mThemeId = (themeName.equals("Dark") ? R.style.CustomTheme : R.style.CustomTheme_Light);
-		setTheme(mThemeId);
-
 		// Set layout
 		setContentView(R.layout.sharelist);
 
+		// Reference controls
+		final TextView tvDescription = (TextView) findViewById(R.id.tvDescription);
+		final RadioGroup rgToggle = (RadioGroup) findViewById(R.id.rgToggle);
+		RadioButton rbClear = (RadioButton) findViewById(R.id.rbClear);
+		RadioButton rbTemplateFull = (RadioButton) findViewById(R.id.rbTemplateFull);
+		RadioButton rbODEnable = (RadioButton) findViewById(R.id.rbEnableOndemand);
+		RadioButton rbODDisable = (RadioButton) findViewById(R.id.rbDisableOndemand);
+		final CheckBox cbClear = (CheckBox) findViewById(R.id.cbClear);
+		final Button btnOk = (Button) findViewById(R.id.btnOk);
+		final Button btnCancel = (Button) findViewById(R.id.btnCancel);
+
 		// Set title
 		if (action.equals(ACTION_TOGGLE)) {
-			mActionId = R.string.menu_restriction_all;
-			setTitle(R.string.menu_restriction_all);
+			mActionId = R.string.menu_toggle;
+			setTitle(R.string.menu_toggle);
 		} else if (action.equals(ACTION_IMPORT)) {
 			mActionId = R.string.menu_import;
 			setTitle(R.string.menu_import);
@@ -189,16 +208,9 @@ public class ActivityShare extends ActivityBase {
 			return;
 		}
 
-		// App list
-		ListView lvShare = (ListView) findViewById(R.id.lvShare);
+		// Build application list
 		AppListTask appListTask = new AppListTask();
-		appListTask.executeOnExecutor(mExecutor, uids, restriction);
-
-		// Allow users to remove apps from list
-		// TODO: replace by swipe left/right
-		// http://stackoverflow.com/questions/18585345/swipe-to-delete-a-listview-item
-		if (mInteractive)
-			registerForContextMenu(lvShare);
+		appListTask.executeOnExecutor(mExecutor, uids);
 
 		// Import/export filename
 		if (action.equals(ACTION_EXPORT) || action.equals(ACTION_IMPORT)) {
@@ -208,26 +220,74 @@ public class ActivityShare extends ActivityBase {
 			boolean hasIntent = Util.isIntentAvailable(ActivityShare.this, file);
 
 			// Get file name
-			if (action.equals(ACTION_EXPORT))
-				mFileName = getFileName(this, hasIntent);
-			else
-				mFileName = (hasIntent ? null : getFileName(this, false));
+			if (action.equals(ACTION_EXPORT)) {
+				String packageName = null;
+				if (uids.length == 1)
+					try {
+						ApplicationInfoEx appInfo = new ApplicationInfoEx(this, uids[0]);
+						packageName = appInfo.getPackageName().get(0);
+					} catch (Throwable ex) {
+						Util.bug(null, ex);
+					}
+				mFileName = getFileName(this, hasIntent, packageName);
+			} else
+				mFileName = (hasIntent ? null : getFileName(this, false, null));
+
 			if (mFileName == null)
 				fileChooser();
 			else
 				showFileName();
-		} else {
-			TextView tvDescription = (TextView) findViewById(R.id.tvDescription);
-			tvDescription.setText(getBaseURL(ActivityShare.this));
-		}
 
-		// Reference buttons
-		final Button btnOk = (Button) findViewById(R.id.btnOk);
-		final Button btnCancel = (Button) findViewById(R.id.btnCancel);
+			if (action.equals(ACTION_IMPORT))
+				cbClear.setVisibility(View.VISIBLE);
+
+		} else if (action.equals(ACTION_FETCH)) {
+			tvDescription.setText(getBaseURL(ActivityShare.this));
+			cbClear.setVisibility(View.VISIBLE);
+
+		} else if (action.equals(ACTION_TOGGLE)) {
+			// Show category
+			if (restrictionName == null)
+				tvDescription.setText(R.string.menu_all);
+			else {
+				int stringId = getResources().getIdentifier("restrict_" + restrictionName, "string", getPackageName());
+				tvDescription.setText(stringId);
+			}
+			rgToggle.setVisibility(View.VISIBLE);
+
+			// Listen for radio button
+			rgToggle.setOnCheckedChangeListener(new OnCheckedChangeListener() {
+				@Override
+				public void onCheckedChanged(RadioGroup group, int checkedId) {
+					btnOk.setEnabled(checkedId >= 0);
+					if (restrictionName == null
+							|| (checkedId == R.id.rbEnableOndemand || checkedId == R.id.rbDisableOndemand))
+						tvDescription.setText(R.string.menu_all);
+					else {
+						int stringId = getResources().getIdentifier("restrict_" + restrictionName, "string",
+								getPackageName());
+						tvDescription.setText(stringId);
+					}
+				}
+			});
+
+			boolean dangerous = PrivacyManager.getSettingBool(0, PrivacyManager.cSettingDangerous, false, false);
+			boolean ondemand = PrivacyManager.getSettingBool(0, PrivacyManager.cSettingOnDemand, true, false);
+			rbODEnable.setVisibility(dangerous && ondemand ? View.VISIBLE : View.GONE);
+			rbODDisable.setVisibility(dangerous && ondemand ? View.VISIBLE : View.GONE);
+
+			if (choice == CHOICE_CLEAR)
+				rbClear.setChecked(true);
+			else if (choice == CHOICE_TEMPLATE)
+				rbTemplateFull.setChecked(true);
+
+		} else
+			tvDescription.setText(getBaseURL(ActivityShare.this));
 
 		if (mInteractive) {
-			// Enable ok (showFileName does this for export/import)
-			if (action.equals(ACTION_SUBMIT) || action.equals(ACTION_FETCH) || action.equals(ACTION_TOGGLE))
+			// Enable ok
+			// (showFileName does this for export/import)
+			if (action.equals(ACTION_SUBMIT) || action.equals(ACTION_FETCH))
 				btnOk.setEnabled(true);
 
 			// Listen for ok
@@ -239,26 +299,28 @@ public class ActivityShare extends ActivityBase {
 					// Toggle
 					if (action.equals(ACTION_TOGGLE)) {
 						mRunning = true;
-						new ToggleTask().executeOnExecutor(mExecutor, restriction);
-					}
+						for (int i = 0; i < rgToggle.getChildCount(); i++)
+							((RadioButton) rgToggle.getChildAt(i)).setEnabled(false);
+						new ToggleTask().executeOnExecutor(mExecutor, restrictionName);
 
-					// Import
-					if (action.equals(ACTION_IMPORT)) {
+						// Import
+					} else if (action.equals(ACTION_IMPORT)) {
 						mRunning = true;
-						new ImportTask().executeOnExecutor(mExecutor, new File(mFileName));
+						cbClear.setEnabled(false);
+						new ImportTask().executeOnExecutor(mExecutor, new File(mFileName), cbClear.isChecked());
 					}
 
 					// Export
 					else if (action.equals(ACTION_EXPORT)) {
 						mRunning = true;
 						new ExportTask().executeOnExecutor(mExecutor, new File(mFileName));
-					}
 
-					// Fetch
-					else if (action.equals(ACTION_FETCH)) {
+						// Fetch
+					} else if (action.equals(ACTION_FETCH)) {
 						if (uids.length > 0) {
 							mRunning = true;
-							new FetchTask().executeOnExecutor(mExecutor);
+							cbClear.setEnabled(false);
+							new FetchTask().executeOnExecutor(mExecutor, cbClear.isChecked());
 						}
 					}
 
@@ -277,6 +339,7 @@ public class ActivityShare extends ActivityBase {
 					}
 				}
 			});
+
 		} else {
 			// Hide ok button and separator
 			btnOk.setVisibility(View.GONE);
@@ -301,8 +364,8 @@ public class ActivityShare extends ActivityBase {
 	protected void onActivityResult(int requestCode, int resultCode, Intent dataIntent) {
 		super.onActivityResult(requestCode, resultCode, dataIntent);
 
-		if (requestCode == ACTIVITY_IMPORT_SELECT) {
-			// Import select
+		// Import select
+		if (requestCode == ACTIVITY_IMPORT_SELECT)
 			if (resultCode == RESULT_CANCELED || dataIntent == null)
 				finish();
 			else {
@@ -311,99 +374,64 @@ public class ActivityShare extends ActivityBase {
 						.getAbsolutePath() + File.separatorChar);
 				showFileName();
 			}
-		}
 	}
 
-	@Override
-	public void onCreateContextMenu(ContextMenu menu, View v, ContextMenu.ContextMenuInfo menuInfo) {
-		super.onCreateContextMenu(menu, v, menuInfo);
-		if (v.getId() == R.id.lvShare)
-			menu.addSubMenu(Menu.NONE, R.string.menu_exclude, Menu.NONE, R.string.menu_exclude);
-	}
+	// State management
 
-	@Override
-	public boolean onContextItemSelected(MenuItem item) {
-		if (!mRunning && item.getItemId() == R.string.menu_exclude) {
-			// remove app from list
-			AdapterView.AdapterContextMenuInfo info = (AdapterView.AdapterContextMenuInfo) item.getMenuInfo();
-			mAppAdapter.remove(mAppAdapter.getItem(info.position));
-
-			// Check submit limit
-			if (mActionId == R.string.menu_submit && mAppAdapter.getCount() <= cSubmitLimit) {
-				Button btnOk = (Button) findViewById(R.id.btnOk);
-				btnOk.setEnabled(true);
-			}
-			return true;
-		} else {
-			return super.onContextItemSelected(item);
-		}
-	}
-
-	// App info and share state
-
-	private class AppHolder implements Comparable<AppHolder> {
-		public int state = STATE_WAITING;
-		public ApplicationInfoEx appInfo;
-		public String message = null;
-
-		public AppHolder(int uid) throws NameNotFoundException {
-			appInfo = new ApplicationInfoEx(ActivityShare.this, uid);
-		}
-
-		@Override
-		public int compareTo(AppHolder other) {
-			return this.appInfo.compareTo(other.appInfo);
-		}
-	}
-
-	// Adapters
-
-	@SuppressLint("DefaultLocale")
-	private class AppListAdapter extends ArrayAdapter<AppHolder> {
-		private LayoutInflater mInflater = (LayoutInflater) getSystemService(Context.LAYOUT_INFLATER_SERVICE);
-		public List<AppHolder> mAppsWaiting = new ArrayList<AppHolder>();
-		private List<AppHolder> mAppsDone = new ArrayList<AppHolder>();
-		private ChangeNotifier changeNotifier = new ChangeNotifier();
-
-		private class ChangeNotifier implements Runnable {
-			AppHolder mScrollTo;
-
+	public void setState(int uid, int state, String message) {
+		final AppState app = mAppsByUid.get(uid);
+		app.message = message;
+		app.state = state;
+		runOnUiThread(new Runnable() {
 			@Override
 			public void run() {
-				if (mScrollTo != null) {
-					int position = mAppAdapter.getPosition(mScrollTo);
-					// Make sure apps done or in progress are listed first
-					// All operations except importing
-					// treat the apps in the listed order
-					if (mActionId == R.string.menu_import && mAppsWaiting.contains(mScrollTo)) {
-						mAppsWaiting.remove(mScrollTo);
-						mAppsDone.add(mScrollTo);
-						mAppAdapter.setNotifyOnChange(false);
-						mAppAdapter.clear();
-						mAppAdapter.addAll(mAppsDone);
-						mAppAdapter.addAll(mAppsWaiting);
-						// If I separate out the app currently in progress, I
-						// could sort the done ones in the same way as the
-						// waiting ones were.
-						// We'd then have in order: a sorted list of the done
-						// apps, mAppCurrent, then all the waiting apps in order
-					}
-					notifyDataSetChanged();
+				if (mAppAdapter != null) {
+					mAppAdapter.notifyDataSetChanged();
+
+					int position = mAppAdapter.getPosition(app);
 					if (position >= 0) {
 						ListView lvShare = (ListView) findViewById(R.id.lvShare);
 						lvShare.smoothScrollToPosition(position);
 					}
 				}
 			}
+		});
+	}
 
-			public void setScrollTo(AppHolder app) {
-				mScrollTo = app;
-			}
-		};
+	public void setState(int uid, int state) {
+		AppState app = mAppsByUid.get(uid);
+		app.state = state;
+	}
 
-		public AppListAdapter(Context context, int resource, List<AppHolder> objects) {
+	public void setMessage(int uid, String message) {
+		AppState app = mAppsByUid.get(uid);
+		app.message = message;
+	}
+
+	// App info and share state
+
+	private class AppState implements Comparable<AppState> {
+		public int state = STATE_WAITING;
+		public String message = null;
+		public ApplicationInfoEx appInfo;
+
+		public AppState(int uid) {
+			appInfo = new ApplicationInfoEx(ActivityShare.this, uid);
+		}
+
+		@Override
+		public int compareTo(AppState other) {
+			return this.appInfo.compareTo(other.appInfo);
+		}
+	}
+
+	// Adapters
+
+	private class AppListAdapter extends ArrayAdapter<AppState> {
+		private LayoutInflater mInflater = (LayoutInflater) getSystemService(Context.LAYOUT_INFLATER_SERVICE);
+
+		public AppListAdapter(Context context, int resource, List<AppState> objects) {
 			super(context, resource, objects);
-			mAppsWaiting.addAll(objects);
 		}
 
 		public List<Integer> getListUid() {
@@ -420,28 +448,11 @@ public class ActivityShare extends ActivityBase {
 			return apps;
 		}
 
-		public void setState(int uid, int state, String message) {
-			AppHolder app = mAppsByUid.get(uid);
-			app.message = message;
-			app.state = state;
-			changeNotifier.setScrollTo(app);
-			runOnUiThread(changeNotifier);
-		}
-
-		public void setState(int uid, int state) {
-			AppHolder app = mAppsByUid.get(uid);
-			app.state = state;
-		}
-
-		public void setMessage(int uid, String message) {
-			AppHolder app = mAppsByUid.get(uid);
-			app.message = message;
-		}
-
 		private class ViewHolder {
 			private View row;
 			private int position;
 			public ImageView imgIcon;
+			public ImageView imgInfo;
 			public TextView tvName;
 			public ImageView imgResult;
 			public ProgressBar pbRunning;
@@ -451,6 +462,7 @@ public class ActivityShare extends ActivityBase {
 				row = theRow;
 				position = thePosition;
 				imgIcon = (ImageView) row.findViewById(R.id.imgIcon);
+				imgInfo = (ImageView) row.findViewById(R.id.imgInfo);
 				tvName = (TextView) row.findViewById(R.id.tvApp);
 				imgResult = (ImageView) row.findViewById(R.id.imgResult);
 				pbRunning = (ProgressBar) row.findViewById(R.id.pbRunning);
@@ -471,7 +483,7 @@ public class ActivityShare extends ActivityBase {
 			}
 
 			// Get info
-			final AppHolder xApp = getItem(holder.position);
+			final AppState xApp = getItem(holder.position);
 
 			// Set background color
 			if (xApp.appInfo.isSystem())
@@ -482,6 +494,16 @@ public class ActivityShare extends ActivityBase {
 			// Display icon
 			holder.imgIcon.setImageDrawable(xApp.appInfo.getIcon(ActivityShare.this));
 			holder.imgIcon.setVisibility(View.VISIBLE);
+
+			holder.imgInfo.setOnClickListener(new View.OnClickListener() {
+				@Override
+				public void onClick(View view) {
+					// Packages can be selected on the web site
+					Util.viewUri(ActivityShare.this, Uri.parse(String.format(
+							ActivityShare.getBaseURL(ActivityShare.this) + "?package_name=%s", xApp.appInfo
+									.getPackageName().get(0))));
+				}
+			});
 
 			// Set app name
 			holder.tvName.setText(xApp.appInfo.toString());
@@ -507,13 +529,16 @@ public class ActivityShare extends ActivityBase {
 				holder.imgResult.setVisibility(View.VISIBLE);
 				holder.pbRunning.setVisibility(View.INVISIBLE);
 				break;
+			default:
+				Util.log(null, Log.ERROR, "Unknown state=" + xApp.state);
+				break;
 			}
 
 			return convertView;
 		}
 
-		public void addAll(Collection<? extends AppHolder> values) {
-			for (AppHolder value : values) {
+		public void addAll(Collection<? extends AppState> values) {
+			for (AppState value : values) {
 				add(value);
 			}
 		}
@@ -521,15 +546,14 @@ public class ActivityShare extends ActivityBase {
 
 	// Tasks
 
-	private class AppListTask extends AsyncTask<Object, Integer, List<AppHolder>> {
+	private class AppListTask extends AsyncTask<int[], Object, List<AppState>> {
 		private ProgressDialog mProgressDialog;
 
 		@Override
-		protected List<AppHolder> doInBackground(Object... params) {
-			int[] uids = (int[]) params[0];
-			String restrictionName = (String) params[1];
-			List<AppHolder> apps = new ArrayList<AppHolder>();
-			mAppsByUid = new SparseArray<AppHolder>();
+		protected List<AppState> doInBackground(int[]... params) {
+			int[] uids = params[0];
+			List<AppState> apps = new ArrayList<AppState>();
+			mAppsByUid = new SparseArray<AppState>();
 
 			if (!mInteractive && mActionId == R.string.menu_export) {
 				// Build list of distinct uids for export
@@ -537,43 +561,22 @@ public class ActivityShare extends ActivityBase {
 				for (PackageInfo pInfo : getPackageManager().getInstalledPackages(0))
 					if (!listUid.contains(pInfo.applicationInfo.uid))
 						listUid.add(pInfo.applicationInfo.uid);
+
 				// Convert to primitive array
 				uids = new int[listUid.size()];
 				for (int i = 0; i < listUid.size(); i++)
 					uids[i] = listUid.get(i);
 			}
 
-			boolean some = false;
 			mProgressDialog.setMax(uids.length);
 			for (int i = 0; i < uids.length; i++) {
 				mProgressDialog.setProgress(i);
-				try {
-					AppHolder app = new AppHolder(uids[i]);
-					apps.add(app);
-					mAppsByUid.put(uids[i], app);
-
-					// If toggling, check if some restricted
-					if (mActionId == R.string.menu_restriction_all)
-						for (PRestriction restriction : PrivacyManager.getRestrictionList(uids[i], restrictionName))
-							if (restriction.restricted) {
-								some = true;
-								break;
-							}
-
-				} catch (NameNotFoundException ex) {
-					Util.bug(null, ex);
-				}
-			}
-
-			if (mActionId == R.string.menu_restriction_all) {
-				mSomeRestricted = some;
-				mActionId = (some ? R.string.menu_clear_all : R.string.menu_restrict_all);
-				Util.log(null, Log.WARN, "Toggle means clear=" + some);
+				AppState app = new AppState(uids[i]);
+				apps.add(app);
+				mAppsByUid.put(uids[i], app);
 			}
 
 			Collections.sort(apps);
-			// TODO: sort according to preferences
-			// TODO: add sort options to actionbar just like in ActivityMain
 			return apps;
 		}
 
@@ -592,7 +595,7 @@ public class ActivityShare extends ActivityBase {
 		}
 
 		@Override
-		protected void onPostExecute(List<AppHolder> listApp) {
+		protected void onPostExecute(List<AppState> listApp) {
 			if (!ActivityShare.this.isFinishing()) {
 				// Display app list
 				mAppAdapter = new AppListAdapter(ActivityShare.this, R.layout.shareentry, listApp);
@@ -600,11 +603,11 @@ public class ActivityShare extends ActivityBase {
 				lvShare.setAdapter(mAppAdapter);
 
 				// Dismiss progress dialog
-				mProgressDialog.dismiss();
-
-				// If toggling, set title
-				if (mActionId == R.string.menu_clear_all || mActionId == R.string.menu_restrict_all)
-					ActivityShare.this.setTitle(mActionId);
+				if (mProgressDialog.isShowing())
+					try {
+						mProgressDialog.dismiss();
+					} catch (IllegalArgumentException ignored) {
+					}
 
 				// Launch non-interactive export
 				if (!mInteractive && mActionId == R.string.menu_export) {
@@ -623,7 +626,8 @@ public class ActivityShare extends ActivityBase {
 			// Get data
 			mProgressCurrent = 0;
 			List<Integer> lstUid = mAppAdapter.getListUid();
-			final String restriction = params[0];
+			final String restrictionName = params[0];
+			int actionId = ((RadioGroup) ActivityShare.this.findViewById(R.id.rgToggle)).getCheckedRadioButtonId();
 
 			for (Integer uid : lstUid)
 				try {
@@ -632,25 +636,38 @@ public class ActivityShare extends ActivityBase {
 
 					// Update progess
 					publishProgress(++mProgressCurrent, lstUid.size() + 1);
-					mAppAdapter.setState(uid, STATE_RUNNING, null);
+					setState(uid, STATE_RUNNING, null);
 
-					List<Boolean> oldState = PrivacyManager.getRestartStates(uid, null);
-					if (restriction == null && mSomeRestricted)
-						PrivacyManager.deleteRestrictions(uid, null);
-					else if (restriction == null)
-						for (String restrictionName : PrivacyManager.getRestrictions()) {
-							String templateName = PrivacyManager.cSettingTemplate + "." + restrictionName;
-							if (PrivacyManager.getSettingBool(0, templateName, true, false))
-								PrivacyManager.setRestriction(uid, restrictionName, null, !mSomeRestricted, false);
-						}
-					else
-						PrivacyManager.setRestriction(uid, restriction, null, !mSomeRestricted, false);
+					List<Boolean> oldState = PrivacyManager.getRestartStates(uid, restrictionName);
+
+					if (actionId == R.id.rbClear)
+						PrivacyManager.deleteRestrictions(uid, restrictionName, (restrictionName == null));
+
+					else if (actionId == R.id.rbRestrict)
+						PrivacyManager.setRestriction(uid, restrictionName, null, true, false);
+
+					else if (actionId == R.id.rbTemplateCategory)
+						PrivacyManager.applyTemplate(uid, restrictionName, false);
+
+					else if (actionId == R.id.rbTemplateFull)
+						PrivacyManager.applyTemplate(uid, restrictionName, true);
+
+					else if (actionId == R.id.rbEnableOndemand) {
+						PrivacyManager.setSetting(uid, PrivacyManager.cSettingOnDemand, Boolean.toString(true));
+						PrivacyManager.setSetting(uid, PrivacyManager.cSettingNotify, Boolean.toString(false));
+
+					} else if (actionId == R.id.rbDisableOndemand) {
+						PrivacyManager.setSetting(uid, PrivacyManager.cSettingOnDemand, Boolean.toString(false));
+						PrivacyManager.setSetting(uid, PrivacyManager.cSettingNotify, Boolean.toString(true));
+
+					} else
+						Util.log(null, Log.ERROR, "Unknown action=" + actionId);
+
 					List<Boolean> newState = PrivacyManager.getRestartStates(uid, null);
 
-					mAppAdapter.setState(uid, STATE_SUCCESS,
-							!newState.equals(oldState) ? getString(R.string.msg_restart) : null);
+					setState(uid, STATE_SUCCESS, !newState.equals(oldState) ? getString(R.string.msg_restart) : null);
 				} catch (Throwable ex) {
-					mAppAdapter.setState(uid, STATE_FAILURE, ex.getLocalizedMessage());
+					setState(uid, STATE_FAILURE, ex.getMessage());
 					return ex;
 				}
 
@@ -695,23 +712,27 @@ public class ActivityShare extends ActivityBase {
 					serializer.startTag(null, "XPrivacy");
 
 					// Process package map
-					for (PackageInfo pInfo : getPackageManager().getInstalledPackages(0)) {
-						serializer.startTag(null, "PackageInfo");
-						serializer.attribute(null, "Id", Integer.toString(pInfo.applicationInfo.uid));
-						serializer.attribute(null, "Name", pInfo.packageName);
-						serializer.endTag(null, "PackageInfo");
-					}
+					for (PackageInfo pInfo : getPackageManager().getInstalledPackages(0))
+						if (listUid.size() == 1 ? pInfo.applicationInfo.uid == listUid.get(0) : true) {
+							serializer.startTag(null, "PackageInfo");
+							serializer.attribute(null, "Id", Integer.toString(pInfo.applicationInfo.uid));
+							serializer.attribute(null, "Name", pInfo.packageName);
+							serializer.endTag(null, "PackageInfo");
+						}
 
 					// Process global settings
-					List<PSetting> listGlobalSetting = PrivacyManager.getSettingList(0);
-					for (PSetting setting : listGlobalSetting) {
-						// Serialize setting
-						serializer.startTag(null, "Setting");
-						serializer.attribute(null, "Id", "");
-						serializer.attribute(null, "Name", setting.name);
-						if (setting.value != null)
-							serializer.attribute(null, "Value", setting.value);
-						serializer.endTag(null, "Setting");
+					if (listUid.size() > 1) {
+						List<PSetting> listGlobalSetting = PrivacyManager.getSettingList(0);
+						for (PSetting setting : listGlobalSetting) {
+							// Serialize setting
+							serializer.startTag(null, "Setting");
+							serializer.attribute(null, "Id", "");
+							serializer.attribute(null, "Type", setting.type);
+							serializer.attribute(null, "Name", setting.name);
+							if (setting.value != null)
+								serializer.attribute(null, "Value", setting.value);
+							serializer.endTag(null, "Setting");
+						}
 					}
 
 					// Process application settings and restrictions
@@ -721,23 +742,21 @@ public class ActivityShare extends ActivityBase {
 								throw new AbortException(ActivityShare.this);
 
 							publishProgress(++mProgressCurrent, listUid.size() + 1);
-							mAppAdapter.setState(uid, STATE_RUNNING, null);
+							setState(uid, STATE_RUNNING, null);
 
 							// Process application settings
 							List<PSetting> listAppSetting = PrivacyManager.getSettingList(uid);
 							for (PSetting setting : listAppSetting) {
 								// Bind accounts/contacts to same device
-								if (setting.name.startsWith(PrivacyManager.cSettingAccount)
-										|| setting.name.startsWith(PrivacyManager.cSettingContact)
-										|| setting.name.startsWith(PrivacyManager.cSettingRawContact))
+								if (Meta.cTypeAccount.equals(setting.type) || Meta.cTypeContact.equals(setting.type))
 									setting.name += "." + android_id;
 
 								// Serialize setting
 								serializer.startTag(null, "Setting");
 								serializer.attribute(null, "Id", Integer.toString(uid));
+								serializer.attribute(null, "Type", setting.type);
 								serializer.attribute(null, "Name", setting.name);
-								if (setting.value != null)
-									serializer.attribute(null, "Value", setting.value);
+								serializer.attribute(null, "Value", setting.value);
 								serializer.endTag(null, "Setting");
 							}
 
@@ -746,35 +765,34 @@ public class ActivityShare extends ActivityBase {
 								// Category
 								// TODO: use getRestrictionList
 								PRestriction crestricted = PrivacyManager.getRestrictionEx(uid, restrictionName, null);
-								if (crestricted.restricted || crestricted.asked) {
-									serializer.startTag(null, "Restriction");
-									serializer.attribute(null, "Id", Integer.toString(uid));
-									serializer.attribute(null, "Name", restrictionName);
-									serializer.attribute(null, "Restricted", Boolean.toString(crestricted.restricted));
-									serializer.attribute(null, "Asked", Boolean.toString(crestricted.asked));
-									serializer.endTag(null, "Restriction");
+								serializer.startTag(null, "Restriction");
+								serializer.attribute(null, "Id", Integer.toString(uid));
+								serializer.attribute(null, "Name", restrictionName);
+								serializer.attribute(null, "Restricted", Boolean.toString(crestricted.restricted));
+								serializer.attribute(null, "Asked", Boolean.toString(crestricted.asked));
+								serializer.endTag(null, "Restriction");
 
-									// Methods
-									for (Hook md : PrivacyManager.getHooks(restrictionName)) {
-										PRestriction mrestricted = PrivacyManager.getRestrictionEx(uid,
-												restrictionName, md.getName());
-										if (!mrestricted.restricted || mrestricted.asked || md.isDangerous()) {
-											serializer.startTag(null, "Restriction");
-											serializer.attribute(null, "Id", Integer.toString(uid));
-											serializer.attribute(null, "Name", restrictionName);
-											serializer.attribute(null, "Method", md.getName());
-											serializer.attribute(null, "Restricted",
-													Boolean.toString(mrestricted.restricted));
-											serializer.attribute(null, "Asked", Boolean.toString(mrestricted.asked));
-											serializer.endTag(null, "Restriction");
-										}
+								// Methods
+								for (Hook md : PrivacyManager.getHooks(restrictionName)) {
+									PRestriction mrestricted = PrivacyManager.getRestrictionEx(uid, restrictionName,
+											md.getName());
+									if ((crestricted.restricted && !mrestricted.restricted)
+											|| (!crestricted.asked && mrestricted.asked) || md.isDangerous()) {
+										serializer.startTag(null, "Restriction");
+										serializer.attribute(null, "Id", Integer.toString(uid));
+										serializer.attribute(null, "Name", restrictionName);
+										serializer.attribute(null, "Method", md.getName());
+										serializer.attribute(null, "Restricted",
+												Boolean.toString(mrestricted.restricted));
+										serializer.attribute(null, "Asked", Boolean.toString(mrestricted.asked));
+										serializer.endTag(null, "Restriction");
 									}
 								}
 							}
 
-							mAppAdapter.setState(uid, STATE_SUCCESS, null);
+							setState(uid, STATE_SUCCESS, null);
 						} catch (Throwable ex) {
-							mAppAdapter.setState(uid, STATE_FAILURE, ex.getLocalizedMessage());
+							setState(uid, STATE_FAILURE, ex.getMessage());
 							throw ex;
 						}
 					// End serialization
@@ -825,14 +843,13 @@ public class ActivityShare extends ActivityBase {
 		}
 	}
 
-	private class ImportTask extends AsyncTask<File, Integer, Throwable> {
-		private File mFile;
-
+	private class ImportTask extends AsyncTask<Object, Integer, Throwable> {
 		@Override
-		protected Throwable doInBackground(File... params) {
+		protected Throwable doInBackground(Object... params) {
 			try {
-				mFile = (File) params[0];
-
+				// Parameters
+				File file = (File) params[0];
+				boolean clear = (Boolean) params[1];
 				List<Integer> listUidSelected = mAppAdapter.getListUid();
 
 				// Progress
@@ -846,13 +863,13 @@ public class ActivityShare extends ActivityBase {
 				};
 
 				// Parse XML
-				Util.log(null, Log.INFO, "Importing " + mFile);
+				Util.log(null, Log.INFO, "Importing " + file);
 				FileInputStream fis = null;
 				Map<String, Map<String, List<ImportHandler.MethodDescription>>> mapPackage;
 				try {
-					fis = new FileInputStream(mFile);
+					fis = new FileInputStream(file);
 					XMLReader xmlReader = SAXParserFactory.newInstance().newSAXParser().getXMLReader();
-					ImportHandler importHandler = new ImportHandler(listUidSelected, progress);
+					ImportHandler importHandler = new ImportHandler(clear, listUidSelected, progress);
 					xmlReader.setContentHandler(importHandler);
 					xmlReader.parse(new InputSource(fis));
 					mapPackage = importHandler.getPackageMap();
@@ -879,13 +896,13 @@ public class ActivityShare extends ActivityBase {
 						// Get uid
 						uid = getPackageManager().getPackageInfo(packageName, 0).applicationInfo.uid;
 
-						if (listUidSelected.size() == 0 || listUidSelected.contains(uid)) {
+						if (listUidSelected.contains(uid)) {
 							Util.log(null, Log.INFO, "Importing " + packageName);
-							mAppAdapter.setState(uid, STATE_RUNNING, null);
+							setState(uid, STATE_RUNNING, null);
 
 							// Reset existing restrictions
 							List<Boolean> oldState = PrivacyManager.getRestartStates(uid, null);
-							PrivacyManager.deleteRestrictions(uid, null);
+							PrivacyManager.deleteRestrictions(uid, null, true);
 
 							// Set imported restrictions
 							for (String restrictionName : mapPackage.get(packageName).keySet()) {
@@ -897,13 +914,14 @@ public class ActivityShare extends ActivityBase {
 							}
 							List<Boolean> newState = PrivacyManager.getRestartStates(uid, null);
 
-							mAppAdapter.setState(uid, STATE_SUCCESS,
-									!newState.equals(oldState) ? getString(R.string.msg_restart) : null);
+							setState(uid, STATE_SUCCESS, !newState.equals(oldState) ? getString(R.string.msg_restart)
+									: null);
 						}
+					} catch (NameNotFoundException ignored) {
 					} catch (Throwable ex) {
-						if (uid > 0)
-							mAppAdapter.setState(uid, STATE_FAILURE, ex.getLocalizedMessage());
-						Util.log(null, Log.WARN, "Not found package=" + packageName);
+						if (listUidSelected.contains(uid))
+							setState(uid, STATE_FAILURE, ex.getMessage());
+						Util.bug(null, ex);
 					}
 				}
 
@@ -911,7 +929,6 @@ public class ActivityShare extends ActivityBase {
 				Util.log(null, Log.INFO, "Importing finished");
 				return null;
 			} catch (Throwable ex) {
-				Util.bug(null, ex);
 				return ex;
 			}
 		}
@@ -924,37 +941,30 @@ public class ActivityShare extends ActivityBase {
 
 		@Override
 		protected void onPostExecute(Throwable result) {
-			// Mark as failed the apps that weren't found
-			if (!ActivityShare.this.isFinishing()) {
-				if (result == null) {
-					List<AppHolder> listWaiting = new ArrayList<AppHolder>();
-					listWaiting.addAll(mAppAdapter.mAppsWaiting);
-					for (AppHolder app : listWaiting) {
-						mAppAdapter.setState(app.appInfo.getUid(), STATE_FAILURE);
-						mAppAdapter.setMessage(app.appInfo.getUid(), getString(R.string.msg_no_restrictions));
-					}
-					mAppAdapter.notifyDataSetChanged();
-				}
-
+			if (!ActivityShare.this.isFinishing())
 				done(result);
-			}
 			super.onPostExecute(result);
 		}
 	}
 
 	private class ImportHandler extends DefaultHandler {
+		private boolean mClear;
 		private List<Integer> mListUidSelected;
+		private List<Integer> mListUidSettings = new ArrayList<Integer>();
+		private List<Integer> mListUidRestrictions = new ArrayList<Integer>();
+
+		private int lastUid = -1;
+		private List<Boolean> mOldState = null;
+
 		private SparseArray<String> mMapId = new SparseArray<String>();
 		private Map<String, Integer> mMapUid = new HashMap<String, Integer>();
 		private Map<String, Map<String, List<MethodDescription>>> mMapPackage = new HashMap<String, Map<String, List<MethodDescription>>>();
-		private String android_id = Secure.getString(getContentResolver(), Secure.ANDROID_ID);
-		private Runnable mProgress;
-		private SparseArray<Map<String, String>> mSettings = new SparseArray<Map<String, String>>();
-		private List<Integer> mListRestrictionUid = new ArrayList<Integer>();
-		private List<Integer> mListAbortedUid = new ArrayList<Integer>();
-		private SparseArray<List<Boolean>> mListRestartStates = new SparseArray<List<Boolean>>();
 
-		public ImportHandler(List<Integer> listUidSelected, Runnable progress) {
+		private Runnable mProgress;
+		private String android_id = Secure.getString(getContentResolver(), Secure.ANDROID_ID);
+
+		public ImportHandler(boolean clear, List<Integer> listUidSelected, Runnable progress) {
+			mClear = clear;
 			mListUidSelected = listUidSelected;
 			mProgress = progress;
 		}
@@ -964,21 +974,31 @@ public class ActivityShare extends ActivityBase {
 			try {
 				if (qName.equals("XPrivacy")) {
 					// Root
+
 				} else if (qName.equals("PackageInfo")) {
 					// Package info
 					int id = Integer.parseInt(attributes.getValue("Id"));
 					String name = attributes.getValue("Name");
 					mMapId.put(id, name);
+
 				} else if (qName.equals("Setting")) {
 					// Setting
 					String id = attributes.getValue("Id");
+					String type = attributes.getValue("Type");
 					String name = attributes.getValue("Name");
 					String value = attributes.getValue("Value");
 
+					if (name.startsWith("Account.") || name.startsWith("Application.") || name.startsWith("Contact.")
+							|| name.startsWith("Template.") || name.startsWith("Whitelist.")) {
+						name = name.replace("Whitelist.", "");
+						int dot = name.indexOf('.');
+						type = name.substring(0, dot);
+						name = name.substring(dot + 1);
+					} else if (type == null)
+						type = "";
+
 					// Import accounts/contacts only for same device
-					if (name.startsWith(PrivacyManager.cSettingAccount)
-							|| name.startsWith(PrivacyManager.cSettingContact)
-							|| name.startsWith(PrivacyManager.cSettingRawContact))
+					if (Meta.cTypeAccount.equals(type) || Meta.cTypeContact.equals(type))
 						if (name.endsWith("." + android_id))
 							name = name.replace("." + android_id, "");
 						else
@@ -988,28 +1008,48 @@ public class ActivityShare extends ActivityBase {
 						// Legacy
 						Util.log(null, Log.WARN, "Legacy " + name + "=" + value);
 						PrivacyManager.setSetting(0, name, value);
-					} else if ("".equals(id))
+
+					} else if ("".equals(id)) {
 						// Global setting
-						// TODO: clear global settings
-						PrivacyManager.setSetting(0, name, value);
-					else {
+						if (mListUidSelected.size() > 1)
+							PrivacyManager.setSetting(0, type, name, value);
+
+					} else {
 						// Application setting
 						int iid = Integer.parseInt(id);
 						int uid = getUid(iid);
-						if (uid >= 0 && mListUidSelected.size() == 0 || mListUidSelected.contains(uid)) {
-							if (!mListRestrictionUid.contains(uid)) {
-								// Cache settings
-								if (mSettings.indexOfKey(uid) < 0)
-									mSettings.put(uid, new HashMap<String, String>());
-								mSettings.get(uid).put(name, value);
-							} else {
-								// This apps cached settings
-								// have already been applied,
-								// so add this one directly
-								PrivacyManager.setSetting(uid, name, value);
+						if (mListUidSelected.contains(uid)) {
+							// Check for abort
+							if (mAbort && !mListUidSettings.contains(uid)) {
+								setState(uid, STATE_FAILURE);
+								setMessage(uid, getString(R.string.msg_aborted));
+								return;
 							}
+
+							// Check for new uid
+							if (!mListUidSettings.contains(uid)) {
+								// Mark previous as success
+								if (lastUid > 0) {
+									boolean restart = !PrivacyManager.getRestartStates(lastUid, null).equals(mOldState);
+									setState(lastUid, STATE_SUCCESS, restart ? getString(R.string.msg_restart) : null);
+								}
+
+								// Update state
+								lastUid = uid;
+								mListUidSettings.add(uid);
+
+								// Update visible state
+								setState(uid, STATE_RUNNING, null);
+
+								// Clear settings
+								if (mClear)
+									PrivacyManager.deleteSettings(uid);
+							}
+
+							PrivacyManager.setSetting(uid, type, name, value);
 						}
 					}
+
 				} else if (qName.equals("Package")) {
 					// Restriction (legacy)
 					String packageName = attributes.getValue("Name");
@@ -1028,6 +1068,7 @@ public class ActivityShare extends ActivityBase {
 						MethodDescription md = new MethodDescription(methodName, restricted);
 						mMapPackage.get(packageName).get(restrictionName).add(md);
 					}
+
 				} else if (qName.equals("Restriction")) {
 					// Restriction (new style)
 					int id = Integer.parseInt(attributes.getValue("Id"));
@@ -1038,34 +1079,37 @@ public class ActivityShare extends ActivityBase {
 
 					// Get uid
 					int uid = getUid(id);
-
-					if (uid >= 0 && mListUidSelected.size() == 0 || mListUidSelected.contains(uid)) {
-
-						// Check whether we should abort
-						if (mAbort && !mListRestrictionUid.contains(uid)) {
-							// This app hasn't begun to be imported, so skip it
-							if (!mListAbortedUid.contains(uid))
-								mListAbortedUid.add(uid);
-							Util.log(null, Log.INFO, "Skipping restriction for uid=" + uid);
+					if (mListUidSelected.contains(uid)) {
+						// Check for abort
+						if (mAbort && !mListUidRestrictions.contains(uid)) {
+							setState(uid, STATE_FAILURE);
+							setMessage(uid, getString(R.string.msg_aborted));
 							return;
 						}
 
-						// Progress report and pre-import cleanup
-						if (!mListRestrictionUid.contains(uid)) {
-							finishLastImport();
+						// Check for new uid
+						if (!mListUidRestrictions.contains(uid)) {
+							// Mark previous as success
+							if (lastUid > 0) {
+								boolean restart = !PrivacyManager.getRestartStates(lastUid, null).equals(mOldState);
+								setState(lastUid, STATE_SUCCESS, restart ? getString(R.string.msg_restart) : null);
+							}
 
-							// Mark the next one as in progress
-							mListRestrictionUid.add(uid);
-							mAppAdapter.setState(uid, STATE_RUNNING, null);
+							// Update state
+							lastUid = uid;
+							mListUidRestrictions.add(uid);
+							mOldState = PrivacyManager.getRestartStates(uid, null);
+
+							// Update visible state
+							setState(uid, STATE_RUNNING, null);
 							runOnUiThread(mProgress);
 
-							// Delete restrictions
-							mListRestartStates.put(uid, PrivacyManager.getRestartStates(uid, null));
-							PrivacyManager.deleteRestrictions(uid, null);
+							// Clear restrictions
+							if (mClear)
+								PrivacyManager.deleteRestrictions(uid, null, false);
 						}
 
 						// Set restriction
-						// TODO: use setRestrictionList
 						PrivacyManager.setRestriction(uid, restrictionName, methodName, restricted, asked);
 					}
 				} else
@@ -1077,44 +1121,11 @@ public class ActivityShare extends ActivityBase {
 
 		@Override
 		public void endElement(String uri, String localName, String qName) {
-			if (qName.equals("XPrivacy")) {
-				finishLastImport();
-
-				// Abort notification
-				if (mListAbortedUid.size() > 0) {
-					int uid = mListAbortedUid.get(0);
-					mAppAdapter.setState(uid, STATE_FAILURE);
-					mAppAdapter.setMessage(uid, getString(R.string.msg_aborted));
+			if (qName.equals("XPrivacy"))
+				if (lastUid > 0) {
+					boolean restart = !PrivacyManager.getRestartStates(lastUid, null).equals(mOldState);
+					setState(lastUid, STATE_SUCCESS, restart ? getString(R.string.msg_restart) : null);
 				}
-
-				runOnUiThread(new Runnable() {
-					@Override
-					public void run() {
-						mAppAdapter.notifyDataSetChanged();
-					}
-				});
-			}
-		}
-
-		private void finishLastImport() {
-			// Finish import for the last app imported
-			if (mListRestrictionUid.size() > 0) {
-				int lastUid = mListRestrictionUid.get(mListRestrictionUid.size() - 1);
-
-				// Apply settings
-				PrivacyManager.deleteSettings(lastUid);
-				if (mSettings.indexOfKey(lastUid) >= 0)
-					for (Entry<String, String> entry : mSettings.get(lastUid).entrySet())
-						PrivacyManager.setSetting(lastUid, entry.getKey(), entry.getValue());
-
-				// Restart notification
-				List<Boolean> oldState = mListRestartStates.get(lastUid);
-				List<Boolean> newState = PrivacyManager.getRestartStates(lastUid, null);
-
-				// Mark as success
-				mAppAdapter.setState(lastUid, STATE_SUCCESS,
-						!newState.equals(oldState) ? getString(R.string.msg_restart) : null);
-			}
 		}
 
 		private int getUid(int id) {
@@ -1157,12 +1168,13 @@ public class ActivityShare extends ActivityBase {
 		}
 	}
 
-	private class FetchTask extends AsyncTask<int[], Integer, Throwable> {
+	private class FetchTask extends AsyncTask<Boolean, Integer, Throwable> {
 		@Override
 		@SuppressLint("DefaultLocale")
-		protected Throwable doInBackground(int[]... params) {
+		protected Throwable doInBackground(Boolean... params) {
 			try {
 				// Get data
+				boolean clear = params[0];
 				List<ApplicationInfoEx> lstApp = mAppAdapter.getListAppInfo();
 
 				String[] license = Util.getProLicenseUnchecked();
@@ -1182,8 +1194,7 @@ public class ActivityShare extends ActivityBase {
 							if (mAbort)
 								throw new AbortException(ActivityShare.this);
 
-							mAppAdapter.setState(appInfo.getUid(), STATE_RUNNING,
-									ActivityShare.this.getString(R.string.menu_fetch));
+							setState(appInfo.getUid(), STATE_RUNNING, ActivityShare.this.getString(R.string.menu_fetch));
 
 							JSONArray appName = new JSONArray();
 							for (String name : appInfo.getApplicationName())
@@ -1226,7 +1237,7 @@ public class ActivityShare extends ActivityBase {
 							if (mAbort)
 								throw new AbortException(ActivityShare.this);
 
-							mAppAdapter.setState(appInfo.getUid(), STATE_RUNNING,
+							setState(appInfo.getUid(), STATE_RUNNING,
 									ActivityShare.this.getString(R.string.msg_applying));
 
 							if (statusLine.getStatusCode() == HttpStatus.SC_OK) {
@@ -1241,7 +1252,10 @@ public class ActivityShare extends ActivityBase {
 									JSONArray settings = status.getJSONArray("settings");
 									// Delete existing restrictions
 									List<Boolean> oldState = PrivacyManager.getRestartStates(appInfo.getUid(), null);
-									PrivacyManager.deleteRestrictions(appInfo.getUid(), null);
+
+									// Clear existing restriction
+									if (clear)
+										PrivacyManager.deleteRestrictions(appInfo.getUid(), null, true);
 
 									// Set fetched restrictions
 									List<PRestriction> listRestriction = new ArrayList<PRestriction>();
@@ -1255,8 +1269,9 @@ public class ActivityShare extends ActivityBase {
 											int voted_restricted = entry.getInt("restricted");
 											int voted_not_restricted = entry.getInt("not_restricted");
 											boolean restricted = (voted_restricted > voted_not_restricted);
-											listRestriction.add(new PRestriction(appInfo.getUid(), restrictionName,
-													methodName, restricted));
+											if (clear || restricted)
+												listRestriction.add(new PRestriction(appInfo.getUid(), restrictionName,
+														methodName, restricted));
 										}
 									}
 									PrivacyManager.setRestrictionList(listRestriction);
@@ -1270,13 +1285,13 @@ public class ActivityShare extends ActivityBase {
 									PrivacyManager.setSetting(appInfo.getUid(), PrivacyManager.cSettingModifyTime,
 											Long.toString(System.currentTimeMillis()));
 
-									mAppAdapter.setState(appInfo.getUid(), STATE_SUCCESS,
+									setState(appInfo.getUid(), STATE_SUCCESS,
 											!newState.equals(oldState) ? getString(R.string.msg_restart) : null);
 								} else {
 									int errno = status.getInt("errno");
 									String message = status.getString("error");
 									ServerException ex = new ServerException(ActivityShare.this, errno, message);
-									mAppAdapter.setState(appInfo.getUid(), STATE_FAILURE, ex.getLocalizedMessage());
+									setState(appInfo.getUid(), STATE_FAILURE, ex.getMessage());
 								}
 							} else {
 								// Failed
@@ -1285,10 +1300,20 @@ public class ActivityShare extends ActivityBase {
 							}
 						}
 					} catch (Throwable ex) {
-						mAppAdapter.setState(appInfo.getUid(), STATE_FAILURE, ex.getLocalizedMessage());
+						setState(appInfo.getUid(), STATE_FAILURE, ex.getMessage());
 						throw ex;
 					}
 				return null;
+			} catch (ConnectTimeoutException ex) {
+				return ex;
+			} catch (HttpHostConnectException ex) {
+				return ex;
+			} catch (SocketTimeoutException ex) {
+				return ex;
+			} catch (SSLException ex) {
+				return ex;
+			} catch (UnknownHostException ex) {
+				return ex;
 			} catch (Throwable ex) {
 				Util.bug(null, ex);
 				return ex;
@@ -1310,9 +1335,9 @@ public class ActivityShare extends ActivityBase {
 	}
 
 	@SuppressLint("DefaultLocale")
-	private class SubmitTask extends AsyncTask<int[], Integer, Throwable> {
+	private class SubmitTask extends AsyncTask<Object, Integer, Throwable> {
 		@Override
-		protected Throwable doInBackground(int[]... params) {
+		protected Throwable doInBackground(Object... params) {
 			try {
 				// Get data
 				List<ApplicationInfoEx> lstApp = mAppAdapter.getListAppInfo();
@@ -1327,16 +1352,15 @@ public class ActivityShare extends ActivityBase {
 
 						// Update progess
 						publishProgress(++mProgressCurrent, lstApp.size() + 1);
-						mAppAdapter.setState(appInfo.getUid(), STATE_RUNNING,
-								ActivityShare.this.getString(R.string.msg_loading));
+						setState(appInfo.getUid(), STATE_RUNNING, ActivityShare.this.getString(R.string.msg_loading));
 
 						// Check if any account allowed
 						boolean allowedAccounts = false;
 						AccountManager accountManager = AccountManager.get(ActivityShare.this);
 						for (Account account : accountManager.getAccounts()) {
 							String sha1 = Util.sha1(account.name + account.type);
-							boolean allowed = PrivacyManager.getSettingBool(appInfo.getUid(),
-									PrivacyManager.cSettingAccount + sha1, false, false);
+							boolean allowed = PrivacyManager.getSettingBool(appInfo.getUid(), Meta.cTypeAccount, sha1,
+									false, false);
 							if (allowed) {
 								allowedAccounts = true;
 								break;
@@ -1348,8 +1372,8 @@ public class ActivityShare extends ActivityBase {
 						for (ApplicationInfoEx aAppInfo : ApplicationInfoEx.getXApplicationList(ActivityShare.this,
 								null))
 							for (String packageName : aAppInfo.getPackageName()) {
-								boolean allowed = PrivacyManager.getSettingBool(aAppInfo.getUid(),
-										PrivacyManager.cSettingApplication + packageName, false, false);
+								boolean allowed = PrivacyManager.getSettingBool(appInfo.getUid(),
+										Meta.cTypeApplication, packageName, false, false);
 								if (allowed) {
 									allowedApplications = true;
 									break;
@@ -1365,7 +1389,7 @@ public class ActivityShare extends ActivityBase {
 								while (cursor.moveToNext()) {
 									long id = cursor.getLong(cursor.getColumnIndex(ContactsContract.Contacts._ID));
 									boolean allowed = PrivacyManager.getSettingBool(appInfo.getUid(),
-											PrivacyManager.cSettingContact + id, false, false);
+											Meta.cTypeContact, Long.toString(id), false, false);
 									if (allowed) {
 										allowedContacts = true;
 										break;
@@ -1374,6 +1398,10 @@ public class ActivityShare extends ActivityBase {
 							} finally {
 								cursor.close();
 							}
+
+						// Get white lists
+						Map<String, TreeMap<String, Boolean>> mapWhitelist = PrivacyManager.listWhitelisted(appInfo
+								.getUid());
 
 						// Encode restrictions
 						JSONArray jSettings = new JSONArray();
@@ -1401,11 +1429,21 @@ public class ActivityShare extends ActivityBase {
 										&& PrivacyManager.getRestrictionEx(appInfo.getUid(), restrictionName,
 												md.getName()).restricted;
 								long mUsed = PrivacyManager.getUsage(appInfo.getUid(), restrictionName, md.getName());
+
+								boolean mWhitelisted = false;
+								if (md.whitelist() != null && mapWhitelist.containsKey(md.whitelist()))
+									for (Boolean allowed : mapWhitelist.get(md.whitelist()).values())
+										if (mRestricted ? allowed : !allowed) {
+											mWhitelisted = true;
+											break;
+										}
+
 								JSONObject jMethod = new JSONObject();
 								jMethod.put("restriction", restrictionName);
 								jMethod.put("method", md.getName());
 								jMethod.put("restricted", mRestricted);
 								jMethod.put("used", mUsed);
+								jMethod.put("allowed", mWhitelisted ? 1 : 0);
 								jSettings.put(jMethod);
 							}
 						}
@@ -1451,8 +1489,7 @@ public class ActivityShare extends ActivityBase {
 						if (mAbort)
 							throw new AbortException(ActivityShare.this);
 
-						mAppAdapter.setState(appInfo.getUid(), STATE_RUNNING,
-								ActivityShare.this.getString(R.string.menu_submit));
+						setState(appInfo.getUid(), STATE_RUNNING, ActivityShare.this.getString(R.string.menu_submit));
 
 						// Submit
 						HttpParams httpParams = new BasicHttpParams();
@@ -1477,7 +1514,7 @@ public class ActivityShare extends ActivityBase {
 								// Mark as shared
 								PrivacyManager.setSetting(appInfo.getUid(), PrivacyManager.cSettingState,
 										Integer.toString(ActivityMain.STATE_SHARED));
-								mAppAdapter.setState(appInfo.getUid(), STATE_SUCCESS, null);
+								setState(appInfo.getUid(), STATE_SUCCESS, null);
 							} else {
 								int errno = status.getInt("errno");
 								String message = status.getString("error");
@@ -1489,7 +1526,7 @@ public class ActivityShare extends ActivityBase {
 											Boolean.toString(false));
 									throw ex;
 								} else
-									mAppAdapter.setState(appInfo.getUid(), STATE_FAILURE, ex.getLocalizedMessage());
+									setState(appInfo.getUid(), STATE_FAILURE, ex.getMessage());
 							}
 						} else {
 							// Failed
@@ -1497,10 +1534,20 @@ public class ActivityShare extends ActivityBase {
 							throw new IOException(statusLine.getReasonPhrase());
 						}
 					} catch (Throwable ex) {
-						mAppAdapter.setState(appInfo.getUid(), STATE_FAILURE, ex.getLocalizedMessage());
+						setState(appInfo.getUid(), STATE_FAILURE, ex.getMessage());
 						throw ex;
 					}
 				return null;
+			} catch (ConnectTimeoutException ex) {
+				return ex;
+			} catch (HttpHostConnectException ex) {
+				return ex;
+			} catch (SocketTimeoutException ex) {
+				return ex;
+			} catch (SSLException ex) {
+				return ex;
+			} catch (UnknownHostException ex) {
+				return ex;
 			} catch (Throwable ex) {
 				Util.bug(null, ex);
 				return ex;
@@ -1548,7 +1595,7 @@ public class ActivityShare extends ActivityBase {
 						@Override
 						public void onClick(DialogInterface dialog, int which) {
 							String email = input.getText().toString();
-							if (!"".equals(email))
+							if (Patterns.EMAIL_ADDRESS.matcher(email).matches())
 								new RegisterTask(context).executeOnExecutor(mExecutor, email);
 						}
 					});
@@ -1620,6 +1667,16 @@ public class ActivityShare extends ActivityBase {
 					response.getEntity().getContent().close();
 					throw new IOException(statusLine.getReasonPhrase());
 				}
+			} catch (ConnectTimeoutException ex) {
+				return ex;
+			} catch (HttpHostConnectException ex) {
+				return ex;
+			} catch (SocketTimeoutException ex) {
+				return ex;
+			} catch (SSLException ex) {
+				return ex;
+			} catch (UnknownHostException ex) {
+				return ex;
 			} catch (Throwable ex) {
 				Util.bug(null, ex);
 				return ex;
@@ -1628,12 +1685,12 @@ public class ActivityShare extends ActivityBase {
 
 		@Override
 		protected void onPostExecute(Throwable result) {
-			if (mContext != null) {
+			if (!mContext.isFinishing()) {
 				String message;
 				if (result == null)
 					message = mContext.getString(R.string.msg_registered);
 				else
-					message = result.getLocalizedMessage();
+					message = result.getMessage();
 
 				// Build dialog
 				AlertDialog.Builder alertDialogBuilder = new AlertDialog.Builder(mContext);
@@ -1676,11 +1733,9 @@ public class ActivityShare extends ActivityBase {
 	private void done(Throwable ex) {
 		String result = null;
 		if (ex != null && !(ex instanceof AbortException))
-			result = ex.getLocalizedMessage();
+			result = ex.getMessage();
 
 		// Check result string and display toast with error
-		// TODO: it might be better to put this in a dialog box
-		// asking whether to send debugging info
 		if (result != null)
 			Toast.makeText(this, result, Toast.LENGTH_LONG).show();
 
@@ -1704,10 +1759,6 @@ public class ActivityShare extends ActivityBase {
 		final View vButtonSeparator = findViewById(R.id.vButtonSeparator);
 		btnCancel.setVisibility(View.GONE);
 		vButtonSeparator.setVisibility(View.GONE);
-		// TODO: a nice touch would be to make the cancel button open the main
-		// list with only the failed apps in view.
-		// I'm not sure what text to put on it though; "Examine failed" might
-		// do, if it isn't too long.
 	}
 
 	public void fileChooser() {
@@ -1720,7 +1771,7 @@ public class ActivityShare extends ActivityBase {
 
 	private void showFileName() {
 		TextView tvDescription = (TextView) findViewById(R.id.tvDescription);
-		tvDescription.setText(".../" + new File(mFileName).getName());
+		tvDescription.setText(mFileName);
 		Button btnOk = (Button) findViewById(R.id.btnOk);
 		btnOk.setEnabled(true);
 	}
@@ -1732,15 +1783,15 @@ public class ActivityShare extends ActivityBase {
 			return HTTP_BASE_URL;
 	}
 
-	public static String getFileName(Context context, boolean multiple) {
+	public static String getFileName(Context context, boolean multiple, String packageName) {
 		File folder = new File(Environment.getExternalStorageDirectory().getAbsolutePath() + File.separator
 				+ ".xprivacy");
 		folder.mkdir();
 		String fileName;
 		if (multiple) {
 			SimpleDateFormat format = new SimpleDateFormat("yyyyMMdd_HHmmss", Locale.ROOT);
-			fileName = String.format("XPrivacy_%s_%s_%s.xml", Util.getSelfVersionName(context),
-					format.format(new Date()), Build.DEVICE);
+			fileName = String.format("XPrivacy_%s_%s_%s%s.xml", Util.getSelfVersionName(context),
+					format.format(new Date()), Build.DEVICE, (packageName == null ? "" : "_" + packageName));
 		} else
 			fileName = "XPrivacy.xml";
 		return new File(folder + File.separator + fileName).getAbsolutePath();
@@ -1756,7 +1807,7 @@ public class ActivityShare extends ActivityBase {
 		}
 	}
 
-	private static class ServerException extends Exception {
+	public static class ServerException extends Exception {
 		private int mErrorNo;
 		private Context mContext = null;
 		private static final long serialVersionUID = 1L;
@@ -1777,10 +1828,10 @@ public class ActivityShare extends ActivityBase {
 
 		@Override
 		@SuppressLint("DefaultLocale")
-		public String getLocalizedMessage() {
+		public String getMessage() {
 			if (mErrorNo == cErrorNoRestrictions && mContext != null)
 				return mContext.getString(R.string.msg_no_restrictions);
-			return String.format("Error %d: %s", mErrorNo, super.getLocalizedMessage());
+			return String.format("Error %d: %s", mErrorNo, super.getMessage());
 			// general:
 			// 'errno' => 101, 'error' => 'Empty request'
 			// 'errno' => 102, 'error' => 'Please upgrade to at least ...'
@@ -1801,6 +1852,7 @@ public class ActivityShare extends ActivityBase {
 			// 'errno' => 304, 'error' => 'Too many packages for application'
 			// 'errno' => 305, 'error' => 'No restrictions available'
 			// 'errno' => 306, 'error' => 'Error retrieving restrictions'
+			// 'errno' => 307, 'error' => 'There is a maximum of ...'
 		}
 	}
 }

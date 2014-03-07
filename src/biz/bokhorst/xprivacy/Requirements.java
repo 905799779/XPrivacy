@@ -43,7 +43,7 @@ public class Requirements {
 						@Override
 						public void onClick(DialogInterface dialog, int which) {
 							Intent androidIntent = new Intent(Intent.ACTION_VIEW);
-							androidIntent.setData(Uri.parse("https://github.com/M66B/XPrivacy#installation"));
+							androidIntent.setData(Uri.parse("https://github.com/M66B/XPrivacy?mobile=0#installation"));
 							context.startActivity(androidIntent);
 						}
 					});
@@ -77,7 +77,7 @@ public class Requirements {
 		if (Util.isXposedEnabled()) {
 			// Check privacy client
 			try {
-				if (PrivacyService.getClient() != null) {
+				if (PrivacyService.checkClient()) {
 					List<String> listError = (List<String>) PrivacyService.getClient().check();
 					if (listError.size() > 0)
 						sendSupportInfo(TextUtils.join("\r\n", listError), context);
@@ -128,21 +128,22 @@ public class Requirements {
 		for (String packageName : cIncompatible)
 			try {
 				ApplicationInfo appInfo = context.getPackageManager().getApplicationInfo(packageName, 0);
-				String name = context.getPackageManager().getApplicationLabel(appInfo).toString();
+				if (appInfo.enabled) {
+					String name = context.getPackageManager().getApplicationLabel(appInfo).toString();
 
-				AlertDialog.Builder alertDialogBuilder = new AlertDialog.Builder(context);
-				alertDialogBuilder.setTitle(R.string.app_name);
-				alertDialogBuilder.setMessage(String.format(context.getString(R.string.app_incompatible), name));
-				alertDialogBuilder.setIcon(context.getThemed(R.attr.icon_launcher));
-				alertDialogBuilder.setPositiveButton(context.getString(android.R.string.ok),
-						new DialogInterface.OnClickListener() {
-							@Override
-							public void onClick(DialogInterface dialog, int which) {
-							}
-						});
-				AlertDialog alertDialog = alertDialogBuilder.create();
-				alertDialog.show();
-
+					AlertDialog.Builder alertDialogBuilder = new AlertDialog.Builder(context);
+					alertDialogBuilder.setTitle(R.string.app_name);
+					alertDialogBuilder.setMessage(String.format(context.getString(R.string.app_incompatible), name));
+					alertDialogBuilder.setIcon(context.getThemed(R.attr.icon_launcher));
+					alertDialogBuilder.setPositiveButton(context.getString(android.R.string.ok),
+							new DialogInterface.OnClickListener() {
+								@Override
+								public void onClick(DialogInterface dialog, int which) {
+								}
+							});
+					AlertDialog alertDialog = alertDialogBuilder.create();
+					alertDialog.show();
+				}
 			} catch (NameNotFoundException ex) {
 			}
 
@@ -221,13 +222,12 @@ public class Requirements {
 				Map<String, String> mapService = new HashMap<String, String>();
 				String[] services = (String[]) listServices.invoke(null);
 				if (services != null)
-					for (String service : services) {
-						IBinder binder = (IBinder) getService.invoke(null, service);
-						if (binder != null) {
-							String description = binder.getInterfaceDescriptor();
-							mapService.put(service, description);
+					for (String service : services)
+						if (service != null) {
+							IBinder binder = (IBinder) getService.invoke(null, service);
+							String descriptor = (binder == null ? null : binder.getInterfaceDescriptor());
+							mapService.put(service, descriptor);
 						}
-					}
 
 				if (mapService.size() > 0) {
 					// Check services
@@ -235,9 +235,7 @@ public class Requirements {
 					List<String> listMissing = new ArrayList<String>();
 					for (String name : XBinder.cServiceName) {
 						String descriptor = XBinder.cServiceDescriptor.get(i++);
-
-						// Skip iphonesubinfo, it is often not running
-						if (!name.equals("iphonesubinfo") && !name.equals("iphonesubinfo_msim")) {
+						if (descriptor != null && !name.equals("iphonesubinfo") && !name.equals("iphonesubinfo_msim")) {
 							// Check name
 							boolean checkDescriptor = false;
 							if (name.equals("telephony.registry")) {
@@ -372,7 +370,7 @@ public class Requirements {
 	}
 
 	public static void sendSupportInfo(final String text, final ActivityBase context) {
-		if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.ICE_CREAM_SANDWICH_MR1) {
+		if (Util.hasValidFingerPrint(context) || Util.isDebuggable(context)) {
 			AlertDialog.Builder alertDialogBuilder = new AlertDialog.Builder(context);
 			alertDialogBuilder.setTitle(R.string.app_name);
 			alertDialogBuilder.setMessage(R.string.msg_support_info);

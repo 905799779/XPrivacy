@@ -1,33 +1,32 @@
 package biz.bokhorst.xprivacy;
 
 import java.lang.reflect.Constructor;
+import java.lang.reflect.Member;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.util.ArrayList;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Random;
-import java.util.Set;
 
 import android.annotation.SuppressLint;
-import android.app.AndroidAppHelper;
 import android.content.Context;
 import android.os.Binder;
 import android.os.Build;
 import android.os.Process;
 import android.util.Log;
 
-import de.robv.android.xposed.IXposedHookLoadPackage;
 import de.robv.android.xposed.IXposedHookZygoteInit;
+import de.robv.android.xposed.IXposedHookLoadPackage;
+import de.robv.android.xposed.callbacks.XC_LoadPackage.LoadPackageParam;
 import de.robv.android.xposed.XposedBridge;
 import de.robv.android.xposed.XposedHelpers;
-import de.robv.android.xposed.callbacks.XC_LoadPackage.LoadPackageParam;
 import de.robv.android.xposed.XC_MethodHook;
 import static de.robv.android.xposed.XposedHelpers.findClass;
 
 @SuppressLint("DefaultLocale")
 public class XPrivacy implements IXposedHookLoadPackage, IXposedHookZygoteInit {
 	private static String mSecret = null;
+
 	private static boolean mAccountManagerHooked = false;
 	private static boolean mActivityManagerHooked = false;
 	private static boolean mClipboardManagerHooked = false;
@@ -38,6 +37,7 @@ public class XPrivacy implements IXposedHookLoadPackage, IXposedHookZygoteInit {
 	private static boolean mTelephonyManagerHooked = false;
 	private static boolean mWindowManagerHooked = false;
 	private static boolean mWiFiManagerHooked = false;
+
 	private static List<String> mListHookError = new ArrayList<String>();
 
 	// http://developer.android.com/reference/android/Manifest.permission.html
@@ -53,12 +53,10 @@ public class XPrivacy implements IXposedHookLoadPackage, IXposedHookZygoteInit {
 		// Generate secret
 		mSecret = Long.toHexString(new Random().nextLong());
 
-		PrivacyService.setupDatabase();
-
 		// System server
 		try {
 			// frameworks/base/services/java/com/android/server/SystemServer.java
-			Class<?> cSystemServer = findClass("com.android.server.SystemServer", null);
+			Class<?> cSystemServer = Class.forName("com.android.server.SystemServer");
 			Method mMain = cSystemServer.getDeclaredMethod("main", String[].class);
 			XposedBridge.hookMethod(mMain, new XC_MethodHook() {
 				@Override
@@ -69,6 +67,9 @@ public class XPrivacy implements IXposedHookLoadPackage, IXposedHookZygoteInit {
 		} catch (Throwable ex) {
 			Util.bug(null, ex);
 		}
+
+		// Activity manager service
+		hookAll(XActivityManagerService.getInstances(), mSecret);
 
 		// App widget manager
 		hookAll(XAppWidgetManager.getInstances(), mSecret);
@@ -198,6 +199,17 @@ public class XPrivacy implements IXposedHookLoadPackage, IXposedHookZygoteInit {
 		Util.log(hook, Log.INFO,
 				"getSystemService " + name + "=" + instance.getClass().getName() + " uid=" + Binder.getCallingUid());
 
+		if ("android.telephony.MSimTelephonyManager".equals(instance.getClass().getName())) {
+			Util.log(hook, Log.WARN, "Telephone service=" + Context.TELEPHONY_SERVICE);
+			Class<?> clazz = instance.getClass();
+			while (clazz != null) {
+				Util.log(hook, Log.WARN, "Class " + clazz);
+				for (Method method : clazz.getDeclaredMethods())
+					Util.log(hook, Log.WARN, "Declared " + method);
+				clazz = clazz.getSuperclass();
+			}
+		}
+
 		if (name.equals(Context.ACCOUNT_SERVICE)) {
 			// Account manager
 			if (!mAccountManagerHooked) {
@@ -278,15 +290,20 @@ public class XPrivacy implements IXposedHookLoadPackage, IXposedHookZygoteInit {
 	private static void hook(final XHook hook, ClassLoader classLoader, String secret) {
 		// Check SDK version
 		Hook md = null;
+		String message = null;
 		if (hook.getRestrictionName() == null) {
 			if (hook.getSdk() == 0)
-				Util.log(null, Log.ERROR, "No SDK specified for " + hook.getClassName() + "." + hook.getMethodName());
+				message = "No SDK specified for " + hook;
 		} else {
 			md = PrivacyManager.getHook(hook.getRestrictionName(), hook.getSpecifier());
 			if (md == null)
-				Util.log(null, Log.ERROR, "Hook not found " + hook.getRestrictionName() + "/" + hook.getSpecifier());
+				message = "Hook not found " + hook;
 			else if (hook.getSdk() != 0)
-				Util.log(null, Log.ERROR, "SDK specified for " + hook.getRestrictionName() + "/" + hook.getSpecifier());
+				message = "SDK not expected for " + hook;
+		}
+		if (message != null) {
+			mListHookError.add(message);
+			Util.log(hook, Log.ERROR, message);
 		}
 
 		int sdk = 0;
@@ -309,10 +326,15 @@ public class XPrivacy implements IXposedHookLoadPackage, IXposedHookZygoteInit {
 					try {
 						if (Process.myUid() <= 0)
 							return;
-						hook.before(param);
+						XParam xparam = XParam.fromXposed(param);
+						hook.before(xparam);
+						if (xparam.hasResult())
+							param.setResult(xparam.getResult());
+						if (xparam.hasThrowable())
+							param.setThrowable(xparam.getThrowable());
+						param.setObjectExtra("xextra", xparam.getExtras());
 					} catch (Throwable ex) {
 						Util.bug(null, ex);
-						throw ex;
 					}
 				}
 
@@ -322,61 +344,114 @@ public class XPrivacy implements IXposedHookLoadPackage, IXposedHookZygoteInit {
 						try {
 							if (Process.myUid() <= 0)
 								return;
-							hook.after(param);
+							XParam xparam = XParam.fromXposed(param);
+							xparam.setExtras(param.getObjectExtra("xextra"));
+							hook.after(xparam);
+							if (xparam.hasResult())
+								param.setResult(xparam.getResult());
+							if (xparam.hasThrowable())
+								param.setThrowable(xparam.getThrowable());
 						} catch (Throwable ex) {
 							Util.bug(null, ex);
-							throw ex;
 						}
 				}
 			};
 
 			// Find class
-			Class<?> hookClass;
+			Class<?> hookClass = null;
 			try {
+				// hookClass = Class.forName(hook.getClassName());
 				hookClass = findClass(hook.getClassName(), classLoader);
-				if (hookClass == null)
-					throw new ClassNotFoundException(hook.getClassName());
 			} catch (Throwable ex) {
-				String packageName = AndroidAppHelper.currentPackageName();
-				String restrictionName = hook.getRestrictionName();
-				String message = String.format("%s: class not found: %s for %s/%s uid=%d", packageName,
-						hook.getClassName(), restrictionName, hook.getSpecifier(), Process.myUid());
+				message = String.format("Class not found for %s", hook);
 				mListHookError.add(message);
 				Util.log(hook, hook.isOptional() ? Log.WARN : Log.ERROR, message);
-				return;
 			}
 
-			// Add hook
-			Set<XC_MethodHook.Unhook> hookSet = new HashSet<XC_MethodHook.Unhook>();
-
+			// Get members
+			List<Member> listMember = new ArrayList<Member>();
 			Class<?> clazz = hookClass;
 			while (clazz != null) {
 				if (hook.getMethodName() == null) {
 					for (Constructor<?> constructor : clazz.getDeclaredConstructors())
 						if (Modifier.isPublic(constructor.getModifiers()) ? hook.isVisible() : !hook.isVisible())
-							hookSet.add(XposedBridge.hookMethod(constructor, methodHook));
-				} else
+							listMember.add(constructor);
+					break;
+				} else {
 					for (Method method : clazz.getDeclaredMethods())
 						if (method.getName().equals(hook.getMethodName())
 								&& (Modifier.isPublic(method.getModifiers()) ? hook.isVisible() : !hook.isVisible()))
-							hookSet.add(XposedBridge.hookMethod(method, methodHook));
-				clazz = (hookSet.isEmpty() ? clazz.getSuperclass() : null);
+							listMember.add(method);
+				}
+				clazz = clazz.getSuperclass();
 			}
 
-			// Check if found
-			if (hookSet.isEmpty() && !hook.getClassName().startsWith("com.google.android.gms")) {
-				String packageName = AndroidAppHelper.currentPackageName();
-				String restrictionName = hook.getRestrictionName();
-				String message = String.format("%s: method not found: %s.%s for %s/%s uid=%d", packageName,
-						hookClass.getName(), hook.getMethodName(), restrictionName, hook.getSpecifier(),
-						Process.myUid());
-				mListHookError.add(message);
+			// Hook members
+			for (Member member : listMember)
+				try {
+					XposedBridge.hookMethod(member, methodHook);
+				} catch (Throwable ex) {
+					mListHookError.add(ex.toString());
+					Util.bug(hook, ex);
+				}
+
+			// Check if members found
+			if (listMember.isEmpty() && !hook.getClassName().startsWith("com.google.android.gms")) {
+				message = String.format("Method not found for %s", hook);
+				if (!hook.isOptional())
+					mListHookError.add(message);
 				Util.log(hook, hook.isOptional() ? Log.WARN : Log.ERROR, message);
-				return;
 			}
 		} catch (Throwable ex) {
-			Util.bug(null, ex);
 			mListHookError.add(ex.toString());
+			Util.bug(hook, ex);
+		}
+	}
+
+	// WORKAROUND: when a native lib is loaded after hooking, the hook is undone
+
+	private static List<XC_MethodHook.Unhook> mUnhookNativeMethod = new ArrayList<XC_MethodHook.Unhook>();
+
+	@SuppressWarnings("unused")
+	private static void registerNativeMethod(final XHook hook, Method method, XC_MethodHook.Unhook unhook) {
+		if (Process.myUid() > 0) {
+			synchronized (mUnhookNativeMethod) {
+				mUnhookNativeMethod.add(unhook);
+				Util.log(hook, Log.INFO, "Native " + method + " uid=" + Process.myUid());
+			}
+		}
+	}
+
+	@SuppressWarnings("unused")
+	private static void hookCheckNative() {
+		try {
+			XC_MethodHook hook = new XC_MethodHook() {
+				@Override
+				protected void afterHookedMethod(MethodHookParam param) throws Throwable {
+					if (Process.myUid() > 0)
+						try {
+							synchronized (mUnhookNativeMethod) {
+								Util.log(null, Log.INFO, "Loading " + param.args[0] + " uid=" + Process.myUid()
+										+ " count=" + mUnhookNativeMethod.size());
+								for (XC_MethodHook.Unhook unhook : mUnhookNativeMethod) {
+									XposedBridge.hookMethod(unhook.getHookedMethod(), unhook.getCallback());
+									unhook.unhook();
+								}
+							}
+						} catch (Throwable ex) {
+							Util.bug(null, ex);
+						}
+				}
+			};
+
+			Class<?> runtimeClass = Class.forName("java.lang.Runtime");
+			for (Method method : runtimeClass.getDeclaredMethods())
+				if (method.getName().equals("load") || method.getName().equals("loadLibrary")) {
+					XposedBridge.hookMethod(method, hook);
+					Util.log(null, Log.WARN, "Hooked " + method);
+				}
+		} catch (Throwable ex) {
+			Util.bug(null, ex);
 		}
 	}
 }

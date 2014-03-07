@@ -7,22 +7,315 @@ Changelog
 * BETA: new or updated features with a lower risk for bugs
 * STABLE: all known bugs fixed; low risk for bugs
 
-Test and beta releases will have experimental functions enabled by default.
+**Downloads**
 
-**Experimental functions**
-
-* None at this time
+* [Xposed module repository](http://repo.xposed.info/module/biz.bokhorst.xprivacy)
+* [GitHub releases](https://github.com/M66B/XPrivacy/releases)
 
 **Next release**
 
 [Open issues](https://github.com/M66B/XPrivacy/issues?state=open)
+
+**Version 1.99.71 BETA**
+
+* Added partial asked state ([issue](/../../issues/1513))
+* Removed reboot action from restart required notification ([issue](/../../issues/1485))
+* Positional text parameters (English only), thanks @[Phylon](https://github.com/Phylon)
+* Updated Dutch translation
+* Updated Slovenian translation
+
+**Version 1.99.70 BETA**
+
+* Fixed exporting of template ([issue](/../../issues/1506))
+* Fixed exporting of on demand restricting function settings ([issue](/../../issues/1508))
+* Added *uid* to *restricted by* dialog (requested on XDA)
+* On demand restricting for dangerous functions with a whitelist always enabled
+* Updated Italian translation
+
+**Version 1.99.69 BETA**
+
+* Small layout fix (reported on XDA)
+* Moved user defined dangerous functions to template
+* Whitelist subnets ([issue](/../../issues/1501))
+* Added *uid* to on demand restricting dialog
+
+**Version 1.99.68 BETA**
+
+* Fixed erasing whitelists when changing restrictions ([issue](/../../issues/1499))
+* Fixed updating application state when new application with shared user ID is installed ([issue](/../../issues/1498))
+* Updated German translation
+* Updated French translation
+
+**Version 1.99.67 TEST**
+
+* Option to apply template partially (categories) or fully (categories and functions)
+* Reverted *Removed user defined dangerous functions*
+
+**Version 1.99.66 TEST**
+
+* Fixed function templates in relation to dangerous functions
+* Added spinners for changing restrictions
+* Clearing restrictions does no longer disable on demand restricting application *setting*
+* Delete restrictions and apply template of applications details view will use batch operation
+* Removed user defined dangerous functions
+
+**Version 1.99.65 TEST**
+
+* Fixed on demand restricting filtering negate ([issue](/../../issues/1495))
+* Run all restriction changes in the background
+	* To prevent application not responding messages
+	* There can be a delay before a restriction change is visible
+* Updated Lithuanian translation
+
+**Version 1.99.64 TEST**
+
+* Fixed all minor bugs reported through the support info
+* Fixed some minor bugs and improved some layouts
+* Added template for functions
+* Added info icon to toggle restrictions
+
+**Version 1.99.63 BETA**
+
+* Fixed interaction of on demand restricting dialog with status bar and keyboard
+	* Some dialogs when starting an application from a notification are still unresponsive
+* Template restrictions and on demand restricting separately, thanks @[jpeg729](https://github.com/jpeg729)
+* Enabled proguard again for a smaller file size (in preparation of the stable release)
+* Updated Italian translation
+
+**Version 1.99.62 BETA**
+
+* Fixed making exceptions for dangerous functions in some situations
+* Batch enable/disable on demand restricting requires enabling *Restrict dangerous functions*
+* Batch enable/disable on demand restricting will disable/enable update notifications too
+* Show usage data for selected category only
+* Updated Android support library to latest version
+* Updated simplified Chinese translation
+
+**Version 1.99.61 BETA**
+
+* Fixed all minor bugs reported through the support info
+	* The loop back address will be restricted too, see [this commit](https://github.com/M66B/XPrivacy/commit/4aad9cecc15cc040a0b9c4104dabb65332e4f63e)
+* Fixed negative GSF ID ([issue](/../../issues/1473))
+* Select visible applications for fetch ([issue](/../../issues/1477))
+* Add package name to export file name when exporting one application ([issue](/../../issues/1465))
+* Lower case entry for Android ID (reported on XDA)
+* Updated German translation
+* Updated Polish translation
+
+**Version 1.99.60 BETA**
+
+* Added option to batch disable on demand restricting ([issue](/../../issues/1467))
+* Clearer whitelist entry delete icon
+* Log database upgrade failures ([issue](/../../issues/1466))
+* Use not focusable on demand dialog ([issue](/../../issues/1464))
+* Updated Dutch translation
+* Updated French translation
+* Updated Lithuanian translation
+* Updated Russian translation
+
+**Version 1.99.59 BETA**
+
+* Fixed all minor bugs reported through the support info
+* More compatible database upgrade procedure (again)
+* Added option to batch enable on demand restricting (requested on XDA)
+* Added option to export from application details view (requested on XDA)
+
+**Version 1.99.58 TEST**
+
+* Fixed all minor bugs reported through the support info
+* Running [VACUUM](http://www.sqlite.org/lang_vacuum.html) on databases on boot
+* Setting [asynchronous mode](http://www.sqlite.org/pragma.html#pragma_synchronous) for usage data database
+
+**Version 1.99.57 TEST**
+
+* More compatible database upgrade procedure (again)
+* Better support info
+
+**Version 1.99.56 TEST**
+
+* More compatible database upgrade procedure
+
+**Version 1.99.55 TEST**
+
+* Fixed submitting restrictions ([issue](/../../issues/1452))
+* System server will create database folder ([issue](/../../issues/1437))
+* Updated Russian translation
+* Updated Slovak translation
+
+**Version 1.99.54 TEST**
+
+* Toggle restriction will allow to choose between, clear, restrict and template ([issue](/../../issues/1319))
+* Option to select if existing restrictions should be deleted on import or fetch ([issue](/../../issues/1119))
+* Move database to /data/system/xprivacy ([issue](/../../issues/1437))
+* Submit functions with a white/blacklist as having an exception ([issue](/../../issues/1438))
+* On demand timeout will result in using defined restriction (was deny once)
+* Import/export one application will not import/export global settings
+* Option to enable/disable usage data parameters (**default disabled**)
+* Removed phone properties restrictions (these are covered by function restrictions too)
+* Fixed on demand restricting asking again ([issue](/../../issues/1447))
+* Separated file name and /proc whitelists
+	* This means you have to whitelist /proc entries again
+* Updated Dutch translation
+* Updated German translation
+* Updated Italian translation
+* Updated Polish translation
+* Updated traditional Chinese translation
+
+**Version 1.99.53 TEST**
+
+* Fixed hooking base constructors ([issue](/../../issues/1431))
+* Fixed some restrictions applying only after reboot (reported on XDA)
+* Restrict all *view* actions, show parameters and whitelisting ([issue](/../../issues/1419))
+	* You might see a few more messages *Restricted by XPrivacy* because of this
+* Improved usage data layout, option to copy parameters ([issue](/../../issues/1424))
+* Improved on demand restricting dialog layout
+* Moved usage data to separate database to improve performance (locking)
+* Removed *internet/socket*, since it passes *internet/connect* anyway
+* Show data parameter for intents
+* Export only application settings when exporting one application
+
+**Version 1.99.52 BETA**
+
+* Optimized *storage/open* restriction
+* Added whitelisting for folders
+* Added whitelisting for subdomains ([issue](/../../issues/1418))
+* Limited parameters to 128 characters to prevent performance problems
+* Display host name instead of IP address where possible ([issue](/../../issues/1415))
+* Fixed crash when both on demand restricting and notify restricted ([issue](/../../issues/1417))
+
+**Version 1.99.51 TEST**
+
+* Fixed returning exceptions ([issue](/../../issues/1398))
+* Localized whitelist names ([issue](/../../issues/1375))
+* Sorted whitelist entries ([issue](/../../issues/1375))
+* Removed /proc exceptions, except */proc/self/cmdline*
+* Added /proc to files whitelist ([issue](/../../issues/1375))
+* *storage/open* will also check media storage
+* Clear restrictions will clear whitelists ([issue](/../../issues/1375))
+* Whitelist management requires a [Pro license](http://www.xprivacy.eu/)
+* Limit parameters to 250 characters (some applications use long Javascript for loadUrl)
+* Updated Dutch translation
+* Updated Lithuanian translation
+* Updated Russian translation
+
+**Version 1.99.50 TEST**
+
+* Fixed returning exceptions ([issue](/../../issues/1398))
+* Attempt to fix interaction between on demand dialog and status bar (reported on XDA)
+* Removed more dependencies on Xposed
+* Improved on demand restricting dialog layout
+* Show SDK version and XPrivacy version *from* in function information
+* Prevent on demand restricting after being powered down
+* Added white/black listing for IP addresses, shell commands, files and URLs, big thanks @[jpeg729](https://github.com/jpeg729) ([issue](/../../issues/1375))
+* Updated Russian translation
+
+**Version 1.99.49 TEST**
+
+* Fixed restriction caching (performance)
+* Fixed allowing contacts for contact aggregation
+* Fixed select/unselect all ([issue](/../../issues/1390))
+* Fixed some more repeated asking on demand, thanks @[jpeg729](https://github.com/jpeg729)
+* Fixed duplicate usage data entries (reported on XDA)
+* Fixed hooking for multi SIM devices ([issue](/../../issues/1366))
+* Improved tutorial/info background ([issue](/../../issues/1391))
+* Added template for on demand restricting, thanks @[jpeg729](https://github.com/jpeg729) ([issue](/../../issues/1376))
+* Reduced dependency on Xposed
+	* So we could *for example* more easily use [Cydia Substrate](http://www.cydiasubstrate.com/)
+* Updated German translation
+* Updated French translation
+* Updated Lithuanian translation
+
+**Version 1.99.48 TEST**
+
+* Fixed a null pointer exception for some ROMs (support info)
+* Fixed not all parameters appearing in the usage data
+* Fixed asking again when allowing/denying once
+* Fixed touch sensitivity on demand restricting check box (reported on XDA)
+* Fixed on demand getting set for functions, when category on demand not set
+* Attempt to fix hooking of native functions ([issue](/../../issues/1366))
+* White list */proc/meminfo* ([issue](/../../issues/1320))
+* Added option to fake [GSM CID/LAC](http://en.wikipedia.org/wiki/Cell_ID) ([issue](/../../issues/1289))
+	* Note: only [cell locations](http://developer.android.com/reference/android/telephony/CellLocation.html) can be faked, not [cell info](http://developer.android.com/reference/android/telephony/CellInfo.html)
+* *Apply to entire category* and *Once for ... seconds* exclude each other ([issue](/../../issues/1381))
+* Notification *Restart required* will ask to reboot ([issue](/../../issues/1382))
+* New dangerous functions will not be unrestricted on update if you have *restrict dangerous functions* enabled
+	* If you want this, disable this setting before upgrading
+* Updated info icons, thanks @[Phylon](https://github.com/Phylon)
+* Updated Slovak translation
+
+**Version 1.99.47 BETA**
+
+* Fixed null pointer in storage/open
+* Fixed restricting GSF ID in some cases ([issue](/../../issues/1374))
+* Improved filter view layout ([issue](/../../issues/1335))
+
+**Version 1.99.46 TEST**
+
+* Fixed function name overlapping information icon
+* Fixed defaults for some on demand restricting settings
+* Clear all data will also clear local caches
+* Show parameters in usage data (only [Pro license](http://www.xprivacy.eu/))
+* Added restriction for deprecated *contacts/people* ([issue](/../../issues/1367))
+* Added restriction for storage/open file on common storage (sdcard or internal storage)
+* Added restriction for internet/socket
+* Compatible with Poweramp unlocker again ([issue](/../../issues/1340))
+* Updated Dutch translation
+* Updated Lithuanian translation
+* Updated Polish translation
+
+**Version 1.99.45 BETA**
+
+* Fixed contacts permissions (reported on XDA)
+* Made *internet/connect* dangerous ([issue](/../../issues/1354))
+* Only check for enabled (not frozen) incompatible applications ([issue](/../../issues/1358))
+* Show notification for restricted *getPrimaryClipDescription*, *hasPrimaryClip* and *hasText* (clipboard)
+* Allow/deny once with parameter will be asked always (time to allow/deny does not apply in this case)
+* Added check boxes to enable/disable on demand restricting asking in application details view, thanks @[jpeg729](https://github.com/jpeg729)
+* Hide name from licensed info ([issue](/../../issues/1347))
+* Added Malay translation
+
+**Version 1.99.44 TEST**
+
+* Fixed function restrictions not sticking
+* Fixed size of documentation popup ([issue](/../../issues/1341))
+* Added restriction for connecting to the internet (experimental)
+* Added restriction for *system/getPreferredActivities*
+* Added documentation for sensors, overlay, system and view, thanks @[jpeg729](https://github.com/jpeg729) ([issue](/../../issues/838))
+* Added documentation for network, NFC, notifications, phone and shell ([issue](/../../issues/838))
+* Updated Lithuanian translation
+* Updated Simplified Chinese translation
+* Updated Slovak translation
+
+**Version 1.99.43 BETA**
+
+* Fixed cycling through restriction states, thanks @[jpeg729](https://github.com/jpeg729)
+* Fixed Gmail contact restricting ([issue](/../../issues/1336))
+* Added documentation for messages and storage ([issue](/../../issues/838))
+* Made *Browser/Downloads* dangerous
+* Updated Dutch translation
+* Updated French translation
+* Updated German translation
+* Updated Lithuanian translation
+
+**Version 1.99.42 BETA**
+
+* Fixed dark theme usage list ([issue](/../../issues/1331))
+* Even easier multiple select, thanks @[paour](https://github.com/paour) ([issue](/../../issues/1318))
+* Added documentation for identification, internet, ipc, location and media ([issue](/../../issues/838))
+* Show required permissions in information dialog
+
+**Version 1.99.41 BETA**
+
+* Fixed some UI elements not working ([issue](/../../issues/1321))
+* Added reboot reasons to reboot view
+* Easier multiple select ([issue](/../../issues/1318))
 
 **Version 1.99.40 BETA**
 
 * Rewritten URI restrictions for better compatibility
 * Simplified restricting / allowing contacts
 * Added restriction for browser downloads
-* Added documentation for accounts, browser, calendar, calling, clipboard, contacts, dictionary and email
+* Added documentation for accounts, browser, calendar, calling, clipboard, contacts, dictionary and email ([issue](/../../issues/838))
 * Added Kurdish translation
 * Updated traditional Chinese translation
 * Updated Norwegian translation

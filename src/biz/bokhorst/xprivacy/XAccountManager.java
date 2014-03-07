@@ -19,8 +19,6 @@ import android.os.Binder;
 import android.os.Bundle;
 import android.util.Log;
 
-import de.robv.android.xposed.XC_MethodHook.MethodHookParam;
-
 public class XAccountManager extends XHook {
 	private Methods mMethod;
 	private String mClassName;
@@ -92,28 +90,32 @@ public class XAccountManager extends XHook {
 
 	@Override
 	@SuppressWarnings("unchecked")
-	protected void before(MethodHookParam param) throws Throwable {
+	protected void before(XParam param) throws Throwable {
 		if (mMethod == Methods.addOnAccountsUpdatedListener) {
 			if (param.args.length > 0 && param.args[0] != null)
 				if (isRestricted(param)) {
+					int uid = Binder.getCallingUid();
 					OnAccountsUpdateListener listener = (OnAccountsUpdateListener) param.args[0];
-					XOnAccountsUpdateListener xlistener = new XOnAccountsUpdateListener(listener,
-							Binder.getCallingUid());
+					XOnAccountsUpdateListener xListener;
 					synchronized (mListener) {
-						mListener.put(listener, xlistener);
-						Util.log(this, Log.INFO, "Added count=" + mListener.size());
+						xListener = mListener.get(listener);
+						if (xListener == null) {
+							xListener = new XOnAccountsUpdateListener(listener, uid);
+							mListener.put(listener, xListener);
+							Util.log(this, Log.WARN, "Added count=" + mListener.size() + " uid=" + uid);
+						}
 					}
-					param.args[0] = xlistener;
+					param.args[0] = xListener;
 				}
 
 		} else if (mMethod == Methods.removeOnAccountsUpdatedListener) {
 			if (param.args.length > 0 && param.args[0] != null)
 				synchronized (mListener) {
 					OnAccountsUpdateListener listener = (OnAccountsUpdateListener) param.args[0];
-					XOnAccountsUpdateListener xlistener = mListener.get(listener);
-					if (xlistener != null) {
-						param.args[0] = xlistener;
-						mListener.remove(listener);
+					XOnAccountsUpdateListener xListener = mListener.get(listener);
+					if (xListener != null) {
+						param.args[0] = xListener;
+						Util.log(this, Log.WARN, "Removed count=" + mListener.size() + " uid=" + Binder.getCallingUid());
 					}
 				}
 
@@ -159,7 +161,7 @@ public class XAccountManager extends XHook {
 
 	@Override
 	@SuppressWarnings("unchecked")
-	protected void after(MethodHookParam param) throws Throwable {
+	protected void after(XParam param) throws Throwable {
 		if (mMethod != Methods.addOnAccountsUpdatedListener && mMethod != Methods.removeOnAccountsUpdatedListener) {
 			int uid = Binder.getCallingUid();
 			if (mMethod == Methods.blockingGetAuthToken) {
@@ -237,7 +239,7 @@ public class XAccountManager extends XHook {
 	private boolean isAccountAllowed(String accountName, String accountType, int uid) {
 		try {
 			String sha1 = Util.sha1(accountName + accountType);
-			if (PrivacyManager.getSettingBool(uid, PrivacyManager.cSettingAccount + sha1, false, true))
+			if (PrivacyManager.getSettingBool(uid, Meta.cTypeAccount, sha1, false, true))
 				return true;
 		} catch (Throwable ex) {
 			Util.bug(this, ex);

@@ -3,12 +3,6 @@
     xmlns:tools="http://schemas.android.com/tools" >
 
     <item
-        android:id="@+id/menu_help"
-        android:icon="?attr/icon_help"
-        android:showAsAction="always"
-        android:title="@string/menu_help"
-        tools:ignore="AlwaysShowAction"/>
-    <item
         android:id="@+id/menu_select_all"
         android:icon="@drawable/icon_select_all"
         android:showAsAction="always"
@@ -24,17 +18,27 @@
         android:showAsAction="always"
         android:title="@string/menu_filter"/>
     <item
+        android:id="@+id/menu_help"
+        android:icon="?attr/icon_help"
+        android:showAsAction="always"
+        android:title="@string/menu_help"
+        tools:ignore="AlwaysShowAction"/>
+    <item
+        android:id="@+id/menu_dump"
+        android:title="Dump"
+        tools:ignore="HardcodedText"/>
+    <item
         android:id="@+id/menu_tutorial"
         android:title="@string/menu_tutorial"/>
     <item
-        android:id="@+id/menu_all"
-        android:title="@string/menu_restriction_all"/>
+        android:id="@+id/menu_usage"
+        android:title="@string/menu_usage"/>
+    <item
+        android:id="@+id/menu_toggle"
+        android:title="@string/menu_toggle"/>
     <item
         android:id="@+id/menu_clear_db"
         android:title="@string/menu_clear_db"/>
-    <item
-        android:id="@+id/menu_usage"
-        android:title="@string/menu_usage"/>
     <item
         android:id="@+id/menu_export"
         android:title="@string/menu_export"/>
@@ -47,9 +51,6 @@
     <item
         android:id="@+id/menu_fetch"
         android:title="@string/menu_fetch"/>
-    <item
-        android:id="@+id/menu_refresh"
-        android:title="@string/menu_refresh"/>
     <item
         android:id="@+id/menu_pro"
         android:title="@string/menu_pro"/>

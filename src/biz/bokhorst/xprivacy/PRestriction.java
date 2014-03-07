@@ -1,5 +1,6 @@
 package biz.bokhorst.xprivacy;
 
+import android.annotation.SuppressLint;
 import android.os.Parcel;
 import android.os.Parcelable;
 
@@ -11,6 +12,8 @@ public class PRestriction implements Parcelable {
 	public boolean restricted;
 	public boolean asked;
 	public long time;
+
+	// The extra is never needed in the result
 
 	public PRestriction() {
 	}
@@ -106,7 +109,9 @@ public class PRestriction implements Parcelable {
 	}
 
 	@Override
+	@SuppressLint("DefaultLocale")
 	public String toString() {
-		return "uid=" + uid + " " + restrictionName + "/" + methodName + "=" + restricted + (asked ? "!" : "?");
+		return String.format("%d/%s(%s) %s=%srestricted%s", uid, methodName, extra, restrictionName, (restricted ? ""
+				: "!"), (asked ? "" : "?"));
 	}
 }

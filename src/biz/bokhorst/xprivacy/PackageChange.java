@@ -15,7 +15,7 @@ public class PackageChange extends BroadcastReceiver {
 	public void onReceive(final Context context, Intent intent) {
 		try {
 			// Check uri
-			Uri inputUri = Uri.parse(intent.getDataString());
+			Uri inputUri = intent.getData();
 			if (inputUri.getScheme().equals("package")) {
 				// Get data
 				int uid = intent.getIntExtra(Intent.EXTRA_UID, 0);
@@ -36,7 +36,7 @@ public class PackageChange extends BroadcastReceiver {
 					if (PrivacyService.getClient() != null && appInfo.getPackageName().size() == 1) {
 						if (!replacing) {
 							// Delete existing restrictions
-							PrivacyManager.deleteRestrictions(uid, null);
+							PrivacyManager.deleteRestrictions(uid, null, false);
 							PrivacyManager.deleteSettings(uid);
 							PrivacyManager.deleteUsage(uid);
 
@@ -48,20 +48,14 @@ public class PackageChange extends BroadcastReceiver {
 								PrivacyManager.setSetting(uid, PrivacyManager.cSettingOnDemand, Boolean.toString(true));
 
 							// Restrict new non-system apps
-							if (!appInfo.isSystem()) {
-								for (String restrictionName : PrivacyManager.getRestrictions()) {
-									String templateName = PrivacyManager.cSettingTemplate + "." + restrictionName;
-									if (PrivacyManager.getSettingBool(0, templateName, !ondemand, false))
-										PrivacyManager.setRestriction(uid, restrictionName, null, true, false);
-								}
-							}
+							if (!appInfo.isSystem())
+								PrivacyManager.applyTemplate(uid, null, true);
 						}
-
-						// Mark as new/changed
-						PrivacyManager.setSetting(uid, PrivacyManager.cSettingState,
-								Integer.toString(ActivityMain.STATE_ATTENTION));
-
 					}
+
+					// Mark as new/changed
+					PrivacyManager.setSetting(uid, PrivacyManager.cSettingState,
+							Integer.toString(ActivityMain.STATE_ATTENTION));
 
 					// New/update notification
 					boolean notify = PrivacyManager.getSettingBool(uid, PrivacyManager.cSettingNotify, true, false);
@@ -118,6 +112,19 @@ public class PackageChange extends BroadcastReceiver {
 						Notification notification = notificationBuilder.build();
 						notificationManager.notify(appInfo.getUid(), notification);
 					}
+
+				} else if (intent.getAction().equals(Intent.ACTION_PACKAGE_REMOVED) && !replacing) {
+					// Package removed
+					notificationManager.cancel(uid);
+
+					// Delete restrictions
+					ApplicationInfoEx appInfo = new ApplicationInfoEx(context, uid);
+					if (PrivacyService.getClient() != null && appInfo.getPackageName().size() == 0) {
+						PrivacyManager.deleteRestrictions(uid, null, false);
+						PrivacyManager.deleteSettings(uid);
+						PrivacyManager.deleteUsage(uid);
+					}
+
 				} else if (intent.getAction().equals(Intent.ACTION_PACKAGE_REPLACED)) {
 					// Notify reboot required
 					String packageName = inputUri.getSchemeSpecificPart();
@@ -141,17 +148,6 @@ public class PackageChange extends BroadcastReceiver {
 
 						// Notify
 						notificationManager.notify(Util.NOTIFY_RESTART, notification);
-					}
-				} else if (intent.getAction().equals(Intent.ACTION_PACKAGE_REMOVED) && !replacing) {
-					// Package removed
-					notificationManager.cancel(uid);
-
-					// Delete restrictions
-					ApplicationInfoEx appInfo = new ApplicationInfoEx(context, uid);
-					if (PrivacyService.getClient() != null && appInfo.getPackageName().size() == 0) {
-						PrivacyManager.deleteRestrictions(uid, null);
-						PrivacyManager.deleteSettings(uid);
-						PrivacyManager.deleteUsage(uid);
 					}
 				}
 			}

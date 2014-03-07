@@ -7,8 +7,6 @@ import java.util.List;
 import android.text.TextUtils;
 import android.util.Log;
 
-import de.robv.android.xposed.XC_MethodHook.MethodHookParam;
-
 public class XProcessBuilder extends XHook {
 
 	private String mCommand;
@@ -35,12 +33,12 @@ public class XProcessBuilder extends XHook {
 	}
 
 	@Override
-	protected void before(MethodHookParam param) throws Throwable {
+	protected void before(XParam param) throws Throwable {
 		String methodName = param.method.getName();
 		if (methodName.equals("start")) {
 			// Get commands
 			ProcessBuilder builder = (ProcessBuilder) param.thisObject;
-			List<String> listProg = builder.command();
+			List<String> listProg = (builder == null ? null : builder.command());
 
 			// Check commands
 			if (listProg != null) {
@@ -56,7 +54,7 @@ public class XProcessBuilder extends XHook {
 	}
 
 	@Override
-	protected void after(MethodHookParam param) throws Throwable {
+	protected void after(XParam param) throws Throwable {
 		// Do nothing
 	}
 }

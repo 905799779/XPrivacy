@@ -14,8 +14,6 @@ import android.location.GpsSatellite;
 import android.location.LocationListener;
 import android.location.GpsStatus;
 
-import de.robv.android.xposed.XC_MethodHook.MethodHookParam;
-
 public class XLocationManager extends XHook {
 	private Methods mMethod;
 	private String mClassName;
@@ -88,7 +86,7 @@ public class XLocationManager extends XHook {
 	}
 
 	@Override
-	protected void before(MethodHookParam param) throws Throwable {
+	protected void before(XParam param) throws Throwable {
 		if (mMethod == Methods.addNmeaListener) {
 			if (isRestricted(param))
 				param.setResult(false);
@@ -111,7 +109,7 @@ public class XLocationManager extends XHook {
 	}
 
 	@Override
-	protected void after(MethodHookParam param) throws Throwable {
+	protected void after(XParam param) throws Throwable {
 		if (mMethod != Methods.addGeofence && mMethod != Methods.addNmeaListener
 				&& mMethod != Methods.addProximityAlert && mMethod != Methods.removeUpdates
 				&& mMethod != Methods.requestLocationUpdates && mMethod != Methods.requestSingleUpdate)
@@ -148,16 +146,21 @@ public class XLocationManager extends XHook {
 				Util.log(this, Log.WARN, "Unknown method=" + param.method.getName());
 	}
 
-	private void replaceLocationListener(MethodHookParam param, int arg) throws Throwable {
+	private void replaceLocationListener(XParam param, int arg) throws Throwable {
 		if (param.args.length > arg && param.args[arg] != null
 				&& LocationListener.class.isAssignableFrom(param.args[arg].getClass())) {
 			if (!(param.args[arg] instanceof XLocationListener)) {
 				LocationListener listener = (LocationListener) param.args[arg];
 				if (listener != null) {
-					XLocationListener xListener = new XLocationListener(listener);
+					XLocationListener xListener;
 					synchronized (mListener) {
-						mListener.put(listener, xListener);
-						Util.log(this, Log.INFO, "Added count=" + mListener.size() + " uid=" + Binder.getCallingUid());
+						xListener = mListener.get(listener);
+						if (xListener == null) {
+							xListener = new XLocationListener(listener);
+							mListener.put(listener, xListener);
+							Util.log(this, Log.WARN,
+									"Added count=" + mListener.size() + " uid=" + Binder.getCallingUid());
+						}
 					}
 					param.args[arg] = xListener;
 				}
@@ -167,7 +170,7 @@ public class XLocationManager extends XHook {
 			param.setResult(null);
 	}
 
-	private void removeLocationListener(MethodHookParam param) {
+	private void removeLocationListener(XParam param) {
 		if (param.args.length > 0 && param.args[0] != null
 				&& LocationListener.class.isAssignableFrom(param.args[0].getClass())) {
 			LocationListener listener = (LocationListener) param.args[0];
@@ -175,7 +178,7 @@ public class XLocationManager extends XHook {
 				XLocationListener xlistener = mListener.get(listener);
 				if (xlistener != null) {
 					param.args[0] = xlistener;
-					mListener.remove(listener);
+					Util.log(this, Log.WARN, "Removed count=" + mListener.size() + " uid=" + Binder.getCallingUid());
 				}
 			}
 		} else

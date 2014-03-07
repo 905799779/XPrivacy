@@ -636,10 +636,7 @@ public class PrivacyProvider extends ContentProvider {
 
 					// Decode setting
 					String[] component = name.split("\\.");
-					if (name.startsWith(PrivacyManager.cSettingAccount)
-							|| name.startsWith(PrivacyManager.cSettingApplication)
-							|| name.startsWith(PrivacyManager.cSettingContact)
-							|| name.startsWith(PrivacyManager.cSettingRawContact)) {
+					if (name.startsWith("Account.") || name.startsWith("Application.") || name.startsWith("Contact.")) {
 						try {
 							// name.uid.key
 							uid = Integer.parseInt(component[1]);
@@ -733,7 +730,7 @@ public class PrivacyProvider extends ContentProvider {
 				try {
 					String value = prefs.getString(name, null);
 					if (value != null && !"".equals(value))
-						listWork.add(new PSetting(uid, name, value));
+						listWork.add(new PSetting(uid, "", name, value));
 				} catch (Throwable ex) {
 					// Legacy boolean
 					Util.bug(null, ex);

@@ -13,9 +13,8 @@ import android.telephony.ServiceState;
 import android.telephony.SignalStrength;
 import android.telephony.CellInfo;
 import android.telephony.TelephonyManager;
+import android.telephony.gsm.GsmCellLocation;
 import android.util.Log;
-
-import de.robv.android.xposed.XC_MethodHook.MethodHookParam;
 
 public class XTelephonyManager extends XHook {
 	private Methods mMethod;
@@ -24,6 +23,12 @@ public class XTelephonyManager extends XHook {
 
 	private XTelephonyManager(Methods method, String restrictionName, String className) {
 		super(restrictionName, method.name(), null);
+		mMethod = method;
+		mClassName = className;
+	}
+
+	private XTelephonyManager(Methods method, String restrictionName, String className, int sdk) {
+		super(restrictionName, method.name(), null, sdk);
 		mMethod = method;
 		mClassName = className;
 	}
@@ -84,7 +89,7 @@ public class XTelephonyManager extends XHook {
 
 		List<XHook> listHook = new ArrayList<XHook>();
 
-		listHook.add(new XTelephonyManager(Methods.disableLocationUpdates, PrivacyManager.cLocation, className));
+		listHook.add(new XTelephonyManager(Methods.disableLocationUpdates, null, className, 10));
 		listHook.add(new XTelephonyManager(Methods.enableLocationUpdates, PrivacyManager.cLocation, className));
 		listHook.add(new XTelephonyManager(Methods.getAllCellInfo, PrivacyManager.cLocation, className));
 		listHook.add(new XTelephonyManager(Methods.getCellLocation, PrivacyManager.cLocation, className));
@@ -123,7 +128,7 @@ public class XTelephonyManager extends XHook {
 	}
 
 	@Override
-	protected void before(MethodHookParam param) throws Throwable {
+	protected void before(XParam param) throws Throwable {
 		if (mMethod == Methods.listen) {
 			if (param.args.length > 1) {
 				PhoneStateListener listener = (PhoneStateListener) param.args[0];
@@ -132,19 +137,25 @@ public class XTelephonyManager extends XHook {
 					if (event == PhoneStateListener.LISTEN_NONE) {
 						// Remove
 						synchronized (mListener) {
-							XPhoneStateListener xlistener = mListener.get(listener);
-							if (xlistener != null) {
-								param.args[0] = xlistener;
-								mListener.remove(listener);
+							XPhoneStateListener xListener = mListener.get(listener);
+							if (xListener != null) {
+								param.args[0] = xListener;
+								Util.log(this, Log.WARN,
+										"Removed count=" + mListener.size() + " uid=" + Binder.getCallingUid());
 							}
 						}
 					} else if (isRestricted(param))
 						try {
 							// Replace
-							XPhoneStateListener xListener = new XPhoneStateListener(listener);
+							XPhoneStateListener xListener;
 							synchronized (mListener) {
-								mListener.put(listener, xListener);
-								Util.log(this, Log.INFO, "Added count=" + mListener.size());
+								xListener = mListener.get(listener);
+								if (xListener == null) {
+									xListener = new XPhoneStateListener(listener);
+									mListener.put(listener, xListener);
+									Util.log(this, Log.WARN,
+											"Added count=" + mListener.size() + " uid=" + Binder.getCallingUid());
+								}
 							}
 							param.args[0] = xListener;
 						} catch (Throwable ignored) {
@@ -153,13 +164,17 @@ public class XTelephonyManager extends XHook {
 							// and stock source code
 						}
 			}
-		} else if (mMethod == Methods.disableLocationUpdates || mMethod == Methods.enableLocationUpdates)
+		} else if (mMethod == Methods.enableLocationUpdates) {
 			if (isRestricted(param))
+				param.setResult(null);
+
+		} else if (mMethod == Methods.disableLocationUpdates)
+			if (isRestricted(param, PrivacyManager.cLocation, "enableLocationUpdates"))
 				param.setResult(null);
 	}
 
 	@Override
-	protected void after(MethodHookParam param) throws Throwable {
+	protected void after(XParam param) throws Throwable {
 		if (mMethod != Methods.listen && mMethod != Methods.disableLocationUpdates
 				&& mMethod != Methods.enableLocationUpdates)
 			if (mMethod == Methods.getAllCellInfo) {
@@ -168,7 +183,7 @@ public class XTelephonyManager extends XHook {
 
 			} else if (mMethod == Methods.getCellLocation) {
 				if (param.getResult() != null && isRestricted(param))
-					param.setResult(CellLocation.getEmpty());
+					param.setResult(getDefacedCellLocation(Binder.getCallingUid()));
 
 			} else if (mMethod == Methods.getIsimImpu) {
 				if (param.getResult() != null && isRestricted(param))
@@ -190,6 +205,17 @@ public class XTelephonyManager extends XHook {
 				if (param.getResult() != null && isRestricted(param))
 					param.setResult(PrivacyManager.getDefacedProp(Binder.getCallingUid(), mMethod.name()));
 			}
+	}
+
+	private static CellLocation getDefacedCellLocation(int uid) {
+		int cid = (Integer) PrivacyManager.getDefacedProp(uid, "CID");
+		int lac = (Integer) PrivacyManager.getDefacedProp(uid, "LAC");
+		if (cid > 0 && lac > 0) {
+			GsmCellLocation cellLocation = new GsmCellLocation();
+			cellLocation.setLacAndCid(lac, cid);
+			return cellLocation;
+		} else
+			return CellLocation.getEmpty();
 	}
 
 	private class XPhoneStateListener extends PhoneStateListener {
@@ -217,7 +243,7 @@ public class XTelephonyManager extends XHook {
 
 		@Override
 		public void onCellLocationChanged(CellLocation location) {
-			mListener.onCellLocationChanged(CellLocation.getEmpty());
+			mListener.onCellLocationChanged(getDefacedCellLocation(Binder.getCallingUid()));
 		}
 
 		@Override

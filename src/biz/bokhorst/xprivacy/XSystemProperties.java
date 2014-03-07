@@ -6,10 +6,6 @@ import java.util.List;
 import android.os.Binder;
 import android.util.Log;
 
-import com.android.internal.telephony.TelephonyProperties;
-
-import de.robv.android.xposed.XC_MethodHook.MethodHookParam;
-
 public class XSystemProperties extends XHook {
 	private Methods mMethod;
 	private String mPropertyName;
@@ -42,33 +38,16 @@ public class XSystemProperties extends XHook {
 			for (Methods getter : Methods.values())
 				listHook.add(new XSystemProperties(getter, PrivacyManager.cIdentification, prop));
 
-		listHook.add(new XSystemProperties(Methods.get, PrivacyManager.cPhone,
-				TelephonyProperties.PROPERTY_OPERATOR_ISO_COUNTRY));
-		listHook.add(new XSystemProperties(Methods.get, PrivacyManager.cPhone,
-				TelephonyProperties.PROPERTY_OPERATOR_NUMERIC));
-		listHook.add(new XSystemProperties(Methods.get, PrivacyManager.cPhone,
-				TelephonyProperties.PROPERTY_OPERATOR_ALPHA));
-
-		listHook.add(new XSystemProperties(Methods.getInt, PrivacyManager.cPhone,
-				TelephonyProperties.CURRENT_ACTIVE_PHONE));
-
-		listHook.add(new XSystemProperties(Methods.get, PrivacyManager.cPhone,
-				TelephonyProperties.PROPERTY_ICC_OPERATOR_ISO_COUNTRY));
-		listHook.add(new XSystemProperties(Methods.get, PrivacyManager.cPhone,
-				TelephonyProperties.PROPERTY_ICC_OPERATOR_NUMERIC));
-		listHook.add(new XSystemProperties(Methods.get, PrivacyManager.cPhone,
-				TelephonyProperties.PROPERTY_ICC_OPERATOR_ALPHA));
-
 		return listHook;
 	}
 
 	@Override
-	protected void before(MethodHookParam param) throws Throwable {
+	protected void before(XParam param) throws Throwable {
 		// Do nothing
 	}
 
 	@Override
-	protected void after(MethodHookParam param) throws Throwable {
+	protected void after(XParam param) throws Throwable {
 		String key = (param.args.length > 0 ? (String) param.args[0] : null);
 		if (key != null)
 			if (mPropertyName.startsWith("%") ? key.contains(mPropertyName.substring(1)) : key.equals(mPropertyName))

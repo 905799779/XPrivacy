@@ -9,8 +9,6 @@ import android.util.Log;
 import android.view.View;
 import android.view.WindowManager;
 
-import de.robv.android.xposed.XC_MethodHook.MethodHookParam;
-
 public class XWindowManager extends XHook {
 	private Methods mMethod;
 	private String mClassName;
@@ -18,6 +16,12 @@ public class XWindowManager extends XHook {
 
 	private XWindowManager(Methods method, String restrictionName, String className) {
 		super(restrictionName, method.name(), null);
+		mMethod = method;
+		mClassName = className;
+	}
+
+	private XWindowManager(Methods method, String restrictionName, String className, int sdk) {
+		super(restrictionName, method.name(), null, sdk);
 		mMethod = method;
 		mClassName = className;
 	}
@@ -44,13 +48,13 @@ public class XWindowManager extends XHook {
 		String className = instance.getClass().getName();
 		List<XHook> listHook = new ArrayList<XHook>();
 		listHook.add(new XWindowManager(Methods.addView, PrivacyManager.cOverlay, className));
-		listHook.add(new XWindowManager(Methods.removeView, PrivacyManager.cOverlay, className));
-		listHook.add(new XWindowManager(Methods.updateViewLayout, PrivacyManager.cOverlay, className));
+		listHook.add(new XWindowManager(Methods.removeView, null, className, 1));
+		listHook.add(new XWindowManager(Methods.updateViewLayout, null, className, 1));
 		return listHook;
 	}
 
 	@Override
-	protected void before(MethodHookParam param) throws Throwable {
+	protected void before(XParam param) throws Throwable {
 		if (mMethod == Methods.addView || mMethod == Methods.removeView || mMethod == Methods.updateViewLayout) {
 			View view = (View) param.args[0];
 			if (view != null) {
@@ -69,7 +73,12 @@ public class XWindowManager extends XHook {
 				if (wmParams != null)
 					if (wmParams.type == WindowManager.LayoutParams.TYPE_SYSTEM_ALERT
 							|| wmParams.type == WindowManager.LayoutParams.TYPE_SYSTEM_OVERLAY)
-						if (isRestricted(param))
+						if (mMethod == Methods.removeView || mMethod == Methods.updateViewLayout) {
+							if (isRestricted(param, PrivacyManager.cOverlay, "addView"))
+								param.setResult(null);
+						}
+
+						else if (isRestricted(param))
 							param.setResult(null);
 			}
 		} else
@@ -77,7 +86,7 @@ public class XWindowManager extends XHook {
 	}
 
 	@Override
-	protected void after(MethodHookParam param) throws Throwable {
+	protected void after(XParam param) throws Throwable {
 		// Do nothing
 	}
 }

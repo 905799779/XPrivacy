@@ -8,6 +8,7 @@
     <string name="app_description">به هیز ترین به رنامه ی نیهینی پاریز</string>
     <string name="app_xversion" formatted="false">ویرژه نی اکپوسید فریمورک: %d</string>
     <string name="app_copyright">Copyright \u00A9 2013–2014 خاوه نی M. Bokhorst (M66B)</string>
+    <string name="app_licensed">Licensed, thanks for your support!</string>
     <string name="menu_usage">زانیاری به کار هینراو</string>
     <string name="menu_refresh">نوی کردنه وه</string>
     <string name="menu_settings">ریک خستن</string>
@@ -25,7 +26,7 @@
     <string name="menu_sort">ریزکردن</string>
     <string name="menu_filter">پالاوتن</string>
     <string name="menu_all">هه موو</string>
-    <string name="menu_restriction_all">سنوردارکردن / سنوردار نه کردن</string>
+    <string name="menu_toggle">سنوردارکردن / سنوردار نه کردن</string>
     <string name="menu_clear_all">به تال کردنی هه مویان</string>
     <string name="menu_restrict_all">سنوردار کردنی هه مویان</string>
     <string name="menu_clear_usage">به تال کردن</string>
@@ -40,6 +41,7 @@
     <string name="menu_accounts">ریپیدان به به کار هینانی ئه م حيسابانه</string>
     <string name="menu_applications">ریپیدان به به کارهینانی ئه م به رنامانه</string>
     <string name="menu_contacts">ریپیدان به به کارهینانی ئه م ژماره ته له فونانه</string>
+    <string name="menu_whitelists">Manage whitelists</string>
     <string name="menu_tutorial">فیربون</string>
     <string name="menu_exclude">جیاکردن</string>
     <string name="menu_close">داخستن</string>
@@ -47,7 +49,6 @@
     <string name="msg_aborted">پاشگه ز کرا</string>
     <string name="msg_new">نوی</string>
     <string name="msg_update">نوی کردنه وه ی ویرژه ن</string>
-    <string name="msg_licensed" formatted="false">ناوی کریار: %s</string>
     <string name="msg_loading">بارکردن &#8230;</string>
     <string name="msg_applying">به کارده هیندریت &#8230;</string>
     <string name="msg_applied">قالبه کان به کارهینران</string>
@@ -95,8 +96,13 @@
     <string name="restrict_shell" tools:ignore="UnusedResources">Shell (commands, superuser)</string>
     <string name="restrict_system" tools:ignore="UnusedResources">سیسته م (ئه م به رنامانه ى دانراون)</string>
     <string name="restrict_view" tools:ignore="UnusedResources">View (browser)</string>
-    <string name="title_categories" tools:ignore="UnusedResources">پولین کردن</string>
+    <string name="whitelist_ipaddress">IP addresses</string>
+    <string name="whitelist_library">Native libraries</string>
+    <string name="whitelist_filename">File names</string>
+    <string name="whitelist_command">Shell commands</string>
+    <string name="whitelist_url">URLs</string>
     <string name="title_restrict">هه ل بژیره بوو سنوردارکردنی:</string>
+    <string name="title_check_whitelist">Check to allow:</string>
     <string name="title_fused">پالاوتن به هوی داتا به کارهینراوه کان</string>
     <string name="title_finternet">پالاوتنی ئه و به رنامانه ی ئينته ر نيت به كاردينن</string>
     <string name="title_fpermission">پالاوتنی ئه و زانياريانه ى كه ده توانريت به كاربهينرين</string>
@@ -117,9 +123,16 @@
     <string name="title_parameters">Parameters:</string>
     <string name="title_applycat">بو هه موو به شه که</string>
     <string name="title_once">ته نیا جاریک بو %1$s چرکه</string>
+    <string name="title_whitelist">Whitelist \'%s\'</string>
     <string name="title_allow">ریگه دان</string>
     <string name="title_deny">ریگه نه دان</string>
     <string name="title_pleasesubmit">ته کایه بو یارمه تی دانی که سانی تریش ئه و شتانه ى سنوردارتكردوون به لاو بكه </string>
+    <string name="title_permissions">Permissions</string>
+    <string name="title_set_restrict">Restrict</string>
+    <string name="title_template_category">Apply template (categories)</string>
+    <string name="title_template_full">Apply template (categories+functions)</string>
+    <string name="title_enable_ondemand">Enable on demand restricting</string>
+    <string name="title_disable_ondemand">Disable on demand restricting</string>
     <string name="settings_serial">سريال نه مبرى موبايل</string>
     <string name="settings_lat">هیلی پانی</string>
     <string name="settings_lon">هیلی دریژی</string>
@@ -145,6 +158,9 @@
     <string name="settings_https">به کارهینانی هیلی پاریزراو</string>
     <string name="settings_syscomponents">سنوردار کردنی شته بنچینه یه کانی سیسته مه که ت (موبایله که ت)</string>
     <string name="settings_usagedata">پیشاندنی ئه و زانياريانه ى به كارهينراون</string>
+    <string name="settings_parameters">Show parameters of usage data</string>
+    <string name="settings_cid">GSM Cell ID</string>
+    <string name="settings_lac">GSM LAC</string>
     <string name="help_longpress">په نجه ت دابگره له سه ر ئه و ناوه ى كه ده ته ویت هه لی بژیریت</string>
     <string name="help_ondemand">داوات لیده کریت بو سنوردار کردن</string>
     <string name="help_application">به رنامه کان</string>

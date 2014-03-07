@@ -2,12 +2,13 @@
 
     <string name="app_notxposed" formatted="false">Chưa cài Xposed framework phiên bản %d+</string>
     <string name="app_notenabled">XPrivacy chưa được kích hoạt trong Xposed installer</string>
-    <string name="app_wrongandroid">Chỉ hỗ trợ Android 4.0+</string>
+    <string name="app_wrongandroid">Chỉ hỗ trợ Android 4.0.3+</string>
     <string name="app_incompatible" formatted="false">XPrivacy is incompatible with %s</string>
     <string name="app_version" formatted="false">XPrivacy phiên bản: %s (%d)</string>
     <string name="app_description">Ứng dụng quản lý thông tin riêng tư tối đa</string>
     <string name="app_xversion" formatted="false">Xposed framework phiên bản: %d</string>
     <string name="app_copyright">Bản quyền \u00A9 2013–2014 thuộc về M. Bokhorst (M66B)</string>
+    <string name="app_licensed">Licensed, thanks for your support!</string>
     <string name="menu_usage">Sử dụng</string>
     <string name="menu_refresh">Làm mới</string>
     <string name="menu_settings">Thiết lập</string>
@@ -25,7 +26,7 @@
     <string name="menu_sort">Sort</string>
     <string name="menu_filter">Filter</string>
     <string name="menu_all">Tất cả</string>
-    <string name="menu_restriction_all">Thay đổi các sự hạn chế</string>
+    <string name="menu_toggle">Thay đổi các sự hạn chế</string>
     <string name="menu_clear_all">Xóa tất cả</string>
     <string name="menu_restrict_all">Hạn chế tất cả</string>
     <string name="menu_clear_usage">Xóa</string>
@@ -40,6 +41,7 @@
     <string name="menu_accounts">Chọn tài khoản cho phép</string>
     <string name="menu_applications">Chọn ứng dụng để cấp phép</string>
     <string name="menu_contacts">Chọn liên lạc cho phép</string>
+    <string name="menu_whitelists">Manage whitelists</string>
     <string name="menu_tutorial">Hướng dẫn</string>
     <string name="menu_exclude">Exclude</string>
     <string name="menu_close">Close</string>
@@ -47,7 +49,6 @@
     <string name="msg_aborted">Aborted</string>
     <string name="msg_new">Mới</string>
     <string name="msg_update">Cập nhật</string>
-    <string name="msg_licensed" formatted="false">Bản quyền: %s</string>
     <string name="msg_loading">Đang tải</string>
     <string name="msg_applying">Đang áp dụng</string>
     <string name="msg_applied">Thiết lập mẫu đã được áp dụng</string>
@@ -95,8 +96,13 @@
     <string name="restrict_shell">Shell (câu lệnh, superuser)</string>
     <string name="restrict_system">Hệ thống (các ứng dụng)</string>
     <string name="restrict_view">Mở trình duyệt</string>
-    <string name="title_categories">Danh mục</string>
+    <string name="whitelist_ipaddress">IP addresses</string>
+    <string name="whitelist_library">Native libraries</string>
+    <string name="whitelist_filename">File names</string>
+    <string name="whitelist_command">Shell commands</string>
+    <string name="whitelist_url">URLs</string>
     <string name="title_restrict">Đánh dấu để hạn chế:</string>
+    <string name="title_check_whitelist">Check to allow:</string>
     <string name="title_fused">Lọc theo sử dụng dữ liệu</string>
     <string name="title_finternet">Lọc theo truy cập internet</string>
     <string name="title_fpermission">Lọc theo quyền</string>
@@ -117,9 +123,16 @@
     <string name="title_parameters">Parameters:</string>
     <string name="title_applycat">Apply to entire category</string>
     <string name="title_once">Once for %1$s seconds</string>
+    <string name="title_whitelist">Whitelist \'%s\'</string>
     <string name="title_allow">Allow</string>
     <string name="title_deny">Deny</string>
     <string name="title_pleasesubmit">Please submit your restrictions to help others</string>
+    <string name="title_permissions">Permissions</string>
+    <string name="title_set_restrict">Restrict</string>
+    <string name="title_template_category">Apply template (categories)</string>
+    <string name="title_template_full">Apply template (categories+functions)</string>
+    <string name="title_enable_ondemand">Enable on demand restricting</string>
+    <string name="title_disable_ondemand">Disable on demand restricting</string>
     <string name="settings_serial">Serial#</string>
     <string name="settings_lat">Vĩ độ</string>
     <string name="settings_lon">Kinh độ</string>
@@ -145,6 +158,9 @@
     <string name="settings_https">Sử dụng các kết nối được bảo mật</string>
     <string name="settings_syscomponents">Restrict system components (Android) (requires restart)</string>
     <string name="settings_usagedata">Show application usage data (requires restart)</string>
+    <string name="settings_parameters">Show parameters of usage data</string>
+    <string name="settings_cid">GSM Cell ID</string>
+    <string name="settings_lac">GSM LAC</string>
     <string name="help_longpress">Long press name to select</string>
     <string name="help_ondemand">restrictions will be asked</string>
     <string name="help_application">Ứng dụng</string>

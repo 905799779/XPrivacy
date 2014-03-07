@@ -12,32 +12,33 @@ import java.util.concurrent.ThreadFactory;
 
 import android.content.Context;
 import android.content.Intent;
-import android.content.pm.ApplicationInfo;
-import android.content.pm.PackageManager;
+import android.graphics.Color;
 import android.graphics.drawable.Drawable;
 import android.os.Bundle;
 import android.support.v4.app.NavUtils;
 import android.support.v4.app.TaskStackBuilder;
+import android.text.TextUtils;
 import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuInflater;
 import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.Filter;
 import android.widget.ImageView;
+import android.widget.LinearLayout;
 import android.widget.ListView;
 import android.widget.TextView;
 
-public class ActivityUsage extends Activity {
-	private int mThemeId;
+public class ActivityUsage extends ActivityBase {
 	private boolean mAll = true;
 	private int mUid;
+	private String mRestrictionName;
 	private UsageAdapter mUsageAdapter;
 
 	public static final String cUid = "Uid";
+	public static final String cRestriction = "Restriction";
 
 	private static ExecutorService mExecutor = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors(),
 			new PriorityThreadFactory());
@@ -53,12 +54,11 @@ public class ActivityUsage extends Activity {
 
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
-		// Set theme
-		String themeName = PrivacyManager.getSetting(0, PrivacyManager.cSettingTheme, "", false);
-		mThemeId = (themeName.equals("Dark") ? R.style.CustomTheme : R.style.CustomTheme_Light);
-		setTheme(mThemeId);
-
 		super.onCreate(savedInstanceState);
+
+		// Check privacy service client
+		if (!PrivacyService.checkClient())
+			return;
 
 		// Set layout
 		setContentView(R.layout.usagelist);
@@ -66,6 +66,7 @@ public class ActivityUsage extends Activity {
 		// Get uid
 		Bundle extras = getIntent().getExtras();
 		mUid = (extras == null ? 0 : extras.getInt(cUid, 0));
+		mRestrictionName = (extras == null ? null : extras.getString(cRestriction));
 
 		// Set title
 		setTitle(String.format("%s - %s", getString(R.string.app_name), getString(R.string.menu_usage)));
@@ -73,20 +74,6 @@ public class ActivityUsage extends Activity {
 		// Start task to get usage data
 		UsageTask usageTask = new UsageTask();
 		usageTask.executeOnExecutor(mExecutor, (Object) null);
-
-		// Listen for clicks
-		ListView lvUsage = (ListView) findViewById(R.id.lvUsage);
-		lvUsage.setOnItemClickListener(new AdapterView.OnItemClickListener() {
-			@Override
-			public void onItemClick(AdapterView<?> adapter, View view, int position, long arg) {
-				PRestriction usageData = mUsageAdapter.getItem(position);
-				Intent intent = new Intent(ActivityUsage.this, ActivityApp.class);
-				intent.putExtra(ActivityApp.cUid, usageData.uid);
-				intent.putExtra(ActivityApp.cRestrictionName, usageData.restrictionName);
-				intent.putExtra(ActivityApp.cMethodName, usageData.methodName);
-				startActivity(intent);
-			}
-		});
 
 		// Up navigation
 		getSupportActionBar().setDisplayHomeAsUpEnabled(true);
@@ -102,8 +89,11 @@ public class ActivityUsage extends Activity {
 	@Override
 	public boolean onCreateOptionsMenu(Menu menu) {
 		MenuInflater inflater = getMenuInflater();
-		inflater.inflate(R.menu.usage, menu);
-		return true;
+		if (inflater != null && PrivacyService.checkClient()) {
+			inflater.inflate(R.menu.usage, menu);
+			return true;
+		} else
+			return false;
 	}
 
 	@Override
@@ -142,11 +132,9 @@ public class ActivityUsage extends Activity {
 	private class UsageTask extends AsyncTask<Object, Object, List<PRestriction>> {
 		@Override
 		protected List<PRestriction> doInBackground(Object... arg0) {
-			long minTime = new Date().getTime() - 1000 * 60 * 60 * 24;
 			List<PRestriction> listUsageData = new ArrayList<PRestriction>();
-			for (PRestriction usageData : PrivacyManager.getUsageList(ActivityUsage.this, mUid))
-				if (usageData.time > minTime)
-					listUsageData.add(usageData);
+			for (PRestriction usageData : PrivacyManager.getUsageList(ActivityUsage.this, mUid, mRestrictionName))
+				listUsageData.add(usageData);
 			return listUsageData;
 		}
 
@@ -166,11 +154,13 @@ public class ActivityUsage extends Activity {
 	// Adapters
 
 	private class UsageAdapter extends ArrayAdapter<PRestriction> {
+		private boolean mHasProLicense = false;
 		private List<PRestriction> mListUsageData;
 		private LayoutInflater mInflater = (LayoutInflater) getSystemService(Context.LAYOUT_INFLATER_SERVICE);
 
 		public UsageAdapter(Context context, int textViewResourceId, List<PRestriction> objects) {
 			super(context, textViewResourceId, objects);
+			mHasProLicense = (Util.hasProLicense(ActivityUsage.this) != null);
 			mListUsageData = new ArrayList<PRestriction>();
 			mListUsageData.addAll(objects);
 		}
@@ -228,20 +218,24 @@ public class ActivityUsage extends Activity {
 		private class ViewHolder {
 			private View row;
 			private int position;
+			public LinearLayout llUsage;
 			public TextView tvTime;
 			public ImageView imgIcon;
 			public ImageView imgRestricted;
 			public TextView tvApp;
 			public TextView tvRestriction;
+			public TextView tvParameter;
 
 			public ViewHolder(View theRow, int thePosition) {
 				row = theRow;
 				position = thePosition;
+				llUsage = (LinearLayout) row.findViewById(R.id.llUsage);
 				tvTime = (TextView) row.findViewById(R.id.tvTime);
 				imgIcon = (ImageView) row.findViewById(R.id.imgIcon);
 				imgRestricted = (ImageView) row.findViewById(R.id.imgRestricted);
 				tvApp = (TextView) row.findViewById(R.id.tvApp);
 				tvRestriction = (TextView) row.findViewById(R.id.tvRestriction);
+				tvParameter = (TextView) row.findViewById(R.id.tvParameter);
 			}
 		}
 
@@ -250,6 +244,8 @@ public class ActivityUsage extends Activity {
 			private ViewHolder holder;
 			private PRestriction usageData;
 			private Drawable icon = null;
+			private boolean system;
+			private Hook hook;
 
 			public HolderTask(int thePosition, ViewHolder theHolder, PRestriction theUsageData) {
 				position = thePosition;
@@ -260,16 +256,10 @@ public class ActivityUsage extends Activity {
 			@Override
 			protected Object doInBackground(Object... params) {
 				if (usageData != null) {
-					try {
-						PackageManager pm = ActivityUsage.this.getPackageManager();
-						String[] packages = pm.getPackagesForUid(usageData.uid);
-						if (packages != null && packages.length > 0) {
-							ApplicationInfo app = pm.getApplicationInfo(packages[0], 0);
-							icon = pm.getApplicationIcon(app);
-						}
-					} catch (Throwable ex) {
-						Util.bug(null, ex);
-					}
+					ApplicationInfoEx appInfo = new ApplicationInfoEx(ActivityUsage.this, usageData.uid);
+					icon = appInfo.getIcon(ActivityUsage.this);
+					system = appInfo.isSystem();
+					hook = PrivacyManager.getHook(usageData.restrictionName, usageData.methodName);
 					return holder;
 				}
 				return null;
@@ -278,8 +268,27 @@ public class ActivityUsage extends Activity {
 			@Override
 			protected void onPostExecute(Object result) {
 				if (holder.position == position && result != null) {
+					if (system || (hook != null && hook.isDangerous()))
+						holder.row.setBackgroundColor(getResources().getColor(getThemed(R.attr.color_dangerous)));
+					else
+						holder.row.setBackgroundColor(Color.TRANSPARENT);
 					holder.imgIcon.setImageDrawable(icon);
 					holder.imgIcon.setVisibility(View.VISIBLE);
+
+					View.OnClickListener listener = new View.OnClickListener() {
+						@Override
+						public void onClick(View view) {
+							PRestriction usageData = mUsageAdapter.getItem(position);
+							Intent intent = new Intent(ActivityUsage.this, ActivityApp.class);
+							intent.putExtra(ActivityApp.cUid, usageData.uid);
+							intent.putExtra(ActivityApp.cRestrictionName, usageData.restrictionName);
+							intent.putExtra(ActivityApp.cMethodName, usageData.methodName);
+							startActivity(intent);
+						}
+					};
+
+					holder.llUsage.setOnClickListener(listener);
+					holder.tvRestriction.setOnClickListener(listener);
 				}
 			}
 		}
@@ -300,13 +309,22 @@ public class ActivityUsage extends Activity {
 			PRestriction usageData = getItem(position);
 
 			// Build entry
+			holder.row.setBackgroundColor(Color.TRANSPARENT);
+
 			Date date = new Date(usageData.time);
 			SimpleDateFormat format = new SimpleDateFormat("HH:mm:ss", Locale.ROOT);
 			holder.tvTime.setText(format.format(date));
+
 			holder.imgIcon.setVisibility(View.INVISIBLE);
 			holder.imgRestricted.setVisibility(usageData.restricted ? View.VISIBLE : View.INVISIBLE);
 			holder.tvApp.setText(Integer.toString(usageData.uid));
 			holder.tvRestriction.setText(String.format("%s/%s", usageData.restrictionName, usageData.methodName));
+
+			if (!TextUtils.isEmpty(usageData.extra) && mHasProLicense) {
+				holder.tvParameter.setText(usageData.extra);
+				holder.tvParameter.setVisibility(View.VISIBLE);
+			} else
+				holder.tvParameter.setVisibility(View.GONE);
 
 			// Async update
 			new HolderTask(position, holder, usageData).executeOnExecutor(mExecutor, (Object) null);

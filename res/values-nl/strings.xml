@@ -1,13 +1,14 @@
 <resources>
 
-    <string name="app_notxposed" formatted="false">Xposed framework versie %d+ is niet geïnstalleerd</string>
+    <string name="app_notxposed">Xposed framework versie %1$d+ is niet geïnstalleerd</string>
     <string name="app_notenabled">XPrivacy is niet ingeschakeld in de Xposed installer</string>
     <string name="app_wrongandroid">Alleen voor Android versie 4.0.3+</string>
-    <string name="app_incompatible" formatted="false">XPrivacy is niet verenigbaar met %s</string>
-    <string name="app_version" formatted="false">XPrivacy versie: %s (%d)</string>
+    <string name="app_incompatible">XPrivacy is niet verenigbaar met %1$s</string>
+    <string name="app_version">XPrivacy versie: %1$s (%2$d)</string>
     <string name="app_description">De ultieme privacy manager</string>
-    <string name="app_xversion" formatted="false">Xposed framework versie: %d</string>
+    <string name="app_xversion">Xposed framework versie: %1$d</string>
     <string name="app_copyright">Copyright \u00A9 2013–2014 by M. Bokhorst (M66B)</string>
+    <string name="app_licensed">Gelicenseerd, bedankt voor uw ondersteuning!</string>
     <string name="menu_usage">Gebruik</string>
     <string name="menu_refresh">Ververs</string>
     <string name="menu_settings">Instellingen</string>
@@ -25,11 +26,11 @@
     <string name="menu_sort">Sorteer</string>
     <string name="menu_filter">Filter</string>
     <string name="menu_all">Allen</string>
-    <string name="menu_restriction_all">Schakel beperkingen</string>
+    <string name="menu_toggle">Schakel beperkingen</string>
     <string name="menu_clear_all">Alles wissen</string>
     <string name="menu_restrict_all">Alles beperken</string>
     <string name="menu_clear_usage">Wissen</string>
-    <string name="menu_clear_db">Wis alle gegevens</string>
+    <string name="menu_clear_db">Wis alle XPrivacy gegevens</string>
     <string name="menu_usage_all">Schakel filter</string>
     <string name="menu_apply">Pas sjabloon toe</string>
     <string name="menu_clear">Wissen</string>
@@ -40,6 +41,7 @@
     <string name="menu_accounts">Sta accounts toe</string>
     <string name="menu_applications">Sta applicaties toe</string>
     <string name="menu_contacts">Sta contacten toe</string>
+    <string name="menu_whitelists">Beheer witte lijsten</string>
     <string name="menu_tutorial">Zelfstudie</string>
     <string name="menu_exclude">Sluit uit</string>
     <string name="menu_close">Sluiten</string>
@@ -47,15 +49,14 @@
     <string name="msg_aborted">Afgebroken</string>
     <string name="msg_new">Nieuw</string>
     <string name="msg_update">Bijgewerkt</string>
-    <string name="msg_licensed" formatted="false">In licentie gegeven aan: %s</string>
     <string name="msg_loading">Laden &#8230;</string>
     <string name="msg_applying">Toepassen &#8230;</string>
     <string name="msg_applied">Sjabloon toegepast</string>
-    <string name="msg_saved_to" formatted="false">Bewaard als %s</string>
+    <string name="msg_saved_to">Bewaard als %1$s</string>
     <string name="msg_no_restrictions">Geen beperkingen gevonden</string>
     <string name="msg_sure">Zeker weten?</string>
     <string name="msg_select">Selecter a.u.b enige applicaties</string>
-    <string name="msg_limit">Selecteer a.u.b. minder dan %d applicaties</string>
+    <string name="msg_limit">Selecteer a.u.b. minder dan %1$d applicaties</string>
     <string name="msg_done">Gereed</string>
     <string name="msg_reboot">Herstart apparaat vereist</string>
     <string name="msg_random_now">Willekeurig</string>
@@ -66,9 +67,9 @@
     <string name="msg_email">Vul a.u.b. uw e-mail adres in:</string>
     <string name="msg_registered">Controleer uw e-mail om uw apparaat te activeren</string>
     <string name="msg_service">Bijwerkdienst actief</string>
-    <string name="msg_migrating" formatted="false">Migratie %s</string>
-    <string name="msg_randomizing" formatted="false">Willekeurig %s</string>
-    <string name="msg_upgrading" formatted="false">Bijwerken %s</string>
+    <string name="msg_migrating">Migratie %1$s</string>
+    <string name="msg_randomizing">Willekeurig %1$s</string>
+    <string name="msg_upgrading">Bijwerken %1$s</string>
     <string name="msg_support_info">Een interne controle faalde, wilt u de ondersteuningsinformatie sturen?</string>
     <string name="msg_restrictedby">Beperkt door XPrivacy</string>
     <string name="msg_first"><b>XPrivacy is zorgvuldig ontwikkeld en getest,
@@ -96,8 +97,13 @@ maar het is onmogelijk om te garanderen dat het op elk apparaat en voor elke app
     <string name="restrict_shell">Shell (opdrachten, superuser)</string>
     <string name="restrict_system">Systeem (geïnstalleerde apps)</string>
     <string name="restrict_view">Tonen (browser)</string>
-    <string name="title_categories">Categorieën</string>
+    <string name="whitelist_ipaddress">IP adressen</string>
+    <string name="whitelist_library">Native libraries</string>
+    <string name="whitelist_filename">Bestandsnamen</string>
+    <string name="whitelist_command">Shell commando\'s</string>
+    <string name="whitelist_url">URLs</string>
     <string name="title_restrict">Vink aan om te beperken:</string>
+    <string name="title_check_whitelist">Vink aan om toe te staan:</string>
     <string name="title_fused">Filter op gegevensgebruik</string>
     <string name="title_finternet">Filter op internettoegang</string>
     <string name="title_fpermission">Filter op rechten</string>
@@ -118,9 +124,16 @@ maar het is onmogelijk om te garanderen dat het op elk apparaat en voor elke app
     <string name="title_parameters">Parameters:</string>
     <string name="title_applycat">Pas toe op gehele categorie</string>
     <string name="title_once">Één keer voor %1$s seconden</string>
+    <string name="title_whitelist">Whitelist \'%1$s\'</string>
     <string name="title_allow">Toestaan</string>
     <string name="title_deny">Blokkeren</string>
     <string name="title_pleasesubmit">Stuur a.u.b. uw beperkingen op om anderen te helpen</string>
+    <string name="title_permissions">Rechten</string>
+    <string name="title_set_restrict">Beperk</string>
+    <string name="title_template_category">Pas sjabloon toe (categorieën)</string>
+    <string name="title_template_full">Pas sjabloon toe (categorieën+functies)</string>
+    <string name="title_enable_ondemand">Zet op verzoek beperken aan</string>
+    <string name="title_disable_ondemand">Zet op verzoek beperken uit</string>
     <string name="settings_serial">Serienummer</string>
     <string name="settings_lat">Breedtegraad</string>
     <string name="settings_lon">Lengtegraad</string>
@@ -146,6 +159,9 @@ maar het is onmogelijk om te garanderen dat het op elk apparaat en voor elke app
     <string name="settings_https">Gebruik veilige verbindingen</string>
     <string name="settings_syscomponents">Beperk systemcomponenten (Android)</string>
     <string name="settings_usagedata">Toon gebruiksgegevens</string>
+    <string name="settings_parameters">Toon parameters bij gebruiksgegevens</string>
+    <string name="settings_cid">GSM Cell ID</string>
+    <string name="settings_lac">GSM LAC</string>
     <string name="help_longpress">Druk lang om te selecteren</string>
     <string name="help_ondemand">beperkingen worden gevraagd</string>
     <string name="help_application">Applicatie</string>

@@ -1,7 +1,5 @@
 package biz.bokhorst.xprivacy;
 
-import static de.robv.android.xposed.XposedHelpers.findField;
-
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
@@ -17,8 +15,6 @@ import android.provider.Telephony;
 import android.service.notification.NotificationListenerService;
 import android.telephony.TelephonyManager;
 import android.util.Log;
-
-import de.robv.android.xposed.XC_MethodHook.MethodHookParam;
 
 public class XActivityThread extends XHook {
 	private Methods mMethod;
@@ -116,14 +112,15 @@ public class XActivityThread extends XHook {
 	}
 
 	@Override
-	protected void before(MethodHookParam param) throws Throwable {
+	protected void before(XParam param) throws Throwable {
 		String methodName = param.method.getName();
 		if (mMethod == Methods.handleReceiver) {
 			if (param.args.length > 0 && param.args[0] != null) {
 				// Get intent
 				Intent intent = null;
 				try {
-					Field fieldIntent = findField(param.args[0].getClass(), "intent");
+					Field fieldIntent = param.args[0].getClass().getDeclaredField("intent");
+					fieldIntent.setAccessible(true);
 					intent = (Intent) fieldIntent.get(param.args[0]);
 				} catch (Throwable ex) {
 					Util.bug(this, ex);
@@ -140,7 +137,7 @@ public class XActivityThread extends XHook {
 							if (bundle != null) {
 								String phoneNumber = bundle.getString(Intent.EXTRA_PHONE_NUMBER);
 								if (phoneNumber != null)
-									if (isRestricted(param, mActionName))
+									if (isRestrictedExtra(param, mActionName, intent.getDataString()))
 										intent.putExtra(Intent.EXTRA_PHONE_NUMBER, (String) PrivacyManager
 												.getDefacedProp(Binder.getCallingUid(), "PhoneNumber"));
 							}
@@ -150,14 +147,14 @@ public class XActivityThread extends XHook {
 							if (bundle != null) {
 								String phoneNumber = bundle.getString(TelephonyManager.EXTRA_INCOMING_NUMBER);
 								if (phoneNumber != null) {
-									if (isRestricted(param, mActionName))
+									if (isRestrictedExtra(param, mActionName, intent.getDataString()))
 										intent.putExtra(TelephonyManager.EXTRA_INCOMING_NUMBER, (String) PrivacyManager
 												.getDefacedProp(Binder.getCallingUid(), "PhoneNumber"));
 								}
 							}
 						} else if (getRestrictionName().equals(PrivacyManager.cSystem)) {
 							// Package event
-							if (isRestricted(param, mActionName)) {
+							if (isRestrictedExtra(param, mActionName, intent.getDataString())) {
 								String[] packageNames;
 								if (action.equals(Intent.ACTION_EXTERNAL_APPLICATIONS_AVAILABLE)
 										|| action.equals(Intent.ACTION_EXTERNAL_APPLICATIONS_UNAVAILABLE))
@@ -171,7 +168,7 @@ public class XActivityThread extends XHook {
 										break;
 									}
 							}
-						} else if (isRestricted(param, mActionName)) {
+						} else if (isRestrictedExtra(param, mActionName, intent.getDataString())) {
 							finish(param);
 							param.setResult(null);
 						}
@@ -184,27 +181,29 @@ public class XActivityThread extends XHook {
 	}
 
 	@Override
-	protected void after(MethodHookParam param) throws Throwable {
+	protected void after(XParam param) throws Throwable {
 		// Do nothing
 	}
 
-	private void finish(MethodHookParam param) {
+	private void finish(XParam param) {
 		// unscheduleGcIdler
-		try {
-			Method unschedule = param.thisObject.getClass().getDeclaredMethod("unscheduleGcIdler");
-			unschedule.invoke(param.thisObject);
-		} catch (Throwable ex) {
-			Util.bug(this, ex);
-		}
+		if (param.thisObject != null)
+			try {
+				Method unschedule = param.thisObject.getClass().getDeclaredMethod("unscheduleGcIdler");
+				unschedule.invoke(param.thisObject);
+			} catch (Throwable ex) {
+				Util.bug(this, ex);
+			}
 
 		// data.finish
-		try {
-			BroadcastReceiver.PendingResult pr = (BroadcastReceiver.PendingResult) param.args[0];
-			pr.finish();
-		} catch (IllegalStateException ignored) {
-			// No receivers for action ...
-		} catch (Throwable ex) {
-			Util.bug(this, ex);
-		}
+		if (param.args[0] instanceof BroadcastReceiver.PendingResult)
+			try {
+				BroadcastReceiver.PendingResult pr = (BroadcastReceiver.PendingResult) param.args[0];
+				pr.finish();
+			} catch (IllegalStateException ignored) {
+				// No receivers for action ...
+			} catch (Throwable ex) {
+				Util.bug(this, ex);
+			}
 	}
 }

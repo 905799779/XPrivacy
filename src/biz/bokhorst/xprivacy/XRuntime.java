@@ -4,12 +4,8 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
-import android.os.Process;
-
 import android.text.TextUtils;
 import android.util.Log;
-
-import de.robv.android.xposed.XC_MethodHook.MethodHookParam;
 
 public class XRuntime extends XHook {
 	private Methods mMethod;
@@ -36,8 +32,8 @@ public class XRuntime extends XHook {
 	// public Process exec(String prog)
 	// public Process exec(String prog, String[] envp)
 	// public Process exec(String prog, String[] envp, File directory)
-	// void load(String filename, ClassLoader loader)
-	// void loadLibrary(String libraryName, ClassLoader loader)
+	// public void load(String pathName)
+	// public void loadLibrary(String libName)
 	// libcore/luni/src/main/java/java/lang/Runtime.java
 	// http://developer.android.com/reference/java/lang/Runtime.html
 
@@ -56,7 +52,7 @@ public class XRuntime extends XHook {
 	}
 
 	@Override
-	protected void before(MethodHookParam param) throws Throwable {
+	protected void before(XParam param) throws Throwable {
 		if (mMethod == Methods.exec) {
 			// Get programs
 			String[] progs = null;
@@ -77,16 +73,14 @@ public class XRuntime extends XHook {
 			}
 
 		} else if (mMethod == Methods.load || mMethod == Methods.loadLibrary) {
-			// Skip pre Android
-			if (Process.myUid() > 0)
-				if (isRestrictedExtra(param, (String) param.args[0]))
-					param.setResult(new UnsatisfiedLinkError());
+			if (isRestrictedExtra(param, (String) param.args[0]))
+				param.setThrowable(new UnsatisfiedLinkError());
 
 		} else
 			Util.log(this, Log.WARN, "Unknown method=" + param.method.getName());
 	}
 
 	@Override
-	protected void after(MethodHookParam param) throws Throwable {
+	protected void after(XParam param) throws Throwable {
 	}
 }

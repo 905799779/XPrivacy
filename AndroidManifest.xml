@@ -1,7 +1,8 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="biz.bokhorst.xprivacy"
-    android:versionCode="274"
-    android:versionName="1.99.40" >
+    android:installLocation="internalOnly"
+    android:versionCode="305"
+    android:versionName="1.99.71" >
 
     <uses-sdk
         android:minSdkVersion="10"
@@ -95,6 +96,12 @@
             <meta-data
                 android:name="android.support.PARENT_ACTIVITY"
                 android:value="biz.bokhorst.xprivacy.ActivityMain" />
+
+            <intent-filter>
+                <action android:name="biz.bokhorst.xprivacy.action.USAGE" />
+
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
         </activity>
         <activity
             android:name=".ActivityShare"

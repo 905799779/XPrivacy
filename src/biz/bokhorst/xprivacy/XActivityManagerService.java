@@ -7,8 +7,6 @@ import java.util.concurrent.Semaphore;
 import android.os.Build;
 import android.util.Log;
 
-import de.robv.android.xposed.XC_MethodHook.MethodHookParam;
-
 public class XActivityManagerService extends XHook {
 	private Methods mMethod;
 
@@ -55,7 +53,8 @@ public class XActivityManagerService extends XHook {
 		listHook.add(new XActivityManagerService(Methods.appNotResponding, Build.VERSION_CODES.ICE_CREAM_SANDWICH_MR1));
 		listHook.add(new XActivityManagerService(Methods.systemReady, Build.VERSION_CODES.ICE_CREAM_SANDWICH_MR1));
 		listHook.add(new XActivityManagerService(Methods.finishBooting, Build.VERSION_CODES.ICE_CREAM_SANDWICH_MR1));
-		listHook.add(new XActivityManagerService(Methods.setLockScreenShown, Build.VERSION_CODES.JELLY_BEAN).optional());
+		listHook.add(new XActivityManagerService(Methods.setLockScreenShown, Build.VERSION_CODES.JELLY_BEAN_MR1)
+				.optional());
 		listHook.add(new XActivityManagerService(Methods.goingToSleep, Build.VERSION_CODES.JELLY_BEAN));
 		listHook.add(new XActivityManagerService(Methods.wakingUp, Build.VERSION_CODES.JELLY_BEAN));
 		listHook.add(new XActivityManagerService(Methods.shutdown, Build.VERSION_CODES.ICE_CREAM_SANDWICH_MR1));
@@ -76,11 +75,11 @@ public class XActivityManagerService extends XHook {
 	}
 
 	@Override
-	protected void before(MethodHookParam param) throws Throwable {
+	protected void before(XParam param) throws Throwable {
 		if (mMethod == Methods.inputDispatchingTimedOut) {
 			try {
 				// Delay foreground ANRs while on demand dialog open
-				boolean ondemanding = (mOndemandSemaphore.availablePermits() < 1);
+				boolean ondemanding = (mOndemandSemaphore != null && mOndemandSemaphore.availablePermits() < 1);
 				Util.log(this, Log.WARN, "Foreground ANR uid=" + getUidANR(param) + " ondemand=" + ondemanding);
 				if (ondemanding)
 					param.setResult(5 * 1000); // 5 seconds
@@ -91,7 +90,7 @@ public class XActivityManagerService extends XHook {
 		} else if (mMethod == Methods.appNotResponding) {
 			try {
 				// Ignore background ANRs while on demand dialog open
-				boolean ondemanding = (mOndemandSemaphore.availablePermits() < 1);
+				boolean ondemanding = (mOndemandSemaphore != null && mOndemandSemaphore.availablePermits() < 1);
 				Util.log(this, Log.WARN, "Background ANR uid=" + getUidANR(param) + " ondemand=" + ondemanding);
 				if (ondemanding)
 					param.setResult(null);
@@ -132,7 +131,7 @@ public class XActivityManagerService extends XHook {
 	}
 
 	@Override
-	protected void after(MethodHookParam param) throws Throwable {
+	protected void after(XParam param) throws Throwable {
 		if (mMethod == Methods.systemReady) {
 			Util.log(this, Log.WARN, "System ready");
 
@@ -155,7 +154,7 @@ public class XActivityManagerService extends XHook {
 
 	// Helper method
 
-	private int getUidANR(MethodHookParam param) throws IllegalAccessException {
+	private int getUidANR(XParam param) throws IllegalAccessException {
 		int uid = -1;
 		try {
 			Class<?> pr = Class.forName("com.android.server.am.ProcessRecord");
