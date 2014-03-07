@@ -20,14 +20,14 @@ public class ActivityBase extends Activity {
 
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
-		super.onCreate(savedInstanceState);
-
 		if (PrivacyService.checkClient()) {
 			// Set theme
 			String themeName = PrivacyManager.getSetting(0, PrivacyManager.cSettingTheme, "", false);
 			mThemeId = (themeName.equals("Dark") ? R.style.CustomTheme : R.style.CustomTheme_Light);
 			setTheme(mThemeId);
+		        super.onCreate(savedInstanceState);
 		} else {
+		        super.onCreate(savedInstanceState);
 			// Privacy client now available
 			setContentView(R.layout.reboot);
 			if (PrivacyService.getClient() == null) {
