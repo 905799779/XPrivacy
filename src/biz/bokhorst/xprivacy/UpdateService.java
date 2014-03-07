@@ -249,7 +249,9 @@ public class UpdateService extends Service {
 
 		NotificationManager notificationManager = (NotificationManager) context
 				.getSystemService(Context.NOTIFICATION_SERVICE);
+		PendingIntent pi = PendingIntent.getActivity(context, 0, new Intent(), 0);
 		NotificationCompat.Builder builder = new NotificationCompat.Builder(context);
+		builder.setContentIntent(pi);
 		builder.setSmallIcon(R.drawable.ic_launcher);
 		builder.setContentTitle(context.getString(R.string.app_name));
 		builder.setContentText(message);
