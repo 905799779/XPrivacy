@@ -7,6 +7,7 @@ import java.util.List;
 import android.annotation.SuppressLint;
 import android.content.Intent;
 import android.net.Uri;
+import android.os.Build;
 import android.provider.MediaStore;
 import android.util.Log;
 
@@ -18,18 +19,12 @@ public class XActivity extends XHook {
 		super(restrictionName, method.name(), actionName);
 		mMethod = method;
 		mActionName = actionName;
-		if (method == Methods.startActivities || method == Methods.startActivityFromFragment) {
-			setSdk(14);
-		}
 	}
 
 	private XActivity(Methods method, String restrictionName, String actionName, int sdk) {
 		super(restrictionName, method.name(), actionName, sdk);
 		mMethod = method;
 		mActionName = actionName;
-		if (method == Methods.startActivities || method == Methods.startActivityFromFragment) {
-			setSdk(14);
-		}
 	}
 
 	public String getClassName() {
@@ -66,6 +61,11 @@ public class XActivity extends XHook {
 
 		List<Methods> startMethods = new ArrayList<Methods>(Arrays.asList(Methods.values()));
 		startMethods.remove(Methods.getSystemService);
+
+		if (Build.VERSION.SDK_INT < 14) {
+			startMethods.remove(Methods.startActivities);
+			startMethods.remove(Methods.startActivityFromFragment);
+		}
 
 		// Intent send: browser
 		for (Methods activity : startMethods)
