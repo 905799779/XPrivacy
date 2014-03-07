@@ -34,7 +34,11 @@ public class XIoBridge extends XHook {
 
 	public String getClassName() {
 		if (android.os.Build.VERSION.SDK_INT < android.os.Build.VERSION_CODES.ICE_CREAM_SANDWICH) {
-			return "dalvik.system.BlockGuard$WrappedFileSystem";
+			if (mMethod == Methods.connect) {
+				return "dalvik.system.BlockGuard$WrappedNetworkSystem";
+			} else {
+				return "dalvik.system.BlockGuard$WrappedFileSystem";
+			}
 		} else {
 			return "libcore.io.IoBridge";
 		}
