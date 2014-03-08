@@ -18,6 +18,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 import android.annotation.SuppressLint;
+import android.annotation.TargetApi;
 import android.app.AlertDialog;
 import android.content.ContentValues;
 import android.content.Context;
@@ -1747,6 +1748,15 @@ public class PrivacyService {
 			}
 		}
 
+		@TargetApi(Build.VERSION_CODES.HONEYCOMB)
+		private boolean isDatabaseIntegrityOk(SQLiteDatabase db) {
+			if (Build.VERSION.SDK_INT < Build.VERSION_CODES.HONEYCOMB) {
+				return true;
+			} else {
+				return db.isDatabaseIntegrityOk();
+			}
+		}
+
 		private SQLiteDatabase getDb() {
 			synchronized (this) {
 				// Check current reference
@@ -1774,7 +1784,7 @@ public class PrivacyService {
 						SQLiteDatabase db = SQLiteDatabase.openOrCreateDatabase(dbFile, null);
 
 						// Check database integrity
-						if (Build.VERSION.SDK_INT < Build.VERSION_CODES.HONEYCOMB || db.isDatabaseIntegrityOk())
+						if (isDatabaseIntegrityOk(db))
 							Util.log(null, Log.WARN, "Database integrity ok");
 						else {
 							// http://www.sqlite.org/howtocorrupt.html
@@ -2114,7 +2124,7 @@ public class PrivacyService {
 						SQLiteDatabase dbUsage = SQLiteDatabase.openOrCreateDatabase(dbUsageFile, null);
 
 						// Check database integrity
-						if (Build.VERSION.SDK_INT < Build.VERSION_CODES.HONEYCOMB || dbUsage.isDatabaseIntegrityOk())
+						if (isDatabaseIntegrityOk(dbUsage))
 							Util.log(null, Log.WARN, "Usage database integrity ok");
 						else {
 							dbUsage.close();
