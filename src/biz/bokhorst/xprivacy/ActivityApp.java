@@ -1108,6 +1108,7 @@ public class ActivityApp extends ActivityBase {
 					holder.llName.setOnClickListener(new View.OnClickListener() {
 						@Override
 						public void onClick(View view) {
+							holder.llName.setEnabled(false);
 							holder.imgCbRestricted.setVisibility(View.GONE);
 							holder.pbRunning.setVisibility(View.VISIBLE);
 
@@ -1137,6 +1138,7 @@ public class ActivityApp extends ActivityBase {
 
 									holder.pbRunning.setVisibility(View.GONE);
 									holder.imgCbRestricted.setVisibility(View.VISIBLE);
+									holder.llName.setEnabled(true);
 								}
 							}.executeOnExecutor(mExecutor);
 						}
@@ -1369,6 +1371,7 @@ public class ActivityApp extends ActivityBase {
 					holder.llMethodName.setOnClickListener(new View.OnClickListener() {
 						@Override
 						public void onClick(View view) {
+							holder.llMethodName.setEnabled(false);
 							holder.imgCbMethodRestricted.setVisibility(View.GONE);
 							holder.pbRunning.setVisibility(View.VISIBLE);
 
@@ -1393,6 +1396,7 @@ public class ActivityApp extends ActivityBase {
 
 									holder.pbRunning.setVisibility(View.GONE);
 									holder.imgCbMethodRestricted.setVisibility(View.VISIBLE);
+									holder.llMethodName.setEnabled(true);
 								}
 							}.executeOnExecutor(mExecutor);
 						}

@@ -30,6 +30,7 @@ import android.content.res.Resources;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteDoneException;
+import android.database.sqlite.SQLiteException;
 import android.database.sqlite.SQLiteStatement;
 import android.os.Binder;
 import android.os.Build;
@@ -629,6 +630,8 @@ public class PrivacyService {
 										}
 									}
 								}
+							} catch (SQLiteException ex) {
+								Util.log(null, Log.WARN, ex.toString());
 							} catch (Throwable ex) {
 								Util.bug(null, ex);
 							}
@@ -1468,8 +1471,10 @@ public class PrivacyService {
 						public void onClick(DialogInterface dialog, int which) {
 							// Deny
 							result.restricted = true;
-							mSelectCategory = cbCategory.isChecked();
-							mSelectOnce = cbOnce.isChecked();
+							if (!cbWhitelist.isChecked() && !cbWhitelistExtra.isChecked()) {
+								mSelectCategory = cbCategory.isChecked();
+								mSelectOnce = cbOnce.isChecked();
+							}
 							if (cbWhitelist.isChecked())
 								onDemandWhitelist(restriction, null, result, hook);
 							else if (cbWhitelistExtra.isChecked())
@@ -1487,8 +1492,10 @@ public class PrivacyService {
 						public void onClick(DialogInterface dialog, int which) {
 							// Allow
 							result.restricted = false;
-							mSelectCategory = cbCategory.isChecked();
-							mSelectOnce = cbOnce.isChecked();
+							if (!cbWhitelist.isChecked() && !cbWhitelistExtra.isChecked()) {
+								mSelectCategory = cbCategory.isChecked();
+								mSelectOnce = cbOnce.isChecked();
+							}
 							if (cbWhitelist.isChecked())
 								onDemandWhitelist(restriction, null, result, hook);
 							else if (cbWhitelistExtra.isChecked())

@@ -3,9 +3,10 @@ Changelog
 
 **Release types**
 
+* EXPERIMENTAL: only install if you know how to fix things
 * TEST: new or updated features with a higher risk for bugs
 * BETA: new or updated features with a lower risk for bugs
-* STABLE: all known bugs fixed; low risk for bugs
+* STABLE: all known bugs are fixed; low risk for bugs
 
 **Downloads**
 
@@ -22,6 +23,9 @@ Changelog
 * Added on demand restricting
 	* XPrivacy will ask to allow/deny on actual function usage
 * Added white and black listing for files, IP addresses, domain names, commands, libraries and URLs
+	* White and black listing on demand are available to anyone
+	* White/black list management from the user interface requires a [Pro license](http://www.xprivacy.eu/)
+	* Clearing restrictions will clear white/black lists too
 * Added parameters to usage data (option) (only [Pro license](http://www.xprivacy.eu/))
 * Added sorting and extended filtering
 * Added multiple select and batch operations to set, reset, import and export restrictions
@@ -31,10 +35,20 @@ Changelog
 * Added in application documentation for all functions
 * Added switch to disable restrictions for each application
 	* Allows for disabling restrictions, without taking away the ability to edit restrictions
+* Support for multiple users (if your device supports this)
 * The number of [crowd sourced restrictions](https://crowd.xprivacy.eu/) is more than 5 million now
+* Donations are [accepted in Bitcoins](http://www.xprivacy.eu/#bitcoin) now too
 
 Other changes:
 
+* Added restriction for time zone ([issue](/../../issues/1524))
+* White listing does not change default of check boxes ([issue](/../../issues/1531))
+* Layout fix ([issue](/../../issues/1537))
+* Updated Dutch translation
+* Updated German translation
+* Updated French translation
+* Updated Polish translation
+* Updated Slovak translation
 * Updated Slovenian translation
 
 [Open issues](https://github.com/M66B/XPrivacy/issues?state=open)
