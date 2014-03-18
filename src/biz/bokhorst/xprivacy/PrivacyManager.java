@@ -24,6 +24,7 @@ import android.annotation.SuppressLint;
 import android.content.Context;
 import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
+import android.content.pm.PackageManager.NameNotFoundException;
 import android.location.Location;
 import android.os.Build;
 import android.os.Process;
@@ -130,17 +131,17 @@ public class PrivacyManager {
 
 	private final static int cMaxExtra = 128;
 	private final static String cDeface = "DEFACE";
-	public final static int cRestrictionCacheTimeoutMs = 15 * 1000;
-	public final static int cSettingCacheTimeoutMs = 30 * 1000;
 
 	// Caching
+	public final static int cRestrictionCacheTimeoutMs = 15 * 1000;
+	public final static int cSettingCacheTimeoutMs = 30 * 1000;
 	private static Map<String, Map<String, Hook>> mMethod = new LinkedHashMap<String, Map<String, Hook>>();
 	private static Map<String, List<String>> mRestart = new LinkedHashMap<String, List<String>>();
 	private static Map<String, List<Hook>> mPermission = new LinkedHashMap<String, List<Hook>>();
 	private static Map<CSetting, CSetting> mSettingsCache = new HashMap<CSetting, CSetting>();
 	private static Map<CRestriction, CRestriction> mRestrictionCache = new HashMap<CRestriction, CRestriction>();
-	public static SparseArray<Map<String, Boolean>> mPermissionRestrictionCache = new SparseArray<Map<String, Boolean>>();
-	public static SparseArray<Map<Hook, Boolean>> mPermissionHookCache = new SparseArray<Map<Hook, Boolean>>();
+	private static SparseArray<Map<String, Boolean>> mPermissionRestrictionCache = new SparseArray<Map<String, Boolean>>();
+	private static SparseArray<Map<Hook, Boolean>> mPermissionHookCache = new SparseArray<Map<Hook, Boolean>>();
 
 	// Meta data
 
@@ -264,8 +265,10 @@ public class PrivacyManager {
 		if (methodName == null || methodName.equals("")) {
 			Util.log(hook, Log.WARN, "Method empty");
 			Util.logStack(hook, Log.WARN);
-		} else if (getHook(restrictionName, methodName) == null)
+		} else if (getHook(restrictionName, methodName) == null) {
 			Util.log(hook, Log.WARN, "Unknown method=" + methodName);
+			Util.logStack(hook, Log.WARN);
+		}
 
 		// Check extra
 		if (extra != null && extra.length() > cMaxExtra)
@@ -339,19 +342,20 @@ public class PrivacyManager {
 			listPRestriction.add(new PRestriction(uid, rRestrictionName, methodName, restricted, asked));
 
 		// Make exceptions for dangerous methods
-		if (methodName == null)
-			if (!getSettingBool(0, cSettingDangerous, false, false))
+		if (methodName == null) {
+			int userId = Util.getUserId(uid);
+			if (!getSettingBool(userId, cSettingDangerous, false, false))
 				for (String rRestrictionName : listRestriction)
 					for (Hook md : getHooks(rRestrictionName))
 						if (md.isDangerous())
 							listPRestriction.add(new PRestriction(uid, rRestrictionName, md.getName(), false, true));
+		}
 
 		setRestrictionList(listPRestriction);
+	}
 
-		// Mark state as changed
+	public static void updateState(int uid) {
 		setSetting(uid, cSettingState, Integer.toString(ActivityMain.STATE_CHANGED));
-
-		// Update modification time
 		setSetting(uid, cSettingModifyTime, Long.toString(System.currentTimeMillis()));
 	}
 
@@ -429,11 +433,13 @@ public class PrivacyManager {
 	public static void applyTemplate(int uid, String restrictionName, boolean methods) {
 		checkCaller();
 
+		int userId = Util.getUserId(uid);
+
 		// Check on-demand
-		boolean ondemand = getSettingBool(0, PrivacyManager.cSettingOnDemand, true, false);
+		boolean ondemand = getSettingBool(userId, PrivacyManager.cSettingOnDemand, true, false);
 		if (ondemand)
 			ondemand = getSettingBool(-uid, PrivacyManager.cSettingOnDemand, false, false);
-		boolean dangerous = getSettingBool(0, cSettingDangerous, false, false);
+		boolean dangerous = getSettingBool(userId, cSettingDangerous, false, false);
 
 		// Build list of restrictions
 		List<String> listRestriction = new ArrayList<String>();
@@ -446,7 +452,7 @@ public class PrivacyManager {
 		List<PRestriction> listPRestriction = new ArrayList<PRestriction>();
 		for (String rRestrictionName : listRestriction) {
 			// Parent
-			String parentValue = getSetting(0, Meta.cTypeTemplate, rRestrictionName, Boolean.toString(!ondemand)
+			String parentValue = getSetting(userId, Meta.cTypeTemplate, rRestrictionName, Boolean.toString(!ondemand)
 					+ "+ask", false);
 			boolean parentRestricted = parentValue.contains("true");
 			boolean parentAsked = (!ondemand || parentValue.contains("asked"));
@@ -456,7 +462,7 @@ public class PrivacyManager {
 			if (methods)
 				for (Hook hook : getHooks(rRestrictionName)) {
 					String settingName = rRestrictionName + "." + hook.getName();
-					String value = getSetting(0, Meta.cTypeTemplate, settingName,
+					String value = getSetting(userId, Meta.cTypeTemplate, settingName,
 							Boolean.toString(parentRestricted && (hook.isDangerous() ? dangerous : true))
 									+ (parentAsked ? "+asked" : "+ask"), false);
 					boolean restricted = value.contains("true");
@@ -579,9 +585,10 @@ public class PrivacyManager {
 			try {
 				value = PrivacyService.getSetting(new PSetting(Math.abs(uid), type, name, null)).value;
 				if (value == null)
-					if (uid > 0)
-						value = PrivacyService.getSetting(new PSetting(0, type, name, defaultValue)).value;
-					else
+					if (uid > 99) {
+						int userId = Util.getUserId(uid);
+						value = PrivacyService.getSetting(new PSetting(userId, type, name, defaultValue)).value;
+					} else
 						value = defaultValue;
 
 				// Add to cache
@@ -1073,6 +1080,17 @@ public class PrivacyManager {
 		}
 	}
 
+	public static void clearPermissionCache(int uid) {
+		synchronized (mPermissionRestrictionCache) {
+			if (mPermissionRestrictionCache.get(uid) != null)
+				mPermissionRestrictionCache.remove(uid);
+		}
+		synchronized (mPermissionHookCache) {
+			if (mPermissionHookCache.get(uid) != null)
+				mPermissionHookCache.remove(uid);
+		}
+	}
+
 	@SuppressLint("DefaultLocale")
 	private static boolean hasPermission(Context context, List<String> listPackage, List<String> listPermission) {
 		try {
@@ -1099,9 +1117,10 @@ public class PrivacyManager {
 								return true;
 							}
 			}
+		} catch (NameNotFoundException ex) {
+			Util.log(null, Log.WARN, ex.toString());
 		} catch (Throwable ex) {
 			Util.bug(null, ex);
-			return false;
 		}
 		return false;
 	}

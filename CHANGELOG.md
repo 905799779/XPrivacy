@@ -15,9 +15,62 @@ Changelog
 
 **Next release**
 
-*Version 2.0*
+[Open issues](https://github.com/M66B/XPrivacy/issues?state=open)
 
-* Replaced XML settings files by privacy service and privacy database
+**Version 2.0.7 STABLE**
+
+* Fixed restrictions *getAuthToken*, *getAuthTokenByFeatures* and *hasFeatures*
+* Increase usage data period to 12 hours
+
+**Version 2.0.6 BETA**
+
+* Fixed global settings for secondary users
+* Import performance optimization
+
+**Version 2.0.5 TEST**
+
+* Fixed wrong uid for restricted profiles ([issue](/../../issues/1561))
+* Fixed on demand dialog colors by hard coding theme ([issue](/../../issues/1562))
+* Fixed synchronization on demand setting and check box (details view)
+* Separated global settings for each Android user ([issue](/../../issues/1563))
+	* Only the primary user can clear all data
+	* Only the primary user can define dangerous functions
+	* Only the primary user can enable/disable debug logging
+* Display usage data for last three hours
+	* The primary user can see all usage data
+	* Secondary users can only see their own usage data
+* Some performance optimizations
+* Updated Slovenian translation
+
+**Version 2.0.4 STABLE**
+
+* Fixed migration of template settings
+* Fixed migration of allowed accounts, applications and contacts ([issue](/../../issues/1555))
+* Fixed permission updates ([issue](/../../issues/1554))
+
+**Version 2.0.3 STABLE**
+
+* Fixed restrictions not always showing correct after on demand restricting ([issue](/../../issues/1549))
+* Fixed invalid *restart required* when toggling restrictions of a category
+* Fixed and improved batch operation layout ([issue](/../../issues/1539))
+* Fixed randomize on access combined with randomize on boot ([issue](/../../issues/1547))
+* Fixed displaying on demand restricting in application list
+* Better matching of *sh* and *su* ([issue](/../../issues/1551))
+
+**Version 2.0.2 STABLE**
+
+* Clear restrictions before calling pro enabler
+
+**Version 2.0.1 STABLE**
+
+* Reverted restriction for time zone ([issue](/../../issues/1524))
+* Updated Norwegian translation
+
+**Version 2.0 STABLE**
+
+Main changes since stable version 1.11:
+
+* Replaced XML settings files by a privacy service and a privacy database
 	* Increased speed, stability and security
 	* Allows for new features formerly not possible, like:
 * Added on demand restricting
@@ -27,6 +80,7 @@ Changelog
 	* White/black list management from the user interface requires a [Pro license](http://www.xprivacy.eu/)
 	* Clearing restrictions will clear white/black lists too
 * Added parameters to usage data (option) (only [Pro license](http://www.xprivacy.eu/))
+* Added a service to migrate settings, upgrade and randomize
 * Added sorting and extended filtering
 * Added multiple select and batch operations to set, reset, import and export restrictions
 * Added a series of new restrictions and improved existing restrictions
@@ -36,6 +90,7 @@ Changelog
 * Added switch to disable restrictions for each application
 	* Allows for disabling restrictions, without taking away the ability to edit restrictions
 * Support for multiple users (if your device supports this)
+* XPrivacy became [one of the Open Source Rookies of 2013](http://www.blackducksoftware.com/news/releases/black-duck-announces-open-source-rookies-year-winners)
 * The number of [crowd sourced restrictions](https://crowd.xprivacy.eu/) is more than 5 million now
 * Donations are [accepted in Bitcoins](http://www.xprivacy.eu/#bitcoin) now too
 
@@ -50,8 +105,6 @@ Other changes:
 * Updated Polish translation
 * Updated Slovak translation
 * Updated Slovenian translation
-
-[Open issues](https://github.com/M66B/XPrivacy/issues?state=open)
 
 **Version 1.99.72 BETA**
 

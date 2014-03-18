@@ -71,7 +71,7 @@ public class PrivacyService {
 	private static final String cTableUsage = "usage";
 	private static final String cTableSetting = "setting";
 
-	private static final int cCurrentVersion = 306;
+	private static final int cCurrentVersion = 314;
 	private static final String cServiceName = "xprivacy305";
 
 	// TODO: define column names
@@ -227,7 +227,7 @@ public class PrivacyService {
 		private Map<CRestriction, CRestriction> mAskedOnceCache = new HashMap<CRestriction, CRestriction>();
 		private Map<CRestriction, CRestriction> mRestrictionCache = new HashMap<CRestriction, CRestriction>();
 
-		private final int cMaxUsageData = 500; // entries
+		private final long cUsageHours = 12;
 		private final int cMaxOnDemandDialog = 20; // seconds
 
 		private ExecutorService mExecutor = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors(),
@@ -251,7 +251,7 @@ public class PrivacyService {
 
 		@Override
 		public List<String> check() throws RemoteException {
-			enforcePermission();
+			enforcePermission(-1);
 
 			List<String> listError = new ArrayList<String>();
 			synchronized (mListError) {
@@ -295,7 +295,7 @@ public class PrivacyService {
 		@Override
 		public void setRestriction(PRestriction restriction) throws RemoteException {
 			try {
-				enforcePermission();
+				enforcePermission(restriction.uid);
 				setRestrictionInternal(restriction);
 			} catch (Throwable ex) {
 				Util.bug(null, ex);
@@ -355,10 +355,9 @@ public class PrivacyService {
 				// Update cache
 				if (mUseCache)
 					synchronized (mRestrictionCache) {
-						if (restriction.methodName == null || restriction.extra == null)
-							for (CRestriction key : new ArrayList<CRestriction>(mRestrictionCache.keySet()))
-								if (key.isSameMethod(restriction))
-									mRestrictionCache.remove(key);
+						for (CRestriction key : new ArrayList<CRestriction>(mRestrictionCache.keySet()))
+							if (key.isSameMethod(restriction))
+								mRestrictionCache.remove(key);
 
 						CRestriction key = new CRestriction(restriction, restriction.extra);
 						if (mRestrictionCache.containsKey(key))
@@ -373,7 +372,13 @@ public class PrivacyService {
 
 		@Override
 		public void setRestrictionList(List<PRestriction> listRestriction) throws RemoteException {
-			enforcePermission();
+			int uid = -1;
+			for (PRestriction restriction : listRestriction)
+				if (uid < 0)
+					uid = restriction.uid;
+				else if (uid != restriction.uid)
+					throw new SecurityException();
+			enforcePermission(uid);
 			for (PRestriction restriction : listRestriction)
 				setRestrictionInternal(restriction);
 		}
@@ -383,6 +388,7 @@ public class PrivacyService {
 				throws RemoteException {
 			long start = System.currentTimeMillis();
 			boolean cached = false;
+			int userId = Util.getUserId(restriction.uid);
 			final PRestriction mresult = new PRestriction(restriction);
 
 			try {
@@ -431,7 +437,7 @@ public class PrivacyService {
 
 				// Check for system component
 				if (usage && !PrivacyManager.isApplication(restriction.uid))
-					if (!getSettingBool(0, PrivacyManager.cSettingSystem, false))
+					if (!getSettingBool(userId, PrivacyManager.cSettingSystem, false))
 						return mresult;
 
 				// Check if restrictions enabled
@@ -516,7 +522,7 @@ public class PrivacyService {
 
 					// Default dangerous
 					if (!methodFound && hook != null && hook.isDangerous())
-						if (!getSettingBool(0, PrivacyManager.cSettingDangerous, false)) {
+						if (!getSettingBool(userId, PrivacyManager.cSettingDangerous, false)) {
 							mresult.restricted = false;
 							mresult.asked = true;
 						}
@@ -539,7 +545,7 @@ public class PrivacyService {
 
 					// Fallback
 					if (!mresult.restricted && usage && PrivacyManager.isApplication(restriction.uid)
-							&& !getSettingBool(0, PrivacyManager.cSettingMigrated, false)) {
+							&& !getSettingBool(userId, PrivacyManager.cSettingMigrated, false)) {
 						if (hook != null && !hook.isDangerous()) {
 							mresult.restricted = PrivacyProvider.getRestrictedFallback(null, restriction.uid,
 									restriction.restrictionName, restriction.methodName);
@@ -584,7 +590,8 @@ public class PrivacyService {
 		private void storeUsageData(final PRestriction restriction, String secret, final PRestriction mresult)
 				throws RemoteException {
 			// Check if enabled
-			if (getSettingBool(0, PrivacyManager.cSettingUsage, true)) {
+			final int userId = Util.getUserId(restriction.uid);
+			if (getSettingBool(userId, PrivacyManager.cSettingUsage, true)) {
 				// Check secret
 				boolean allowed = true;
 				if (Util.getAppId(Binder.getCallingUid()) != getXUid()) {
@@ -605,7 +612,7 @@ public class PrivacyService {
 
 									String extra = "";
 									if (restriction.extra != null)
-										if (getSettingBool(0, PrivacyManager.cSettingParameters, false))
+										if (getSettingBool(userId, PrivacyManager.cSettingParameters, false))
 											extra = restriction.extra;
 
 									mLockUsage.writeLock().lock();
@@ -645,7 +652,7 @@ public class PrivacyService {
 		public List<PRestriction> getRestrictionList(PRestriction selector) throws RemoteException {
 			List<PRestriction> result = new ArrayList<PRestriction>();
 			try {
-				enforcePermission();
+				enforcePermission(selector.uid);
 
 				PRestriction query;
 				if (selector.restrictionName == null)
@@ -675,7 +682,7 @@ public class PrivacyService {
 		@Override
 		public void deleteRestrictions(int uid, String restrictionName) throws RemoteException {
 			try {
-				enforcePermission();
+				enforcePermission(uid);
 				SQLiteDatabase db = getDb();
 				if (db == null)
 					return;
@@ -719,7 +726,13 @@ public class PrivacyService {
 		public long getUsage(List<PRestriction> listRestriction) throws RemoteException {
 			long lastUsage = 0;
 			try {
-				enforcePermission();
+				int uid = -1;
+				for (PRestriction restriction : listRestriction)
+					if (uid < 0)
+						uid = restriction.uid;
+					else if (uid != restriction.uid)
+						throw new SecurityException();
+				enforcePermission(uid);
 				SQLiteDatabase dbUsage = getDbUsage();
 
 				// Precompile statement when needed
@@ -778,32 +791,34 @@ public class PrivacyService {
 		public List<PRestriction> getUsageList(int uid, String restrictionName) throws RemoteException {
 			List<PRestriction> result = new ArrayList<PRestriction>();
 			try {
-				enforcePermission();
+				enforcePermission(-1);
 				SQLiteDatabase dbUsage = getDbUsage();
+				int userId = Util.getUserId(Binder.getCallingUid());
 
 				mLockUsage.readLock().lock();
 				dbUsage.beginTransaction();
 				try {
+					String sFrom = Long.toString(new Date().getTime() - cUsageHours * 60L * 60L * 1000L);
 					Cursor cursor;
 					if (uid == 0) {
 						if ("".equals(restrictionName))
 							cursor = dbUsage.query(cTableUsage, new String[] { "uid", "restriction", "method",
-									"restricted", "time", "extra" }, null, new String[] {}, null, null,
-									"time DESC LIMIT " + cMaxUsageData);
+									"restricted", "time", "extra" }, "time>?", new String[] { sFrom }, null, null,
+									"time DESC");
 						else
 							cursor = dbUsage.query(cTableUsage, new String[] { "uid", "restriction", "method",
-									"restricted", "time", "extra" }, "restriction=?", new String[] { restrictionName },
-									null, null, "time DESC LIMIT " + cMaxUsageData);
+									"restricted", "time", "extra" }, "restriction=? AND time>?", new String[] {
+									restrictionName, sFrom }, null, null, "time DESC");
 					} else {
 						if ("".equals(restrictionName))
 							cursor = dbUsage.query(cTableUsage, new String[] { "uid", "restriction", "method",
-									"restricted", "time", "extra" }, "uid=?", new String[] { Integer.toString(uid) },
-									null, null, "time DESC LIMIT " + cMaxUsageData);
+									"restricted", "time", "extra" }, "uid=? AND time>?",
+									new String[] { Integer.toString(uid), sFrom }, null, null, "time DESC");
 						else
 							cursor = dbUsage.query(cTableUsage, new String[] { "uid", "restriction", "method",
-									"restricted", "time", "extra" }, "uid=? AND restriction=?",
-									new String[] { Integer.toString(uid), restrictionName }, null, null,
-									"time DESC LIMIT " + cMaxUsageData);
+									"restricted", "time", "extra" }, "uid=? AND restriction=? AND time>?",
+									new String[] { Integer.toString(uid), restrictionName, sFrom }, null, null,
+									"time DESC");
 					}
 
 					if (cursor == null)
@@ -818,7 +833,8 @@ public class PrivacyService {
 								data.restricted = (cursor.getInt(3) > 0);
 								data.time = cursor.getLong(4);
 								data.extra = cursor.getString(5);
-								result.add(data);
+								if (userId == 0 || Util.getUserId(data.uid) == userId)
+									result.add(data);
 							}
 						} finally {
 							cursor.close();
@@ -842,7 +858,7 @@ public class PrivacyService {
 		@Override
 		public void deleteUsage(int uid) throws RemoteException {
 			try {
-				enforcePermission();
+				enforcePermission(uid);
 				SQLiteDatabase dbUsage = getDbUsage();
 
 				mLockUsage.writeLock().lock();
@@ -873,7 +889,7 @@ public class PrivacyService {
 		@Override
 		public void setSetting(PSetting setting) throws RemoteException {
 			try {
-				enforcePermission();
+				enforcePermission(setting.uid);
 				setSettingInternal(setting);
 			} catch (Throwable ex) {
 				Util.bug(null, ex);
@@ -950,7 +966,13 @@ public class PrivacyService {
 
 		@Override
 		public void setSettingList(List<PSetting> listSetting) throws RemoteException {
-			enforcePermission();
+			int uid = -1;
+			for (PSetting setting : listSetting)
+				if (uid < 0)
+					uid = setting.uid;
+				else if (uid != setting.uid)
+					throw new SecurityException();
+			enforcePermission(uid);
 			for (PSetting setting : listSetting)
 				setSettingInternal(setting);
 		}
@@ -958,6 +980,7 @@ public class PrivacyService {
 		@Override
 		@SuppressLint("DefaultLocale")
 		public PSetting getSetting(PSetting setting) throws RemoteException {
+			int userId = Util.getUserId(setting.uid);
 			PSetting result = new PSetting(setting.uid, setting.type, setting.name, setting.value);
 
 			try {
@@ -981,7 +1004,7 @@ public class PrivacyService {
 
 				// Fallback
 				if (!PrivacyManager.cSettingMigrated.equals(setting.name)
-						&& !getSettingBool(0, PrivacyManager.cSettingMigrated, false)) {
+						&& !getSettingBool(userId, PrivacyManager.cSettingMigrated, false)) {
 					if (setting.uid == 0)
 						result.value = PrivacyProvider.getSettingFallback(setting.name, null, false);
 					if (result.value == null) {
@@ -1043,7 +1066,7 @@ public class PrivacyService {
 		public List<PSetting> getSettingList(int uid) throws RemoteException {
 			List<PSetting> listSetting = new ArrayList<PSetting>();
 			try {
-				enforcePermission();
+				enforcePermission(uid);
 				SQLiteDatabase db = getDb();
 				if (db == null)
 					return listSetting;
@@ -1082,7 +1105,7 @@ public class PrivacyService {
 		@Override
 		public void deleteSettings(int uid) throws RemoteException {
 			try {
-				enforcePermission();
+				enforcePermission(uid);
 				SQLiteDatabase db = getDb();
 				if (db == null)
 					return;
@@ -1116,7 +1139,7 @@ public class PrivacyService {
 		@Override
 		public void clear() throws RemoteException {
 			try {
-				enforcePermission();
+				enforcePermission(0);
 				SQLiteDatabase db = getDb();
 				SQLiteDatabase dbUsage = getDbUsage();
 				if (db == null || dbUsage == null)
@@ -1208,6 +1231,8 @@ public class PrivacyService {
 
 		private boolean onDemandDialog(final Hook hook, final PRestriction restriction, final PRestriction result) {
 			try {
+				int userId = Util.getUserId(restriction.uid);
+
 				// Without handler nothing can be done
 				if (mHandler == null)
 					return false;
@@ -1217,13 +1242,13 @@ public class PrivacyService {
 					return false;
 
 				// Check if enabled
-				if (!getSettingBool(0, PrivacyManager.cSettingOnDemand, true))
+				if (!getSettingBool(userId, PrivacyManager.cSettingOnDemand, true))
 					return false;
 				if (!getSettingBool(restriction.uid, PrivacyManager.cSettingOnDemand, false))
 					return false;
 
 				// Skip dangerous methods
-				final boolean dangerous = getSettingBool(0, PrivacyManager.cSettingDangerous, false);
+				final boolean dangerous = getSettingBool(userId, PrivacyManager.cSettingDangerous, false);
 				if (!dangerous && hook != null && hook.isDangerous() && hook.whitelist() == null)
 					return false;
 
@@ -1461,7 +1486,12 @@ public class PrivacyService {
 			});
 
 			// Ask
-			AlertDialog.Builder alertDialogBuilder = new AlertDialog.Builder(context);
+			AlertDialog.Builder alertDialogBuilder;
+			if (Build.VERSION.SDK_INT > Build.VERSION_CODES.GINGERBREAD_MR1) {
+				alertDialogBuilder = new AlertDialog.Builder(context, AlertDialog.THEME_HOLO_DARK);
+			} else {
+				alertDialogBuilder = new AlertDialog.Builder(context);
+			}
 			alertDialogBuilder.setTitle(resources.getString(R.string.app_name));
 			alertDialogBuilder.setView(view);
 			alertDialogBuilder.setIcon(resources.getDrawable(R.drawable.ic_launcher));
@@ -1558,6 +1588,7 @@ public class PrivacyService {
 
 		private void onDemandChoice(PRestriction restriction, boolean category, boolean restrict) {
 			try {
+				int userId = Util.getUserId(restriction.uid);
 				PRestriction result = new PRestriction(restriction);
 
 				// Get current category restriction state
@@ -1579,7 +1610,7 @@ public class PrivacyService {
 					setRestrictionInternal(result);
 
 					// Clear category on change
-					boolean dangerous = getSettingBool(0, PrivacyManager.cSettingDangerous, false);
+					boolean dangerous = getSettingBool(userId, PrivacyManager.cSettingDangerous, false);
 					for (Hook md : PrivacyManager.getHooks(restriction.restrictionName)) {
 						result.methodName = md.getName();
 						result.restricted = (md.isDangerous() && !dangerous ? false : restrict);
@@ -1647,7 +1678,11 @@ public class PrivacyService {
 			return Boolean.parseBoolean(value);
 		}
 
-		private void enforcePermission() {
+		private void enforcePermission(int uid) {
+			if (uid >= 0)
+				if (Util.getUserId(uid) != Util.getUserId(Binder.getCallingUid()))
+					throw new SecurityException("uid=" + uid + " calling=" + Binder.getCallingUid());
+
 			int callingUid = Util.getAppId(Binder.getCallingUid());
 			if (callingUid != getXUid() && callingUid != Process.SYSTEM_UID)
 				throw new SecurityException("xuid=" + mXUid + " calling=" + Binder.getCallingUid());
@@ -1770,16 +1805,6 @@ public class PrivacyService {
 				if (mDb != null && !mDb.isOpen()) {
 					mDb = null;
 					Util.log(null, Log.ERROR, "Database not open");
-				}
-
-				mLock.readLock().lock();
-				try {
-					if (mDb != null && mDb.getVersion() != 11) {
-						mDb = null;
-						Util.log(null, Log.ERROR, "Database wrong version=" + mDb.getVersion());
-					}
-				} finally {
-					mLock.readLock().unlock();
 				}
 
 				if (mDb == null)

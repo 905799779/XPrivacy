@@ -60,8 +60,10 @@ import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Environment;
+import android.os.Process;
 import android.provider.ContactsContract;
 import android.provider.Settings.Secure;
+import android.text.TextUtils;
 import android.util.Log;
 import android.util.Patterns;
 import android.util.SparseArray;
@@ -142,6 +144,7 @@ public class ActivityShare extends ActivityBase {
 			return;
 
 		// Get data
+		int userId = Util.getUserId(Process.myUid());
 		final Bundle extras = getIntent().getExtras();
 		final String action = getIntent().getAction();
 		final int[] uids = (extras != null && extras.containsKey(cUidList) ? extras.getIntArray(cUidList) : new int[0]);
@@ -271,8 +274,8 @@ public class ActivityShare extends ActivityBase {
 				}
 			});
 
-			boolean dangerous = PrivacyManager.getSettingBool(0, PrivacyManager.cSettingDangerous, false, false);
-			boolean ondemand = PrivacyManager.getSettingBool(0, PrivacyManager.cSettingOnDemand, true, false);
+			boolean dangerous = PrivacyManager.getSettingBool(userId, PrivacyManager.cSettingDangerous, false, false);
+			boolean ondemand = PrivacyManager.getSettingBool(userId, PrivacyManager.cSettingOnDemand, true, false);
 			rbODEnable.setVisibility(dangerous && ondemand ? View.VISIBLE : View.GONE);
 			rbODDisable.setVisibility(dangerous && ondemand ? View.VISIBLE : View.GONE);
 
@@ -509,25 +512,30 @@ public class ActivityShare extends ActivityBase {
 			holder.tvName.setText(xApp.appInfo.toString());
 
 			// Show app share state
-			holder.tvMessage.setText(xApp.message == null ? "" : xApp.message);
+			if (TextUtils.isEmpty(xApp.message))
+				holder.tvMessage.setVisibility(View.GONE);
+			else {
+				holder.tvMessage.setVisibility(View.VISIBLE);
+				holder.tvMessage.setText(xApp.message);
+			}
 			switch (xApp.state) {
 			case STATE_WAITING:
-				holder.imgResult.setVisibility(View.INVISIBLE);
-				holder.pbRunning.setVisibility(View.INVISIBLE);
+				holder.imgResult.setVisibility(View.GONE);
+				holder.pbRunning.setVisibility(View.GONE);
 				break;
 			case STATE_RUNNING:
-				holder.imgResult.setVisibility(View.INVISIBLE);
+				holder.imgResult.setVisibility(View.GONE);
 				holder.pbRunning.setVisibility(View.VISIBLE);
 				break;
 			case STATE_SUCCESS:
 				holder.imgResult.setBackgroundResource(R.drawable.btn_check_buttonless_on);
 				holder.imgResult.setVisibility(View.VISIBLE);
-				holder.pbRunning.setVisibility(View.INVISIBLE);
+				holder.pbRunning.setVisibility(View.GONE);
 				break;
 			case STATE_FAILURE:
 				holder.imgResult.setBackgroundResource(R.drawable.indicator_input_error);
 				holder.imgResult.setVisibility(View.VISIBLE);
-				holder.pbRunning.setVisibility(View.INVISIBLE);
+				holder.pbRunning.setVisibility(View.GONE);
 				break;
 			default:
 				Util.log(null, Log.ERROR, "Unknown state=" + xApp.state);
@@ -643,8 +651,10 @@ public class ActivityShare extends ActivityBase {
 					if (actionId == R.id.rbClear)
 						PrivacyManager.deleteRestrictions(uid, restrictionName, (restrictionName == null));
 
-					else if (actionId == R.id.rbRestrict)
+					else if (actionId == R.id.rbRestrict) {
 						PrivacyManager.setRestriction(uid, restrictionName, null, true, false);
+						PrivacyManager.updateState(uid);
+					}
 
 					else if (actionId == R.id.rbTemplateCategory)
 						PrivacyManager.applyTemplate(uid, restrictionName, false);
@@ -663,7 +673,7 @@ public class ActivityShare extends ActivityBase {
 					} else
 						Util.log(null, Log.ERROR, "Unknown action=" + actionId);
 
-					List<Boolean> newState = PrivacyManager.getRestartStates(uid, null);
+					List<Boolean> newState = PrivacyManager.getRestartStates(uid, restrictionName);
 
 					setState(uid, STATE_SUCCESS, !newState.equals(oldState) ? getString(R.string.msg_restart) : null);
 				} catch (Throwable ex) {
@@ -912,6 +922,7 @@ public class ActivityShare extends ActivityBase {
 									PrivacyManager.setRestriction(uid, restrictionName, md.getMethodName(),
 											md.isRestricted(), false);
 							}
+							PrivacyManager.updateState(uid);
 							List<Boolean> newState = PrivacyManager.getRestartStates(uid, null);
 
 							setState(uid, STATE_SUCCESS, !newState.equals(oldState) ? getString(R.string.msg_restart)
@@ -1007,12 +1018,15 @@ public class ActivityShare extends ActivityBase {
 					if (id == null) {
 						// Legacy
 						Util.log(null, Log.WARN, "Legacy " + name + "=" + value);
-						PrivacyManager.setSetting(0, name, value);
+						int userId = Util.getUserId(Process.myUid());
+						PrivacyManager.setSetting(userId, name, value);
 
 					} else if ("".equals(id)) {
 						// Global setting
-						if (mListUidSelected.size() > 1)
-							PrivacyManager.setSetting(0, type, name, value);
+						if (mListUidSelected.size() > 1) {
+							int userId = Util.getUserId(Process.myUid());
+							PrivacyManager.setSetting(userId, type, name, value);
+						}
 
 					} else {
 						// Application setting
@@ -1091,6 +1105,7 @@ public class ActivityShare extends ActivityBase {
 						if (!mListUidRestrictions.contains(uid)) {
 							// Mark previous as success
 							if (lastUid > 0) {
+								PrivacyManager.updateState(lastUid);
 								boolean restart = !PrivacyManager.getRestartStates(lastUid, null).equals(mOldState);
 								setState(lastUid, STATE_SUCCESS, restart ? getString(R.string.msg_restart) : null);
 							}
@@ -1123,6 +1138,7 @@ public class ActivityShare extends ActivityBase {
 		public void endElement(String uri, String localName, String qName) {
 			if (qName.equals("XPrivacy"))
 				if (lastUid > 0) {
+					PrivacyManager.updateState(lastUid);
 					boolean restart = !PrivacyManager.getRestartStates(lastUid, null).equals(mOldState);
 					setState(lastUid, STATE_SUCCESS, restart ? getString(R.string.msg_restart) : null);
 				}
@@ -1177,11 +1193,13 @@ public class ActivityShare extends ActivityBase {
 				boolean clear = params[0];
 				List<ApplicationInfoEx> lstApp = mAppAdapter.getListAppInfo();
 
+				int userId = Util.getUserId(Process.myUid());
 				String[] license = Util.getProLicenseUnchecked();
 				String android_id = Secure.getString(ActivityShare.this.getContentResolver(), Secure.ANDROID_ID);
 				PackageInfo xInfo = getPackageManager().getPackageInfo(getPackageName(), 0);
-				String confidence = PrivacyManager.getSetting(0, PrivacyManager.cSettingConfidence, "", false);
-				boolean dangerous = PrivacyManager.getSettingBool(0, PrivacyManager.cSettingDangerous, false, false);
+				String confidence = PrivacyManager.getSetting(userId, PrivacyManager.cSettingConfidence, "", false);
+				boolean dangerous = PrivacyManager.getSettingBool(userId, PrivacyManager.cSettingDangerous, false,
+						false);
 
 				// Initialize progress
 				mProgressCurrent = 0;
@@ -1372,7 +1390,7 @@ public class ActivityShare extends ActivityBase {
 						for (ApplicationInfoEx aAppInfo : ApplicationInfoEx.getXApplicationList(ActivityShare.this,
 								null))
 							for (String packageName : aAppInfo.getPackageName()) {
-								boolean allowed = PrivacyManager.getSettingBool(appInfo.getUid(),
+								boolean allowed = PrivacyManager.getSettingBool(-appInfo.getUid(),
 										Meta.cTypeApplication, packageName, false, false);
 								if (allowed) {
 									allowedApplications = true;
@@ -1388,7 +1406,7 @@ public class ActivityShare extends ActivityBase {
 							try {
 								while (cursor.moveToNext()) {
 									long id = cursor.getLong(cursor.getColumnIndex(ContactsContract.Contacts._ID));
-									boolean allowed = PrivacyManager.getSettingBool(appInfo.getUid(),
+									boolean allowed = PrivacyManager.getSettingBool(-appInfo.getUid(),
 											Meta.cTypeContact, Long.toString(id), false, false);
 									if (allowed) {
 										allowedContacts = true;
@@ -1522,7 +1540,8 @@ public class ActivityShare extends ActivityBase {
 
 								// Mark as unregistered
 								if (errno == ServerException.cErrorNotActivated) {
-									PrivacyManager.setSetting(0, PrivacyManager.cSettingRegistered,
+									int userId = Util.getUserId(Process.myUid());
+									PrivacyManager.setSetting(userId, PrivacyManager.cSettingRegistered,
 											Boolean.toString(false));
 									throw ex;
 								} else
@@ -1569,8 +1588,9 @@ public class ActivityShare extends ActivityBase {
 	}
 
 	public static boolean registerDevice(final ActivityBase context) {
+		int userId = Util.getUserId(Process.myUid());
 		if (Util.hasProLicense(context) == null
-				&& !PrivacyManager.getSettingBool(0, PrivacyManager.cSettingRegistered, false, false)) {
+				&& !PrivacyManager.getSettingBool(userId, PrivacyManager.cSettingRegistered, false, false)) {
 			// Get accounts
 			String email = null;
 			for (Account account : AccountManager.get(context).getAccounts())
@@ -1655,7 +1675,8 @@ public class ActivityShare extends ActivityBase {
 					JSONObject status = new JSONObject(out.toString("UTF-8"));
 					if (status.getBoolean("ok")) {
 						// Mark as registered
-						PrivacyManager.setSetting(0, PrivacyManager.cSettingRegistered, Boolean.toString(true));
+						int userId = Util.getUserId(Process.myUid());
+						PrivacyManager.setSetting(userId, PrivacyManager.cSettingRegistered, Boolean.toString(true));
 						return null;
 					} else {
 						int errno = status.getInt("errno");
@@ -1777,7 +1798,8 @@ public class ActivityShare extends ActivityBase {
 	}
 
 	public static String getBaseURL(Context context) {
-		if (PrivacyManager.getSettingBool(0, PrivacyManager.cSettingHttps, true, true))
+		int userId = Util.getUserId(Process.myUid());
+		if (PrivacyManager.getSettingBool(userId, PrivacyManager.cSettingHttps, true, true))
 			return HTTPS_BASE_URL;
 		else
 			return HTTP_BASE_URL;
