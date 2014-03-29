@@ -11,6 +11,7 @@ import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.io.UnsupportedEncodingException;
 import java.lang.reflect.Method;
+import java.lang.RuntimeException;
 import java.nio.channels.FileChannel;
 import java.security.KeyFactory;
 import java.security.MessageDigest;
@@ -89,7 +90,9 @@ public class Util {
 
 	public static void bug(XHook hook, Throwable ex) {
 		int priority;
-		if (ex instanceof OutOfMemoryError)
+		if (ex instanceof RuntimeException)
+			priority = Log.WARN;
+		else if (ex instanceof OutOfMemoryError)
 			priority = Log.WARN;
 		else if (ex instanceof ActivityShare.AbortException)
 			priority = Log.WARN;
@@ -273,7 +276,10 @@ public class Util {
 				String name = iniFile.get("name", "");
 				String email = iniFile.get("email", "");
 				String signature = iniFile.get("signature", "");
-				return new String[] { name, email, signature };
+				if (name == null || email == null || signature == null)
+					return null;
+				else
+					return new String[] { name, email, signature };
 			} catch (FileNotFoundException ex) {
 				return null;
 			} catch (Throwable ex) {

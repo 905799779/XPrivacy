@@ -72,6 +72,8 @@
     <string name="msg_upgrading" formatted="false">Oppdaterer %s</string>
     <string name="msg_support_info">En intern sjekk mislyktes, vil du sende støtteinformasjon?</string>
     <string name="msg_restrictedby">Blokkert av XPrivacy</string>
+    <string name="msg_service_missing">Privacy service not found; did you enable XPrivacy in the Xposed installer and reboot your device?</string>
+    <string name="msg_service_version">Privacy service version mismatch; did you reboot your device after upgrading XPrivacy?</string>
     <string name="msg_first"><b>XPrivacy er grundig utviklet og testet, men det er umulig å garantere at Appen fungerer feilfritt på alle enheter og for alle applikasjoner.\n\nAppen brukes på egen risiko.</b>\n\nSe også lisensen:</string>
     <string name="restrict_accounts">Konto (Google, Facebook, osv.)</string>
     <string name="restrict_browser">Nettleser (bokmerker/historikk)</string>
@@ -172,12 +174,11 @@
     <string name="help_half">delvis blokkert</string>
     <string name="help_attention">restriksjoner trenger oppmerksomhet</string>
     <string name="help_restricted">restriksjoner ble forandret</string>
-    <string name="help_shared">restriksjoner ble lastet opp</string> 
+    <string name="help_shared">restriksjoner ble lastet opp</string>
     <string name="tutorial_mainheader">Marker kategori som skal blokkeres</string>
     <string name="tutorial_mainlist">Sett hake for å blokkere kategorien som er valgt for en app\n
 \nApper får tom eller forfalsket data for kategorier som er blokkert\n
-\nTrykk på app ikonet for å se detaljerte restriksjoner og innstillinger
-</string>
+\nTrykk på app ikonet for å se detaljerte restriksjoner og innstillinger</string>
     <string name="tutorial_detailsheader">Trykk på app ikonet for å få flere valg/aksjoner</string>
     <string name="tutorial_detailslist">Trykk på pilene som viser ned for å se funksjonene innen en kategorie</string>
     <string name="permission_manage">Behandle apper, inklusive avslutting</string>

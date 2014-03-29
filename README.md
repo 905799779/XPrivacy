@@ -299,7 +299,7 @@ Limitations
 -----------
 
 * [/proc](http://linux.die.net/man/5/proc), CID and system (build) properties cannot be restricted for Android (serial number, IMEI, MAC address, etc), because restricting these will result in bootloops
-* /proc/self/cmdline will not be restricted by /proc, because it will result in instability
+* */proc/self/cmdline* will not be restricted by */proc*, because it will result in instability
 * The phone number cannot be restricted for the standard phone application
 * The browser bookmarks and history cannot be restricted for the browser itself
 * Internet and storage can only be restricted for applications, providers, and services started by the Android package manager
@@ -307,18 +307,19 @@ Limitations
 * Because it is static, [Build.SERIAL](http://developer.android.com/reference/android/os/Build.html#SERIAL) can only be randomized when an application starts, and there is no usage data
 * Due to a bug in Chromium, the user agent cannot be restricted in all cases ([issue](https://github.com/M66B/XPrivacy/issues/825))
 * Due to a custom implementation, the clipboard cannot be restricted on some Samsung stock ROMs ([issue](https://github.com/M66B/XPrivacy/issues/857))
-* It is not possible to restrict hardware MAC addresses or the external IP address
+* It is not possible to restrict external hardware MAC addresses or the external IP address
+* You cannot restrict *Configuration.MCC/MNC* on demand
+* Allowing contacts for SIM-contacts isn't supported (who is using these anyway these days?)
+* The on demand restricting dialog does sometimes not respond and is sometimes hidden
+	* A known situation is starting an application from a notification for the restrictions *inet*, *sdcard* and *media*
+	* Another known situation are some restrictions triggered by hardware buttons, like the volume buttons
+	* This cannot be fixed, because the on demand dialog is locking a system process
+	* The on demand dialog will timeout after 20 seconds, so this is not a major problem
 * You cannot restrict the Android ID for XPrivacy because it is used for submitting restrictions
 * You cannot restrict *IPC* for XPrivacy because it is needed for internal checks
 * You cannot restrict *storage* for XPrivacy because it is needed to read the XPrivacy Pro license file
 * You cannot restrict *system* for XPrivacy because it is needed to get an application list
 * You cannot restrict *view* for XPrivacy because it is needed to open links to the crowd sourced restrictions
-* You cannot restrict *Configuration.MCC/MNC* on demand
-* Allowing contacts for SIM-contacts isn't supported (who is using these anyway these days?)
-* The on demand restricting dialog does sometimes not respond and is sometimes hidden
-	* A known situation is starting an application from a notification for the restrictions *inet*, *sdcard* and *media*
-	* This cannot be fixed, because the on demand dialog is locking a system process
-	* The on demand dialog will timeout after 20 seconds, so this is not a major problem
 
 You can still restrict the XPrivacy app's access to accounts, contacts, and other things.
 
@@ -328,7 +329,7 @@ Compatibility
 XPrivacy has been tested with Android version 4.0.3 - 4.4.2 (ICS, JellyBean, KitKat)
 and is reported to work with most Android variants, including stock ROMs.
 
-**XPrivacy is not compatible with LBE Security Master**  ([issue](https://github.com/M66B/XPrivacy/issues/1231))
+**XPrivacy is not compatible with LBE Security Master** ([issue](https://github.com/M66B/XPrivacy/issues/1231))
 
 Installation
 ------------
@@ -401,20 +402,39 @@ To see restriction in action, try restricting the category *Identification* for
 [Android Id Info](https://play.google.com/store/apps/details?id=com.bzgames.androidid)
 or try restriction the category *Contacts* for the Contacts application.
 
-**Applying some restrictions require restarting applications and/or your device**
+**Applying some restrictions require restarting applications**
+
+You can turn on and off all restrictions for an application using the on/off switch.
+
+Since version 1.99 you can also restrict on demand.
+This means you will be asked to allow or deny a category/function
+when the category/function is used by an application.
+Restricting on demand is the default for newly installed applications.
+You can turn on and off restricting on demand in the application details view
+using either the settings or the check box next to the on/off switch.
+You can turn on and off restricting on demand for individual categories and functions
+using the second column of check boxes.
 
 If an application has requested Android permissions for a data category,
 the category will be marked with a green key icon.
 If an application has used or tried to use data, the data category will be marked with an orange warning triangle icon.
 If an application has internet permissions, a world globe icon will be shown.
-These icons are just a guideline because an application can still access some privacy sensitive data without Android permissions, such as your device's serial number, and because it is not possible to monitor data usage in each and every situation, such as access to the internet or the external storage.
+These icons are just a guideline because an application can still access some privacy sensitive data without Android permissions,
+such as your device's serial number, and because it is not possible to monitor data usage in each and every situation,
+such as access to the internet or the external storage.
 Be aware that an application can still access the internet through other (sister) applications.
 
-Restricting internet or storage means blocking access to the internet and to external storage (typically the SD card), respectively. Either of these may result in error messages and even cause applications to force close (crash).
+Restricting internet or storage means blocking access to the internet and to external storage (typically the SD card), respectively.
+Either of these may result in error messages and even cause applications to force close (crash).
 
-Category and function restrictions considered dangerous are marked with a reddish background color. These dangerous categories and functions are more likely to cause applications to crash if you restrict them.
+Function restrictions considered dangerous are marked with a reddish background color.
+These dangerous functions are more likely to cause applications to crash if you restrict them.
 
-Global settings and application specific settings are accessible from the application list's menu and from the menu of the application's detailed view. The global settings, such as randomized or set latitude/longitude, apply to all applications unless you override them with specific application settings. But saving an empty set of specific application settings (you can use the clear button)
+Global settings and application specific settings are accessible from the application list's menu
+and from the menu of the application's detailed view. The global settings,
+such as randomized or set latitude/longitude, apply to all applications
+unless you override them with specific application settings.
+But saving an empty set of specific application settings (you can use the clear button)
 will erase all application specific settings so that the global settings will again be in force.
 
 The restrictions template (in the main menu) is applied automatically to newly installed applications
@@ -685,7 +705,7 @@ Note: by default, categories and functions are filtered by permission, so you ma
 <a name="FAQ29"></a>
 **(29) Why doesn't the  pro enabler make all pro features available?**
 
-The [pro enabler](https://play.google.com/store/apps/details?id=biz.bokhorst.xprivacy.pro) is in the Play Store by request of some early XPrivacy users. In the beginning, there was just one pro feature: export and import all restrictions and settings. Later, fetching [crowd sourced restrictions](http://crowd.xprivacy.eu/) was added as a pro feature. Processing the crowd sourced restrictions requires a big server that has to be paid for. The pro enabler's low price (don't forget Google takes 30%) prevented providing this feature for free. Looking back, I would never have added the pro enabler to the Play Store, but I can no longer remove it because of the existing users.
+The [pro enabler](https://play.google.com/store/apps/details?id=biz.bokhorst.xprivacy.pro) is in the Play Store by request of some early XPrivacy users. In the beginning, there was just one pro feature: export and import all restrictions and settings. Later, fetching [crowd sourced restrictions](http://crowd.xprivacy.eu/) was added as a pro feature. Processing the crowd sourced restrictions requires a big server that has to be paid for. The pro enabler's low price (don't forget Google takes 30%) prevented providing this feature for free. Looking back, I would never have added the pro enabler to the Play Store, but I can no longer remove it because of the existing users. Moreover, not everybody has access to PayPal or Bitcoin and not everybody needs all pro features, so for these people the pro enabler is still of use.
 
 <a name="FAQ30"></a>
 **(30) What should I do if an application force closes (crashes)?**
@@ -807,8 +827,6 @@ IMHO you should at least install an ad blocker and a firewall.
 * [CrappaLinks](http://forum.xda-developers.com/showthread.php?t=2603868)
 * [AFWall+](https://play.google.com/store/apps/details?id=dev.ukanth.ufirewall)
 * [NOGAPPS](http://forum.xda-developers.com/showthread.php?t=1715375)
-* [Disable Service](https://play.google.com/store/apps/details?id=cn.wq.disableservice)
-* [Trash Android Bugreports](https://play.google.com/store/apps/details?id=fr.slvn.trashreport)
 * [OS Monitor](https://f-droid.org/repository/browse/?fdfilter=os%20monitor&fdid=com.eolwral.osmonitor)
 
 Please note that these applications are not written by me
@@ -841,6 +859,11 @@ So, yes, exporting and importing can take quite some time. The default is to exp
 However, it is possible to filter the applications you want to export, for example only user applications with restrictions,
 and to select these applications using the action bar *select all* to only export a part of the applications.
 
+<a name="FAQ55"></a>
+**(55) Why does applying the template not enable on demand restricting?**
+
+Batch enabling on demand restricting using the template could lead to an on demand "hell" and easily bring down your device. On demand restricting is enabled by default for new applications, but not for existing applications. The template enables on demand restricting only if the application on demand restricting master switch is enabled. The master switch can be found in the application specific settings or next to the on/off switch. You can batch enable the master switch by enabling "restrict dangerous" in the main settings.
+
 Support
 -------
 
@@ -868,6 +891,7 @@ It is already enough work to support the official versions from the last stable 
 If you encounter a bug please [create an issue](https://github.com/M66B/XPrivacy/issues).
 
 Include a [logcat](#FAQ14) when relevant (use [pastebin](http://pastebin.com/) or a similar service).
+Try to keep the logcat as brief as possible, searching in large logcats is no fun and not useful.
 
 **Do not forget to enable XPrivacy logging using the settings menu!**
 

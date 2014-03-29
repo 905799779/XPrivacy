@@ -250,24 +250,25 @@ public class PrivacyManager {
 		if (uid <= 0)
 			return false;
 		if (secret == null) {
-			Util.log(null, Log.WARN, "Secret null");
+			Util.log(null, Log.ERROR, "Secret null");
+			Util.logStack(hook, Log.ERROR);
 			secret = "";
 		}
 
 		// Check restriction
 		if (restrictionName == null || restrictionName.equals("")) {
-			Util.log(hook, Log.WARN, "restriction empty method=" + methodName);
-			Util.logStack(hook, Log.WARN);
+			Util.log(hook, Log.ERROR, "restriction empty method=" + methodName);
+			Util.logStack(hook, Log.ERROR);
 			return false;
 		}
 
 		// Check usage
 		if (methodName == null || methodName.equals("")) {
-			Util.log(hook, Log.WARN, "Method empty");
-			Util.logStack(hook, Log.WARN);
+			Util.log(hook, Log.ERROR, "Method empty");
+			Util.logStack(hook, Log.ERROR);
 		} else if (getHook(restrictionName, methodName) == null) {
-			Util.log(hook, Log.WARN, "Unknown method=" + methodName);
-			Util.logStack(hook, Log.WARN);
+			Util.log(hook, Log.ERROR, "Unknown method=" + methodName);
+			Util.logStack(hook, Log.ERROR);
 		}
 
 		// Check extra
@@ -437,8 +438,6 @@ public class PrivacyManager {
 
 		// Check on-demand
 		boolean ondemand = getSettingBool(userId, PrivacyManager.cSettingOnDemand, true, false);
-		if (ondemand)
-			ondemand = getSettingBool(-uid, PrivacyManager.cSettingOnDemand, false, false);
 		boolean dangerous = getSettingBool(userId, cSettingDangerous, false, false);
 
 		// Build list of restrictions
@@ -746,26 +745,26 @@ public class PrivacyManager {
 		if (name.equals("getIsimImpu"))
 			return null;
 
-		if (name.equals("getNetworkCountryIso") || name.equals("gsm.operator.iso-country")) {
+		if (name.equals("getNetworkCountryIso")) {
 			// ISO country code
 			String value = getSetting(uid, cSettingCountry, "XX", true);
 			return (cValueRandom.equals(value) ? getRandomProp("ISO3166") : value);
 		}
-		if (name.equals("getNetworkOperator") || name.equals("gsm.operator.numeric"))
+		if (name.equals("getNetworkOperator"))
 			// MCC+MNC: test network
 			return getSetting(uid, cSettingMcc, "001", true) + getSetting(uid, cSettingMnc, "01", true);
-		if (name.equals("getNetworkOperatorName") || name.equals("gsm.operator.alpha"))
+		if (name.equals("getNetworkOperatorName"))
 			return getSetting(uid, cSettingOperator, cDeface, true);
 
-		if (name.equals("getSimCountryIso") || name.equals("gsm.sim.operator.iso-country")) {
+		if (name.equals("getSimCountryIso")) {
 			// ISO country code
 			String value = getSetting(uid, cSettingCountry, "XX", true);
 			return (cValueRandom.equals(value) ? getRandomProp("ISO3166") : value);
 		}
-		if (name.equals("getSimOperator") || name.equals("gsm.sim.operator.numeric"))
+		if (name.equals("getSimOperator"))
 			// MCC+MNC: test network
 			return getSetting(uid, cSettingMcc, "001", true) + getSetting(uid, cSettingMnc, "01", true);
-		if (name.equals("getSimOperatorName") || name.equals("gsm.sim.operator.alpha"))
+		if (name.equals("getSimOperatorName"))
 			return getSetting(uid, cSettingOperator, cDeface, true);
 
 		if (name.equals("getSimSerialNumber") || name.equals("getIccSerialNumber"))
@@ -877,7 +876,8 @@ public class PrivacyManager {
 			}
 
 		// Fallback
-		Util.log(null, Log.WARN, "Fallback value name=" + name);
+		Util.log(null, Log.ERROR, "Fallback value name=" + name);
+		Util.logStack(null, Log.ERROR);
 		return cDeface;
 	}
 

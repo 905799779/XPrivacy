@@ -17,6 +17,45 @@ Changelog
 
 [Open issues](https://github.com/M66B/XPrivacy/issues?state=open)
 
+**Version 2.0.12 STABLE**
+
+* Updated embedded documentation
+* Fixed some minor issues reported by support info
+* Updated traditional Chinese translation
+
+**Version 2.0.11 BETA**
+
+* Fixed application specific settings ([issue](/../../issues/1596))
+* Always notify *Restricted by ...* (disabled client side caching)
+* Hide application notifications settings when global setting disabled
+
+**Version 2.0.10 TEST**
+
+* Fixed multi threaded database access (for some ROMs this happens sometimes)
+* Added option to globally enable/disable update notifications
+* *getDeviceId* and *getSubscriberId* will automatically restrict *getPhoneType*, thanks @[Phylon](https://github.com/Phylon) for the suggestion
+
+**Version 2.0.9 BETA**
+
+* Fixed photos for allowed contacts ([issue](/../../issues/1588))
+* Fixed *GMS.removeGeofences*
+* Fixed randomization for secondary users
+* Updated Lithuanian translation
+* Updated Slovenian translation
+
+**Version 2.0.8 BETA**
+
+* Using secure links for documentation, thanks @[Phylon](https://github.com/Phylon)
+* Made reboot messages translatable ([issue](/../../issues/1580))
+* Limited usage data to 12 hours or 700 lines
+* Made applying template consistent with visible template
+* Updated Dutch translation
+* Updated French translation
+* Updated German translation
+* Updated Italian translation
+* Updated Russian translation
+* Updated Vietnamese translation
+
 **Version 2.0.7 STABLE**
 
 * Fixed restrictions *getAuthToken*, *getAuthTokenByFeatures* and *hasFeatures*

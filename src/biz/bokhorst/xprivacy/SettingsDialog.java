@@ -232,13 +232,12 @@ public class SettingsDialog {
 		String confidence = PrivacyManager.getSetting(uid, PrivacyManager.cSettingConfidence, "", false);
 		final boolean expert = (components || dangerous || experimental || !https || !"".equals(confidence));
 
-		// Common
-		boolean random = PrivacyManager.getSettingBool(-uid, PrivacyManager.cSettingRandom, false, false);
-
 		// Application specific
 		boolean notify = PrivacyManager.getSettingBool(-uid, PrivacyManager.cSettingNotify, true, false);
-		final boolean ondemand = PrivacyManager.getSettingBool(-uid, PrivacyManager.cSettingOnDemand, uid == userId,
-				false);
+		boolean ondemand = PrivacyManager.getSettingBool(-uid, PrivacyManager.cSettingOnDemand, uid == userId, false);
+
+		// Common
+		boolean random = PrivacyManager.getSettingBool(-uid, PrivacyManager.cSettingRandom, false, false);
 
 		String serial = PrivacyManager.getSetting(-uid, PrivacyManager.cSettingSerial, "", false);
 		String lat = PrivacyManager.getSetting(-uid, PrivacyManager.cSettingLatitude, "", false);
@@ -256,9 +255,6 @@ public class SettingsDialog {
 
 		// Set current values
 		if (uid == userId) {
-			// Disable app settings
-			cbNotify.setVisibility(View.GONE);
-
 			// Global settings
 			cbUsage.setChecked(usage);
 			cbParameters.setChecked(parameters);
@@ -293,10 +289,13 @@ public class SettingsDialog {
 			cbExperimental.setVisibility(View.GONE);
 			cbHttps.setVisibility(View.GONE);
 			llConfidence.setVisibility(View.GONE);
-
-			// Application specific settings
-			cbNotify.setChecked(notify);
 		}
+
+		boolean gnotify = PrivacyManager.getSettingBool(userId, PrivacyManager.cSettingNotify, true, false);
+		if (uid == userId || gnotify)
+			cbNotify.setChecked(notify);
+		else
+			cbNotify.setVisibility(View.GONE);
 
 		boolean gondemand = PrivacyManager.getSettingBool(userId, PrivacyManager.cSettingOnDemand, true, false);
 		if (uid == userId || (PrivacyManager.isApplication(uid) && gondemand))
@@ -453,12 +452,12 @@ public class SettingsDialog {
 					PrivacyManager.setSetting(uid, PrivacyManager.cSettingHttps, Boolean.toString(cbHttps.isChecked()));
 					PrivacyManager
 							.setSetting(uid, PrivacyManager.cSettingConfidence, etConfidence.getText().toString());
-				} else {
-					// App specific settings
-					PrivacyManager.setSetting(uid, PrivacyManager.cSettingNotify,
-							Boolean.toString(cbNotify.isChecked()));
 				}
 
+				// Notifications
+				PrivacyManager.setSetting(uid, PrivacyManager.cSettingNotify, Boolean.toString(cbNotify.isChecked()));
+
+				// On demand restricting
 				if (uid == userId || PrivacyManager.isApplication(uid))
 					PrivacyManager.setSetting(uid, PrivacyManager.cSettingOnDemand,
 							Boolean.toString(cbOnDemand.isChecked()));
