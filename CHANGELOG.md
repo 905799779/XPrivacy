@@ -17,6 +17,44 @@ Changelog
 
 [Open issues](https://github.com/M66B/XPrivacy/issues?state=open)
 
+**Version 2.0.19 STABLE**
+
+* Fixed handling of *removeActivityUpdates*
+
+**Version 2.0.18 STABLE**
+
+* Updated Italian translation
+
+**Version 2.0.17 BETA**
+
+* Fixed restricting activity recognition (category location)
+* Display disabled standard dangerous functions with a faint background color
+
+**Version 2.0.16 BETA**
+
+* Fixed applying template in relation to default restrictions ([issue](/../../issues/1566))
+* Prefix export file name with date ([issue](/../../issues/1625))
+* Display user defined dangerous functions orangish ([issue](/../../issues/1626))
+	* Long press on a function in the template to define dangerous functions
+
+**Version 2.0.15 BETA**
+
+* On demand restricting control in application list ([issue](/../../issues/1615))
+* Updated embedded documentation, thanks @[Phylon](https://github.com/Phylon)
+* Updated Polish translation
+* Updated Slovak translation
+
+**Version 2.0.14 STABLE**
+
+* Fixed restricting profile (owner name, etc) ([issue](/../../issues/1610))
+
+**Version 2.0.13 TEST**
+
+* Fixed error message for Android versions below JellyBean MR1 (SDK 17) ([issue](/../../issues/1602))
+* Reverted "Fixed multi threaded database access", since it leads to freezes on some ROMs
+* Added restriction for [activity recognition](http://developer.android.com/training/location/activity-recognition.html) ([issue](/../../issues/1608))
+* Updated Arabic translation
+
 **Version 2.0.12 STABLE**
 
 * Updated embedded documentation

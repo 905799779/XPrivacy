@@ -58,7 +58,7 @@
     <string name="identification__system_build_prop" translatable="false"><![CDATA[Will restrict access to the system build properties file]]></string>
     <string name="identification__sys_block_____cid" translatable="false"><![CDATA[Will restrict direct access to CID (Card Identification Register = SD card serial number)]]></string>
     <string name="identification__sys_class_____cid" translatable="false"><![CDATA[Will restrict direct access to CID (Card Identification Register = SD card serial number)]]></string>
-    <string name="identification_AdvertisingId" translatable="false"><![CDATA[Will restrict access to the Google advertising identifier]]></string>
+    <string name="identification_AdvertisingId" translatable="false"><![CDATA[<a href="https://developer.android.com/google/play-services/id.html">Google documentation</a>]]></string>
     <string name="identification_getString" translatable="false"><![CDATA[Will restrict access to the Android ID]]></string>
     <string name="identification_getDescriptor" translatable="false"><![CDATA[<a href="https://developer.android.com/reference/android/view/InputDevice.html#getDescriptor()">Google documentation</a>]]></string>
     <string name="identification_GservicesProvider" translatable="false"><![CDATA[Will restrict direct access to android_id, acquired through the Google services provider]]></string>
@@ -114,6 +114,7 @@
     <string name="location_GMS_addGeofences" translatable="false"><![CDATA[<a href="https://developer.android.com/reference/com/google/android/gms/location/LocationClient.html#addGeofences(java.util.List&lt;com.google.android.gms.location.Geofence&gt;,%20android.app.PendingIntent,%20com.google.android.gms.location.LocationClient.OnAddGeofencesResultListener)">Google documentation</a>]]></string>
     <string name="location_GMS_getLastLocation" translatable="false"><![CDATA[<a href="https://developer.android.com/reference/com/google/android/gms/location/LocationClient.html#getLastLocation()">Google documentation</a>]]></string>
     <string name="location_GMS_requestLocationUpdates" translatable="false"><![CDATA[<a href="https://developer.android.com/reference/com/google/android/gms/location/LocationClient.html#requestLocationUpdates(com.google.android.gms.location.LocationRequest,%20android.app.PendingIntent)">Google documentation</a>]]></string>
+    <string name="location_GMS_requestActivityUpdates" translatable="false"><![CDATA[<a href="http://developer.android.com/training/location/activity-recognition.html">Google documentation</a>]]></string>
     <!-- media -->
     <string name="media_startRecording" translatable="false"><![CDATA[<a href="https://developer.android.com/reference/android/media/AudioRecord.html#startRecording()">Google documentation</a>]]></string>
     <string name="media_setPreviewCallback" translatable="false"><![CDATA[<a href="https://developer.android.com/reference/android/hardware/Camera.html#setPreviewCallback(android.hardware.Camera.PreviewCallback)">Google documentation</a>]]></string>
