@@ -60,6 +60,7 @@ import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Environment;
+import android.os.PowerManager;
 import android.os.Process;
 import android.provider.ContactsContract;
 import android.provider.Settings.Secure;
@@ -631,55 +632,64 @@ public class ActivityShare extends ActivityBase {
 	private class ToggleTask extends AsyncTask<String, Integer, Throwable> {
 		@Override
 		protected Throwable doInBackground(String... params) {
-			// Get data
-			mProgressCurrent = 0;
-			List<Integer> lstUid = mAppAdapter.getListUid();
-			final String restrictionName = params[0];
-			int actionId = ((RadioGroup) ActivityShare.this.findViewById(R.id.rgToggle)).getCheckedRadioButtonId();
+			// Get wakelock
+			PowerManager pm = (PowerManager) ActivityShare.this.getSystemService(Context.POWER_SERVICE);
+			PowerManager.WakeLock wl = pm.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "XPrivacy.Toggle");
+			wl.acquire();
+			try {
+				// Get data
+				mProgressCurrent = 0;
+				List<Integer> lstUid = mAppAdapter.getListUid();
+				final String restrictionName = params[0];
+				int actionId = ((RadioGroup) ActivityShare.this.findViewById(R.id.rgToggle)).getCheckedRadioButtonId();
 
-			for (Integer uid : lstUid)
-				try {
-					if (mAbort)
-						throw new AbortException(ActivityShare.this);
+				for (Integer uid : lstUid)
+					try {
+						if (mAbort)
+							throw new AbortException(ActivityShare.this);
 
-					// Update progess
-					publishProgress(++mProgressCurrent, lstUid.size() + 1);
-					setState(uid, STATE_RUNNING, null);
+						// Update progess
+						publishProgress(++mProgressCurrent, lstUid.size() + 1);
+						setState(uid, STATE_RUNNING, null);
 
-					List<Boolean> oldState = PrivacyManager.getRestartStates(uid, restrictionName);
+						List<Boolean> oldState = PrivacyManager.getRestartStates(uid, restrictionName);
 
-					if (actionId == R.id.rbClear)
-						PrivacyManager.deleteRestrictions(uid, restrictionName, (restrictionName == null));
+						if (actionId == R.id.rbClear)
+							PrivacyManager.deleteRestrictions(uid, restrictionName, (restrictionName == null));
 
-					else if (actionId == R.id.rbRestrict) {
-						PrivacyManager.setRestriction(uid, restrictionName, null, true, false);
-						PrivacyManager.updateState(uid);
+						else if (actionId == R.id.rbRestrict) {
+							PrivacyManager.setRestriction(uid, restrictionName, null, true, false);
+							PrivacyManager.updateState(uid);
+						}
+
+						else if (actionId == R.id.rbTemplateCategory)
+							PrivacyManager.applyTemplate(uid, restrictionName, false);
+
+						else if (actionId == R.id.rbTemplateFull)
+							PrivacyManager.applyTemplate(uid, restrictionName, true);
+
+						else if (actionId == R.id.rbEnableOndemand) {
+							PrivacyManager.setSetting(uid, PrivacyManager.cSettingOnDemand, Boolean.toString(true));
+							PrivacyManager.setSetting(uid, PrivacyManager.cSettingNotify, Boolean.toString(false));
+
+						} else if (actionId == R.id.rbDisableOndemand) {
+							PrivacyManager.setSetting(uid, PrivacyManager.cSettingOnDemand, Boolean.toString(false));
+							PrivacyManager.setSetting(uid, PrivacyManager.cSettingNotify, Boolean.toString(true));
+
+						} else
+							Util.log(null, Log.ERROR, "Unknown action=" + actionId);
+
+						List<Boolean> newState = PrivacyManager.getRestartStates(uid, restrictionName);
+
+						setState(uid, STATE_SUCCESS, !newState.equals(oldState) ? getString(R.string.msg_restart)
+								: null);
+					} catch (Throwable ex) {
+						setState(uid, STATE_FAILURE, ex.getMessage());
+						return ex;
 					}
-
-					else if (actionId == R.id.rbTemplateCategory)
-						PrivacyManager.applyTemplate(uid, restrictionName, false);
-
-					else if (actionId == R.id.rbTemplateFull)
-						PrivacyManager.applyTemplate(uid, restrictionName, true);
-
-					else if (actionId == R.id.rbEnableOndemand) {
-						PrivacyManager.setSetting(uid, PrivacyManager.cSettingOnDemand, Boolean.toString(true));
-						PrivacyManager.setSetting(uid, PrivacyManager.cSettingNotify, Boolean.toString(false));
-
-					} else if (actionId == R.id.rbDisableOndemand) {
-						PrivacyManager.setSetting(uid, PrivacyManager.cSettingOnDemand, Boolean.toString(false));
-						PrivacyManager.setSetting(uid, PrivacyManager.cSettingNotify, Boolean.toString(true));
-
-					} else
-						Util.log(null, Log.ERROR, "Unknown action=" + actionId);
-
-					List<Boolean> newState = PrivacyManager.getRestartStates(uid, restrictionName);
-
-					setState(uid, STATE_SUCCESS, !newState.equals(oldState) ? getString(R.string.msg_restart) : null);
-				} catch (Throwable ex) {
-					setState(uid, STATE_FAILURE, ex.getMessage());
-					return ex;
-				}
+			} finally {
+				wl.release();
+			}
 
 			return null;
 		}
@@ -703,6 +713,11 @@ public class ActivityShare extends ActivityBase {
 
 		@Override
 		protected Throwable doInBackground(File... params) {
+			// Get wakelock
+			PowerManager pm = (PowerManager) ActivityShare.this.getSystemService(Context.POWER_SERVICE);
+			PowerManager.WakeLock wl = pm.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "XPrivacy.Export");
+			wl.acquire();
+
 			mProgressCurrent = 0;
 			try {
 				mFile = params[0];
@@ -821,6 +836,8 @@ public class ActivityShare extends ActivityBase {
 				if (mFile.exists())
 					mFile.delete();
 				return ex;
+			} finally {
+				wl.release();
 			}
 		}
 
@@ -856,6 +873,10 @@ public class ActivityShare extends ActivityBase {
 	private class ImportTask extends AsyncTask<Object, Integer, Throwable> {
 		@Override
 		protected Throwable doInBackground(Object... params) {
+			// Get wakelock
+			PowerManager pm = (PowerManager) ActivityShare.this.getSystemService(Context.POWER_SERVICE);
+			PowerManager.WakeLock wl = pm.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "XPrivacy.Import");
+			wl.acquire();
 			try {
 				// Parameters
 				File file = (File) params[0];
@@ -941,6 +962,8 @@ public class ActivityShare extends ActivityBase {
 				return null;
 			} catch (Throwable ex) {
 				return ex;
+			} finally {
+				wl.release();
 			}
 		}
 
@@ -1188,6 +1211,10 @@ public class ActivityShare extends ActivityBase {
 		@Override
 		@SuppressLint("DefaultLocale")
 		protected Throwable doInBackground(Boolean... params) {
+			// Get wakelock
+			PowerManager pm = (PowerManager) ActivityShare.this.getSystemService(Context.POWER_SERVICE);
+			PowerManager.WakeLock wl = pm.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "XPrivacy.Fetch");
+			wl.acquire();
 			try {
 				// Get data
 				boolean clear = params[0];
@@ -1332,9 +1359,13 @@ public class ActivityShare extends ActivityBase {
 				return ex;
 			} catch (UnknownHostException ex) {
 				return ex;
+			} catch (IOException ex) {
+				return ex;
 			} catch (Throwable ex) {
 				Util.bug(null, ex);
 				return ex;
+			} finally {
+				wl.release();
 			}
 		}
 
@@ -1356,6 +1387,10 @@ public class ActivityShare extends ActivityBase {
 	private class SubmitTask extends AsyncTask<Object, Integer, Throwable> {
 		@Override
 		protected Throwable doInBackground(Object... params) {
+			// Get wakelock
+			PowerManager pm = (PowerManager) ActivityShare.this.getSystemService(Context.POWER_SERVICE);
+			PowerManager.WakeLock wl = pm.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "XPrivacy.Submit");
+			wl.acquire();
 			try {
 				// Get data
 				List<ApplicationInfoEx> lstApp = mAppAdapter.getListAppInfo();
@@ -1567,9 +1602,13 @@ public class ActivityShare extends ActivityBase {
 				return ex;
 			} catch (UnknownHostException ex) {
 				return ex;
+			} catch (IOException ex) {
+				return ex;
 			} catch (Throwable ex) {
 				Util.bug(null, ex);
 				return ex;
+			} finally {
+				wl.release();
 			}
 		}
 
@@ -1645,6 +1684,10 @@ public class ActivityShare extends ActivityBase {
 		}
 
 		protected Throwable doInBackground(String... params) {
+			// Get wakelock
+			PowerManager pm = (PowerManager) mContext.getSystemService(Context.POWER_SERVICE);
+			PowerManager.WakeLock wl = pm.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "XPrivacy.Register");
+			wl.acquire();
 			try {
 				String android_id = Secure.getString(mContext.getContentResolver(), Secure.ANDROID_ID);
 
@@ -1698,9 +1741,13 @@ public class ActivityShare extends ActivityBase {
 				return ex;
 			} catch (UnknownHostException ex) {
 				return ex;
+			} catch (IOException ex) {
+				return ex;
 			} catch (Throwable ex) {
 				Util.bug(null, ex);
 				return ex;
+			} finally {
+				wl.release();
 			}
 		}
 

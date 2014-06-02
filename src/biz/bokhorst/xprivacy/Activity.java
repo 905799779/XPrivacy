@@ -1,6 +1,7 @@
 package biz.bokhorst.xprivacy;
 
-import android.content.Intent;
+import me.piebridge.util.GingerBreadUtil;
+
 import android.os.Build;
 import android.os.Bundle;
 import android.support.v7.app.ActionBarActivity;
@@ -20,16 +21,7 @@ public class Activity extends ActionBarActivity {
 
 	@Override
 	public void recreate() {
-		if (Build.VERSION.SDK_INT > Build.VERSION_CODES.GINGERBREAD_MR1) {
-			super.recreate();
-		} else {
-			Bundle bundle = new Bundle();
-			onSaveInstanceState(bundle);
-			Intent intent = new Intent(this, ActivityApp.class);
-			intent.putExtra(BUNDLE, bundle);
-			startActivity(getIntent());
-			finish();
-		}
+		GingerBreadUtil.recreate(this);
 	}
 
 	@Override
