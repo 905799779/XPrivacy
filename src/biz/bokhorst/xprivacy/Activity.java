@@ -8,7 +8,11 @@ import android.support.v7.app.ActionBarActivity;
 public class Activity extends ActionBarActivity {
 	@Override
 	public void recreate() {
-		GingerBreadUtil.recreate(this);
+		if (Build.VERSION.SDK_INT > Build.VERSION_CODES.GINGERBREAD_MR1) {
+			super.recreate();
+		} else {
+			GingerBreadUtil.recreate(this);
+		}
 	}
 
 	@Override
