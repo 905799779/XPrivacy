@@ -71,6 +71,7 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 public class ActivityApp extends ActivityBase {
+	private int mXUid;
 	private ApplicationInfoEx mAppInfo = null;
 	private RestrictionAdapter mPrivacyListAdapter = null;
 
@@ -113,6 +114,7 @@ public class ActivityApp extends ActivityBase {
 	public void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
 
+		mXUid = Util.getSelfUid(this);
 		final int userId = Util.getUserId(Process.myUid());
 
 		// Check privacy service client
@@ -1129,6 +1131,11 @@ public class ActivityApp extends ActivityBase {
 						holder.imgCbAsk.setVisibility(View.VISIBLE);
 					} else
 						holder.imgCbAsk.setVisibility(View.GONE);
+					if (rstate.mUid == mXUid &&
+						Util.isSelfRequired(rstate.mRestrictionName, rstate.mMethodName)) {
+						holder.llName.setEnabled(false);
+						holder.imgCbAsk.setEnabled(false);
+					}
 
 					// Listen for restriction changes
 					holder.llName.setOnClickListener(new View.OnClickListener() {
@@ -1414,6 +1421,11 @@ public class ActivityApp extends ActivityBase {
 						holder.imgCbMethodAsk.setVisibility(View.VISIBLE);
 					} else
 						holder.imgCbMethodAsk.setVisibility(View.GONE);
+					if (rstate.mUid == mXUid &&
+						Util.isSelfRequired(rstate.mRestrictionName, rstate.mMethodName)) {
+						holder.llMethodName.setEnabled(false);
+						holder.imgCbMethodAsk.setEnabled(false);
+					}
 
 					// Listen for restriction changes
 					if (parent.restricted)
