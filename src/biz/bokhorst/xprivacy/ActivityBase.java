@@ -1,6 +1,7 @@
 package biz.bokhorst.xprivacy;
 
 import android.annotation.SuppressLint;
+import android.content.Context;
 import android.content.pm.PackageInfo;
 import android.content.res.TypedArray;
 import android.graphics.Bitmap;
@@ -9,9 +10,11 @@ import android.graphics.Paint;
 import android.graphics.Bitmap.Config;
 import android.graphics.PorterDuff.Mode;
 import android.graphics.drawable.Drawable;
+import android.os.Build;
 import android.os.Bundle;
 import android.os.Process;
 import android.util.TypedValue;
+import android.view.ContextThemeWrapper;
 import android.view.View;
 import android.widget.TextView;
 
@@ -162,8 +165,19 @@ public class ActivityBase extends Activity {
 	}
 
 	public int getThemed(int attr) {
+		if (Build.VERSION.SDK_INT < Build.VERSION_CODES.HONEYCOMB && attr == R.attr.icon_launcher) {
+			return R.drawable.ic_launcher_holo_dark;
+		}
 		TypedValue tv = new TypedValue();
 		getTheme().resolveAttribute(attr, tv, true);
 		return tv.resourceId;
+	}
+
+	public Context getDialogContext() {
+		if (Build.VERSION.SDK_INT < Build.VERSION_CODES.HONEYCOMB) {
+			return new ContextThemeWrapper(this, R.style.CustomTheme);
+		} else {
+			return this;
+		}
 	}
 }

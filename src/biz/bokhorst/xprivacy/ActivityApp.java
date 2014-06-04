@@ -865,7 +865,7 @@ public class ActivityApp extends ActivityBase {
 				alertDialogBuilder.setIcon(getThemed(R.attr.icon_launcher));
 
 				if (mListWhitelist.keySet().size() > 0) {
-					LayoutInflater inflater = (LayoutInflater) getSystemService(Context.LAYOUT_INFLATER_SERVICE);
+					LayoutInflater inflater = LayoutInflater.from(getDialogContext());
 					View llWhitelists = inflater.inflate(R.layout.whitelists, null);
 
 					int index = 0;

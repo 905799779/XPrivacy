@@ -1645,8 +1645,7 @@ public class ActivityShare extends ActivityBase {
 					break;
 				}
 
-			LayoutInflater LayoutInflater = (LayoutInflater) context.getSystemService(Context.LAYOUT_INFLATER_SERVICE);
-			View view = LayoutInflater.inflate(R.layout.register, null);
+			View view = LayoutInflater.from(context.getDialogContext()).inflate(R.layout.register, null);
 			final EditText input = (EditText) view.findViewById(R.id.etEmail);
 			if (email != null)
 				input.setText(email);

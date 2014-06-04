@@ -630,9 +630,10 @@ public class ActivityMain extends ActivityBase implements OnItemSelectedListener
 		AlertDialog.Builder alertDialogBuilder = new AlertDialog.Builder(this);
 		alertDialogBuilder.setTitle(R.string.menu_template);
 		alertDialogBuilder.setIcon(getThemed(R.attr.icon_launcher));
-		ExpandableListView elvTemplate = new ExpandableListView(this);
+		Context context = getDialogContext();
+		ExpandableListView elvTemplate = new ExpandableListView(context);
 		elvTemplate.setPadding(6, 0, 6, 0);
-		elvTemplate.setAdapter(new TemplateListAdapter(this, R.layout.templateentry));
+		elvTemplate.setAdapter(new TemplateListAdapter(context, R.layout.templateentry));
 		elvTemplate.setScrollBarStyle(ExpandableListView.SCROLLBARS_INSIDE_INSET);
 		alertDialogBuilder.setView(elvTemplate);
 		alertDialogBuilder.setPositiveButton(getString(R.string.msg_done), new DialogInterface.OnClickListener() {
@@ -802,8 +803,8 @@ public class ActivityMain extends ActivityBase implements OnItemSelectedListener
 	}
 
 	private void optionSort() {
-		LayoutInflater LayoutInflater = (LayoutInflater) getSystemService(Context.LAYOUT_INFLATER_SERVICE);
-		View view = LayoutInflater.inflate(R.layout.sort, null);
+		Context context = getDialogContext();
+		View view = LayoutInflater.from(context).inflate(R.layout.sort, null);
 		final RadioGroup rgSMode = (RadioGroup) view.findViewById(R.id.rgSMode);
 		final CheckBox cbSInvert = (CheckBox) view.findViewById(R.id.cbSInvert);
 
@@ -870,8 +871,8 @@ public class ActivityMain extends ActivityBase implements OnItemSelectedListener
 	}
 
 	private void optionFilter() {
-		LayoutInflater LayoutInflater = (LayoutInflater) getSystemService(Context.LAYOUT_INFLATER_SERVICE);
-		View view = LayoutInflater.inflate(R.layout.filters, null);
+		Context context = getDialogContext();
+		View view = LayoutInflater.from(context).inflate(R.layout.filters, null);
 		final CheckBox cbFUsed = (CheckBox) view.findViewById(R.id.cbFUsed);
 		final CheckBox cbFInternet = (CheckBox) view.findViewById(R.id.cbFInternet);
 		final CheckBox cbFPermission = (CheckBox) view.findViewById(R.id.cbFPermission);
@@ -1066,9 +1067,10 @@ public class ActivityMain extends ActivityBase implements OnItemSelectedListener
 		private List<String> listLocalizedTitle;
 		private boolean ondemand;
 		private boolean dangerous;
-		private LayoutInflater mInflater = (LayoutInflater) getSystemService(Context.LAYOUT_INFLATER_SERVICE);
+		private LayoutInflater mInflater;
 
 		public TemplateListAdapter(Context context, int resource) {
+			mInflater = LayoutInflater.from(context);
 
 			// Get restriction categories
 			TreeMap<String, String> tmRestriction = PrivacyManager.getRestrictions(context);
