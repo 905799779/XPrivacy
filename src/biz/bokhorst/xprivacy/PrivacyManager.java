@@ -432,7 +432,7 @@ public class PrivacyManager {
 		return listRestartRestriction;
 	}
 
-	public static void applyTemplate(int uid, String restrictionName, boolean methods) {
+	public static void applyTemplate(int uid, String restrictionName, boolean methods, boolean clear) {
 		checkCaller();
 
 		int userId = Util.getUserId(uid);
@@ -451,14 +451,21 @@ public class PrivacyManager {
 		// Apply template
 		List<PRestriction> listPRestriction = new ArrayList<PRestriction>();
 		for (String rRestrictionName : listRestriction) {
-			deleteRestrictions(uid, rRestrictionName, false);
+			if (clear)
+				deleteRestrictions(uid, rRestrictionName, false);
 
 			// Parent
 			String parentValue = getSetting(userId, Meta.cTypeTemplate, rRestrictionName, Boolean.toString(!ondemand)
 					+ "+ask", false);
 			boolean parentRestricted = parentValue.contains("true");
 			boolean parentAsked = (!ondemand || parentValue.contains("asked"));
-			listPRestriction.add(new PRestriction(uid, rRestrictionName, null, parentRestricted, parentAsked));
+			PRestriction parentMerge;
+			if (clear)
+				parentMerge = new PRestriction(uid, rRestrictionName, null, parentRestricted, parentAsked);
+			else
+				parentMerge = getRestrictionEx(uid, rRestrictionName, null);
+			listPRestriction.add(new PRestriction(uid, rRestrictionName, null, parentMerge.restricted
+					|| parentRestricted, parentMerge.asked && parentAsked));
 
 			// Childs
 			if (methods)
@@ -469,9 +476,19 @@ public class PrivacyManager {
 									+ (parentAsked ? "+asked" : "+ask"), false);
 					boolean restricted = value.contains("true");
 					boolean asked = (!ondemand || value.contains("asked"));
-					if ((parentRestricted && !restricted) || (!parentAsked && asked) || hook.whitelist() != null)
-						listPRestriction.add(new PRestriction(uid, rRestrictionName, hook.getName(), parentRestricted
-								&& restricted, parentAsked || asked));
+					PRestriction childMerge;
+					if (clear)
+						childMerge = new PRestriction(uid, rRestrictionName, hook.getName(), parentRestricted
+								&& restricted, parentAsked || asked);
+					else
+						childMerge = getRestrictionEx(uid, rRestrictionName, hook.getName());
+					if ((parentRestricted && !restricted) || (!parentAsked && asked) || hook.whitelist() != null
+							|| !clear) {
+						PRestriction child = new PRestriction(uid, rRestrictionName, hook.getName(),
+								(parentRestricted && restricted) || childMerge.restricted, (parentAsked || asked)
+										&& childMerge.asked);
+						listPRestriction.add(child);
+					}
 				}
 		}
 		setRestrictionList(listPRestriction);
@@ -553,7 +570,14 @@ public class PrivacyManager {
 
 	public static String getSalt(int userId) {
 		String def = (Build.SERIAL == null ? "" : Build.SERIAL);
-		return getSetting(userId, PrivacyManager.cSettingSalt, def, true);
+		return getSetting(userId, cSettingSalt, def, true);
+	}
+
+	public static void removeLegacySalt(int userId) {
+		String def = (Build.SERIAL == null ? "" : Build.SERIAL);
+		String salt = getSetting(userId, cSettingSalt, null, false);
+		if (def.equals(salt))
+			setSetting(userId, cSettingSalt, null);
 	}
 
 	public static boolean getSettingBool(int uid, String name, boolean defaultValue, boolean useCache) {

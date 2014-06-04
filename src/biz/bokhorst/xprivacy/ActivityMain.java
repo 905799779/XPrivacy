@@ -168,11 +168,6 @@ public class ActivityMain extends ActivityBase implements OnItemSelectedListener
 		if (getIntent().getAction().equals(Intent.ACTION_VIEW))
 			Util.importProLicense(new File(getIntent().getData().getEncodedPath()));
 
-		// Delete legacy salt
-		String salt = PrivacyManager.getSetting(userId, PrivacyManager.cSettingSalt, null, false);
-		if (salt != null && salt.equals(PrivacyManager.getSalt(userId)))
-			PrivacyManager.setSetting(userId, PrivacyManager.cSettingSalt, null);
-
 		// Set layout
 		setContentView(R.layout.mainlist);
 		getWindow().setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_STATE_ALWAYS_HIDDEN);
@@ -1612,7 +1607,6 @@ public class ActivityMain extends ActivityBase implements OnItemSelectedListener
 			private RState rstate;
 			private boolean gondemand;
 			private boolean ondemand;
-			private boolean dangerous;
 
 			public HolderTask(int thePosition, ViewHolder theHolder, ApplicationInfoEx theAppInfo) {
 				position = thePosition;
@@ -1640,7 +1634,6 @@ public class ActivityMain extends ActivityBase implements OnItemSelectedListener
 					ondemand = (PrivacyManager.isApplication(xAppInfo.getUid()) && (mRestrictionName == null ? true
 							: PrivacyManager.getSettingBool(-xAppInfo.getUid(), PrivacyManager.cSettingOnDemand, false,
 									false)));
-					dangerous = PrivacyManager.getSettingBool(userId, PrivacyManager.cSettingDangerous, false, false);
 
 					// Get if granted
 					granted = true;
@@ -1681,7 +1674,7 @@ public class ActivityMain extends ActivityBase implements OnItemSelectedListener
 					holder.imgIcon.setVisibility(View.VISIBLE);
 
 					// Display on demand
-					if (gondemand && dangerous) {
+					if (gondemand) {
 						if (ondemand) {
 							holder.imgCbAsk.setImageBitmap(getAskBoxImage(rstate));
 							holder.imgCbAsk.setVisibility(View.VISIBLE);
@@ -1781,7 +1774,7 @@ public class ActivityMain extends ActivityBase implements OnItemSelectedListener
 					});
 
 					// Listen for ask changes
-					if (gondemand && dangerous && ondemand)
+					if (gondemand && ondemand)
 						holder.imgCbAsk.setOnClickListener(new View.OnClickListener() {
 							@Override
 							public void onClick(View view) {

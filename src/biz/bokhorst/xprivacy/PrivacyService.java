@@ -72,7 +72,7 @@ public class PrivacyService {
 	private static final String cTableUsage = "usage";
 	private static final String cTableSetting = "setting";
 
-	private static final int cCurrentVersion = 334;
+	private static final int cCurrentVersion = 335;
 	private static final String cServiceName = "xprivacy333";
 
 	// TODO: define column names
@@ -142,7 +142,8 @@ public class PrivacyService {
 			IPrivacyService client = getClient();
 			if (client != null)
 				return (client.getVersion() == cCurrentVersion);
-		} catch (RemoteException ex) {
+		} catch (SecurityException ignored) {
+		} catch (Throwable ex) {
 			Util.bug(null, ex);
 		}
 		return false;
@@ -248,6 +249,7 @@ public class PrivacyService {
 
 		@Override
 		public int getVersion() throws RemoteException {
+			enforcePermission(-1);
 			return cCurrentVersion;
 		}
 
@@ -581,7 +583,7 @@ public class PrivacyService {
 				}
 
 				// Store usage data
-				if (usage && hook != null && hook.hasUsageData())
+				if (usage && hook != null)
 					storeUsageData(restriction, secret, mresult);
 
 			} catch (Throwable ex) {
@@ -1386,6 +1388,8 @@ public class PrivacyService {
 										}
 									};
 									mHandler.postDelayed(rProgress, 50);
+								} catch (NameNotFoundException ex) {
+									latch.countDown();
 								} catch (Throwable ex) {
 									Util.bug(null, ex);
 									latch.countDown();

@@ -17,7 +17,20 @@ Changelog
 
 [Open issues](https://github.com/M66B/XPrivacy/issues?state=open)
 
-**Version 2.0.27 BETA**
+**Version 2.0.28 BETA**
+
+* Added *WRITE_CALENDAR* permissions to calendar restriction
+* Updated XposedBridge to version 54 (Xposed version 2.6 is required now)
+* Show all usage data ([issue](/../../issues/1695))
+* Show toggle on demand restricting on/off always ([issue](/../../issues/1697))
+* Added option to merge template with existing restrictions ([issue](/../../issues/1700))
+* Fixed selected accounts when imported from another device ([issue](/../../issues/1699))
+* Updated Dutch translation
+* Updated German translation
+* Updated Lithuanian translation
+* Updated Norwegian translation
+
+**Version 2.0.27 STABLE**
 
 * Showing icon if there is white/black list for a function ([issue](/../../issues/1654))
 	* Thanks @[an0n981](https://github.com/an0n981) for the icons

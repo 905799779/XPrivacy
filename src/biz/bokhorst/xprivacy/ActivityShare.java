@@ -275,10 +275,9 @@ public class ActivityShare extends ActivityBase {
 				}
 			});
 
-			boolean dangerous = PrivacyManager.getSettingBool(userId, PrivacyManager.cSettingDangerous, false, false);
 			boolean ondemand = PrivacyManager.getSettingBool(userId, PrivacyManager.cSettingOnDemand, true, false);
-			rbODEnable.setVisibility(dangerous && ondemand ? View.VISIBLE : View.GONE);
-			rbODDisable.setVisibility(dangerous && ondemand ? View.VISIBLE : View.GONE);
+			rbODEnable.setVisibility(ondemand ? View.VISIBLE : View.GONE);
+			rbODDisable.setVisibility(ondemand ? View.VISIBLE : View.GONE);
 
 			if (choice == CHOICE_CLEAR)
 				rbClear.setChecked(true);
@@ -663,10 +662,13 @@ public class ActivityShare extends ActivityBase {
 						}
 
 						else if (actionId == R.id.rbTemplateCategory)
-							PrivacyManager.applyTemplate(uid, restrictionName, false);
+							PrivacyManager.applyTemplate(uid, restrictionName, false, true);
 
 						else if (actionId == R.id.rbTemplateFull)
-							PrivacyManager.applyTemplate(uid, restrictionName, true);
+							PrivacyManager.applyTemplate(uid, restrictionName, true, true);
+
+						else if (actionId == R.id.rbTemplateMerge)
+							PrivacyManager.applyTemplate(uid, restrictionName, true, false);
 
 						else if (actionId == R.id.rbEnableOndemand) {
 							PrivacyManager.setSetting(uid, PrivacyManager.cSettingOnDemand, Boolean.toString(true));
@@ -1159,12 +1161,17 @@ public class ActivityShare extends ActivityBase {
 
 		@Override
 		public void endElement(String uri, String localName, String qName) {
-			if (qName.equals("XPrivacy"))
+			if (qName.equals("XPrivacy")) {
 				if (lastUid > 0) {
 					PrivacyManager.updateState(lastUid);
 					boolean restart = !PrivacyManager.getRestartStates(lastUid, null).equals(mOldState);
 					setState(lastUid, STATE_SUCCESS, restart ? getString(R.string.msg_restart) : null);
 				}
+
+				// Cleanup salt
+				int userId = Util.getUserId(Process.myUid());
+				PrivacyManager.removeLegacySalt(userId);
+			}
 		}
 
 		private int getUid(int id) {
