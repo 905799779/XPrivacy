@@ -1066,7 +1066,6 @@ public class ActivityMain extends ActivityBase implements OnItemSelectedListener
 		private List<String> listRestrictionName;
 		private List<String> listLocalizedTitle;
 		private boolean ondemand;
-		private boolean dangerous;
 		private LayoutInflater mInflater;
 
 		public TemplateListAdapter(Context context, int resource) {
@@ -1079,7 +1078,6 @@ public class ActivityMain extends ActivityBase implements OnItemSelectedListener
 
 			int userId = Util.getUserId(Process.myUid());
 			ondemand = PrivacyManager.getSettingBool(userId, PrivacyManager.cSettingOnDemand, true, false);
-			dangerous = PrivacyManager.getSettingBool(userId, PrivacyManager.cSettingDangerous, false, false);
 		}
 
 		private class ViewHolder {
@@ -1218,7 +1216,7 @@ public class ActivityMain extends ActivityBase implements OnItemSelectedListener
 
 			// Get child info
 			String value = PrivacyManager.getSetting(userId, Meta.cTypeTemplate, settingName,
-					Boolean.toString(parentRestricted && (hook.isDangerous() ? dangerous : true))
+					Boolean.toString(parentRestricted && !hook.isDangerous())
 							+ (parentAsked ? "+asked" : "+ask"), false);
 			holder.restricted = value.contains("true");
 			holder.asked = (!ondemand || value.contains("asked"));
