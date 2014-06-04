@@ -1299,10 +1299,6 @@ public class PrivacyService {
 					// Get application info
 					final ApplicationInfoEx appInfo = new ApplicationInfoEx(context, restriction.uid);
 
-					// Check if system application
-					if (!dangerous && appInfo.isSystem())
-						return false;
-
 					// Check if activity manager agrees
 					if (!XActivityManagerService.canOnDemand())
 						return false;
