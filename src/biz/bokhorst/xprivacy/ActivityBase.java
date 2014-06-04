@@ -28,9 +28,9 @@ public class ActivityBase extends Activity {
 			String themeName = PrivacyManager.getSetting(userId, PrivacyManager.cSettingTheme, "", false);
 			mThemeId = (themeName.equals("Dark") ? R.style.CustomTheme : R.style.CustomTheme_Light);
 			setTheme(mThemeId);
-		        super.onCreate(savedInstanceState);
+			super.onCreate(savedInstanceState);
 		} else {
-		        super.onCreate(savedInstanceState);
+			super.onCreate(savedInstanceState);
 			// Privacy client now available
 			setContentView(R.layout.reboot);
 
