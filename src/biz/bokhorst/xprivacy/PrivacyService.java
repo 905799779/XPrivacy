@@ -40,7 +40,6 @@ import android.os.Handler;
 import android.os.IBinder;
 import android.os.Looper;
 import android.os.Process;
-import android.os.RemoteException;
 import android.os.StrictMode;
 import android.os.StrictMode.ThreadPolicy;
 import android.text.TextUtils;
@@ -182,7 +181,7 @@ public class PrivacyService {
 	}
 
 	public static PRestriction getRestriction(final PRestriction restriction, boolean usage, String secret)
-			throws RemoteException {
+			throws android.os.RemoteException {
 		if (isRegistered())
 			return mPrivacyService.getRestriction(restriction, usage, secret);
 		else {
@@ -198,7 +197,7 @@ public class PrivacyService {
 		}
 	}
 
-	public static PSetting getSetting(PSetting setting) throws RemoteException {
+	public static PSetting getSetting(PSetting setting) throws android.os.RemoteException {
 		if (isRegistered())
 			return mPrivacyService.getSetting(setting);
 		else {
@@ -303,7 +302,7 @@ public class PrivacyService {
 				setRestrictionInternal(restriction);
 			} catch (Throwable ex) {
 				Util.bug(null, ex);
-				throw new RemoteException();
+				throw new RemoteException(ex.toString());
 			}
 		}
 
@@ -312,7 +311,7 @@ public class PrivacyService {
 			if (restriction.restrictionName == null) {
 				Util.log(null, Log.ERROR, "Set invalid restriction " + restriction);
 				Util.logStack(null, Log.ERROR);
-				throw new RemoteException();
+				throw new RemoteException("Invalid restriction");
 			}
 
 			try {
@@ -370,7 +369,7 @@ public class PrivacyService {
 					}
 			} catch (Throwable ex) {
 				Util.bug(null, ex);
-				throw new RemoteException();
+				throw new RemoteException(ex.toString());
 			}
 		}
 
@@ -668,7 +667,7 @@ public class PrivacyService {
 					}
 			} catch (Throwable ex) {
 				Util.bug(null, ex);
-				throw new RemoteException();
+				throw new RemoteException(ex.toString());
 			}
 			return result;
 		}
@@ -758,7 +757,7 @@ public class PrivacyService {
 				}
 			} catch (Throwable ex) {
 				Util.bug(null, ex);
-				throw new RemoteException();
+				throw new RemoteException(ex.toString());
 			}
 		}
 
@@ -824,7 +823,7 @@ public class PrivacyService {
 				}
 			} catch (Throwable ex) {
 				Util.bug(null, ex);
-				throw new RemoteException();
+				throw new RemoteException(ex.toString());
 			}
 			return lastUsage;
 		}
@@ -893,7 +892,7 @@ public class PrivacyService {
 				}
 			} catch (Throwable ex) {
 				Util.bug(null, ex);
-				throw new RemoteException();
+				throw new RemoteException(ex.toString());
 			}
 			return result;
 		}
@@ -923,7 +922,7 @@ public class PrivacyService {
 				}
 			} catch (Throwable ex) {
 				Util.bug(null, ex);
-				throw new RemoteException();
+				throw new RemoteException(ex.toString());
 			}
 		}
 
@@ -936,7 +935,7 @@ public class PrivacyService {
 				setSettingInternal(setting);
 			} catch (Throwable ex) {
 				Util.bug(null, ex);
-				throw new RemoteException();
+				throw new RemoteException(ex.toString());
 			}
 		}
 
@@ -1003,7 +1002,7 @@ public class PrivacyService {
 							}
 			} catch (Throwable ex) {
 				Util.bug(null, ex);
-				throw new RemoteException();
+				throw new RemoteException(ex.toString());
 			}
 		}
 
@@ -1147,7 +1146,7 @@ public class PrivacyService {
 				}
 			} catch (Throwable ex) {
 				Util.bug(null, ex);
-				throw new RemoteException();
+				throw new RemoteException(ex.toString());
 			}
 			return listSetting;
 		}
@@ -1182,7 +1181,7 @@ public class PrivacyService {
 					}
 			} catch (Throwable ex) {
 				Util.bug(null, ex);
-				throw new RemoteException();
+				throw new RemoteException(ex.toString());
 			}
 		}
 
@@ -1250,7 +1249,7 @@ public class PrivacyService {
 
 			} catch (Throwable ex) {
 				Util.bug(null, ex);
-				throw new RemoteException();
+				throw new RemoteException(ex.toString());
 			}
 		}
 

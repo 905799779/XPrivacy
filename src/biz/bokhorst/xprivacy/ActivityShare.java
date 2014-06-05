@@ -343,12 +343,8 @@ public class ActivityShare extends ActivityBase {
 				}
 			});
 
-		} else {
-			// Hide ok button and separator
-			btnOk.setVisibility(View.GONE);
-			final View vButtonSeparator = findViewById(R.id.vButtonSeparator);
-			vButtonSeparator.setVisibility(View.GONE);
-		}
+		} else
+			btnOk.setEnabled(false);
 
 		// Listen for cancel
 		btnCancel.setOnClickListener(new Button.OnClickListener() {
@@ -1794,6 +1790,7 @@ public class ActivityShare extends ActivityBase {
 		View vShareProgressFull = (View) findViewById(R.id.vShareProgressFull);
 		vShareProgressFull.getLayoutParams().width = width;
 		vShareProgressFull.invalidate();
+		vShareProgressFull.requestLayout();
 	}
 
 	private void done(Throwable ex) {
@@ -1809,22 +1806,19 @@ public class ActivityShare extends ActivityBase {
 		blueStreakOfProgress(0, 1);
 		mRunning = false;
 
-		// Change ok button to "Close"
+		// Update buttons
+		final Button btnCancel = (Button) findViewById(R.id.btnCancel);
 		final Button btnOk = (Button) findViewById(R.id.btnOk);
-		btnOk.setText(getString(R.string.menu_close));
+		btnCancel.setEnabled(false);
 		btnOk.setEnabled(true);
+
+		// Handle close
 		btnOk.setOnClickListener(new Button.OnClickListener() {
 			@Override
 			public void onClick(View v) {
 				finish();
 			}
 		});
-
-		// Remove cancel button and separator
-		final Button btnCancel = (Button) findViewById(R.id.btnCancel);
-		final View vButtonSeparator = findViewById(R.id.vButtonSeparator);
-		btnCancel.setVisibility(View.GONE);
-		vButtonSeparator.setVisibility(View.GONE);
 	}
 
 	public void fileChooser() {
