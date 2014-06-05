@@ -106,14 +106,14 @@
                 android:background="@android:color/darker_gray" />
 
             <LinearLayout
-                style="?android:attr/buttonBarButtonStyle"
+                style="?attr/buttonBarButtonStyle"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="horizontal" >
 
                 <Button
                     android:id="@+id/btnCancel"
-                    style="?android:attr/buttonBarButtonStyle"
+                    style="?attr/buttonBarButtonStyle"
                     android:layout_width="0dip"
                     android:layout_height="wrap_content"
                     android:layout_gravity="center_horizontal"
@@ -127,7 +127,7 @@
 
                 <Button
                     android:id="@+id/btnOk"
-                    style="?android:attr/buttonBarButtonStyle"
+                    style="?attr/buttonBarButtonStyle"
                     android:layout_width="0dip"
                     android:layout_height="wrap_content"
                     android:layout_gravity="center_horizontal"
@@ -155,7 +155,7 @@
                     android:id="@+id/vShareProgressFull"
                     android:layout_width="0dip"
                     android:layout_height="3dip"
-                    android:background="?android:attr/colorActivatedHighlight" />
+                    android:background="?attr/colorActivatedHighlight" />
             </RelativeLayout>
         </LinearLayout>
     </ScrollView>
