@@ -228,13 +228,43 @@ public class PrivacyManager {
 
 	public static PRestriction getRestrictionEx(int uid, String restrictionName, String methodName) {
 		PRestriction query = new PRestriction(uid, restrictionName, methodName, false);
+		PRestriction result = new PRestriction(uid, restrictionName, methodName, false, true);
 		try {
-			// TODO: use cache?
-			return PrivacyService.getRestriction(query, false, "");
+			// Check cache
+			boolean cached = false;
+			CRestriction key = new CRestriction(uid, restrictionName, methodName, null);
+			synchronized (mRestrictionCache) {
+				if (mRestrictionCache.containsKey(key)) {
+					CRestriction entry = mRestrictionCache.get(key);
+					if (!entry.isExpired()) {
+						cached = true;
+						result.restricted = entry.restricted;
+						result.asked = entry.asked;
+					}
+				}
+			}
+
+			if (!cached) {
+				// Get restriction
+				result = PrivacyService.getRestriction(query, false, "");
+
+				// Add to cache
+				key.restricted = result.restricted;
+				key.asked = result.asked;
+				if (result.time > 0) {
+					key.setExpiry(result.time);
+					Util.log(null, Log.WARN, "Caching " + result + " until " + new Date(result.time));
+				}
+				synchronized (mRestrictionCache) {
+					if (mRestrictionCache.containsKey(key))
+						mRestrictionCache.remove(key);
+					mRestrictionCache.put(key, key);
+				}
+			}
 		} catch (RemoteException ex) {
 			Util.bug(null, ex);
-			return query;
 		}
+		return result;
 	}
 
 	public static boolean getRestriction(final XHook hook, int uid, String restrictionName, String methodName,
@@ -286,6 +316,7 @@ public class PrivacyManager {
 				if (!entry.isExpired()) {
 					cached = true;
 					result.restricted = entry.restricted;
+					result.asked = entry.asked;
 				}
 			}
 		}
@@ -300,6 +331,7 @@ public class PrivacyManager {
 				// Add to cache
 				if (result.time >= 0) {
 					key.restricted = result.restricted;
+					key.asked = result.asked;
 					if (result.time > 0) {
 						key.setExpiry(result.time);
 						Util.log(null, Log.WARN, "Caching " + result + " until " + new Date(result.time));
@@ -346,12 +378,35 @@ public class PrivacyManager {
 		// Make exceptions for dangerous methods
 		if (methodName == null)
 			for (String rRestrictionName : listRestriction)
-				for (Hook md : getHooks(rRestrictionName))
+				for (Hook md : getHooks(rRestrictionName)) {
 					if (md.isDangerous())
 						listPRestriction.add(new PRestriction(uid, rRestrictionName, md.getName(), false, md
 								.whitelist() == null));
+					else if (!canRestrict(uid, Process.myUid(), rRestrictionName, md.getName()))
+						listPRestriction.add(new PRestriction(uid, rRestrictionName, md.getName(), false, true));
+				}
 
 		setRestrictionList(listPRestriction);
+	}
+
+	public static boolean canRestrict(int uid, int xuid, String restrictionName, String methodName) {
+		int _uid = Util.getAppId(uid);
+
+		if (_uid == Process.SYSTEM_UID && PrivacyManager.cIdentification.equals(restrictionName))
+			return false;
+
+		// @formatter:off
+		if ((_uid == Util.getAppId(xuid)) &&
+			(((PrivacyManager.cIdentification.equals(restrictionName) &&
+			("getString".equals(methodName) || "SERIAL".equals(methodName)))
+			|| PrivacyManager.cIPC.equals(restrictionName)
+			|| PrivacyManager.cStorage.equals(restrictionName)
+			|| PrivacyManager.cSystem.equals(restrictionName)
+			|| PrivacyManager.cView.equals(restrictionName))))
+			return false;
+		// @formatter:on
+
+		return true;
 	}
 
 	public static void updateState(int uid) {
@@ -455,7 +510,7 @@ public class PrivacyManager {
 		int userId = Util.getUserId(uid);
 
 		// Check on-demand
-		boolean ondemand = getSettingBool(userId, PrivacyManager.cSettingOnDemand, true, false);
+		boolean ondemand = getSettingBool(userId, PrivacyManager.cSettingOnDemand, true);
 
 		// Build list of restrictions
 		List<String> listRestriction = new ArrayList<String>();
@@ -497,8 +552,8 @@ public class PrivacyManager {
 								&& restricted, parentAsked || asked);
 					else
 						childMerge = getRestrictionEx(uid, rRestrictionName, hook.getName());
-					if ((parentRestricted && !restricted) || (!parentAsked && asked) || hook.isDangerous()
-							|| hook.whitelist() != null || !clear) {
+					if ((parentRestricted && !restricted) || (!parentAsked && asked) || hook.whitelist() != null
+							|| !clear) {
 						PRestriction child = new PRestriction(uid, rRestrictionName, hook.getName(),
 								(parentRestricted && restricted) || childMerge.restricted, (parentAsked || asked)
 										&& childMerge.asked);
@@ -595,11 +650,11 @@ public class PrivacyManager {
 			setSetting(userId, cSettingSalt, null);
 	}
 
-	public static boolean getSettingBool(int uid, String name, boolean defaultValue, boolean useCache) {
+	public static boolean getSettingBool(int uid, String name, boolean defaultValue) {
 		return Boolean.parseBoolean(getSetting(uid, name, Boolean.toString(defaultValue)));
 	}
 
-	public static boolean getSettingBool(int uid, String type, String name, boolean defaultValue, boolean useCache) {
+	public static boolean getSettingBool(int uid, String type, String name, boolean defaultValue) {
 		return Boolean.parseBoolean(getSetting(uid, type, name, Boolean.toString(defaultValue)));
 	}
 
@@ -633,9 +688,11 @@ public class PrivacyManager {
 				if (value == null)
 					if (uid > 99) {
 						int userId = Util.getUserId(uid);
-						value = PrivacyService.getSetting(new PSetting(userId, type, name, defaultValue)).value;
-					} else
-						value = defaultValue;
+						value = PrivacyService.getSetting(new PSetting(userId, type, name, null)).value;
+					}
+
+				if (value == null)
+					value = defaultValue;
 
 				// Add to cache
 				key.setValue(value);
@@ -644,6 +701,7 @@ public class PrivacyManager {
 						mSettingsCache.remove(key);
 					mSettingsCache.put(key, key);
 				}
+
 			} catch (Throwable ex) {
 				Util.bug(null, ex);
 			}

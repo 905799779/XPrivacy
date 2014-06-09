@@ -71,7 +71,7 @@ public class PrivacyService {
 	private static final String cTableUsage = "usage";
 	private static final String cTableSetting = "setting";
 
-	private static final int cCurrentVersion = 335;
+	private static final int cCurrentVersion = 337;
 	private static final String cServiceName = "xprivacy336";
 
 	// TODO: define column names
@@ -408,7 +408,8 @@ public class PrivacyService {
 				}
 
 				// Check if can be restricted
-				if (Util.cannotRestrict(restriction.uid, getXUid(), restriction.restrictionName, restriction.methodName)) {
+				if (!PrivacyManager.canRestrict(restriction.uid, getXUid(), restriction.restrictionName,
+						restriction.methodName)) {
 					mresult.asked = true;
 					return mresult;
 				}

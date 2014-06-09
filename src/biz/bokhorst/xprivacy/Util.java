@@ -61,7 +61,7 @@ public class Util {
 		if (!mLogDetermined && uid > 0) {
 			mLogDetermined = true;
 			try {
-				mLog = PrivacyManager.getSettingBool(0, PrivacyManager.cSettingLog, false, false);
+				mLog = PrivacyManager.getSettingBool(0, PrivacyManager.cSettingLog, false);
 			} catch (Throwable ignored) {
 				mLog = false;
 			}
@@ -391,19 +391,6 @@ public class Util {
 			Util.bug(null, ex);
 			return null;
 		}
-	}
-
-	public static boolean cannotRestrict(int uid, int xuid, String restrictionName, String methodName) {
-		// @formatter:off
-		return
-			(getAppId(uid) == getAppId(xuid)) &&
-			(((PrivacyManager.cIdentification.equals(restrictionName) &&
-			("getString".equals(methodName) || "SERIAL".equals(methodName)))
-			|| PrivacyManager.cIPC.equals(restrictionName)
-			|| PrivacyManager.cStorage.equals(restrictionName)
-			|| PrivacyManager.cSystem.equals(restrictionName)
-			|| PrivacyManager.cView.equals(restrictionName)));
-		// @formatter:on
 	}
 
 	private static byte[] hex2bytes(String hex) {
