@@ -71,7 +71,7 @@ public class PrivacyService {
 	private static final String cTableUsage = "usage";
 	private static final String cTableSetting = "setting";
 
-	private static final int cCurrentVersion = 337;
+	private static final int cCurrentVersion = 340;
 	private static final String cServiceName = "xprivacy336";
 
 	// TODO: define column names
@@ -511,9 +511,13 @@ public class PrivacyService {
 					// Default dangerous
 					if (!methodFound && hook != null && hook.isDangerous())
 						if (!getSettingBool(userId, PrivacyManager.cSettingDangerous, false)) {
-							mresult.restricted = false;
-							if (hook.whitelist() == null)
-								mresult.asked = true;
+							Version sVersion = new Version(getSetting(new PSetting(userId, "",
+									PrivacyManager.cSettingVersion, "0.0")).value);
+							if (sVersion.compareTo(new Version("2.0.32")) < 0) {
+								mresult.restricted = false;
+								if (hook.whitelist() == null)
+									mresult.asked = true;
+							}
 						}
 
 					// Check whitelist

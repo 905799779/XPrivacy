@@ -38,12 +38,13 @@ public class Meta {
 		mListHook.add(new Hook("accounts", "getAccounts", "GET_ACCOUNTS", 10, null, null));
 		mListHook.add(new Hook("accounts", "getAccountsByType", "GET_ACCOUNTS", 10, null, null));
 		mListHook.add(new Hook("accounts", "getAccountsByTypeAndFeatures", "GET_ACCOUNTS", 10, null, null));
-		mListHook.add(new Hook("accounts", "getAuthToken", "USE_CREDENTIALS", 10, null, null));
-		mListHook.add(new Hook("accounts", "getAuthTokenByFeatures", "MANAGE_ACCOUNTS", 10, null, null));
+		mListHook.add(new Hook("accounts", "getAuthToken", "USE_CREDENTIALS", 10, "0.0", null).dangerous());
+		mListHook.add(new Hook("accounts", "getAuthTokenByFeatures", "MANAGE_ACCOUNTS", 10, "0.0", null).dangerous());
 		mListHook.add(new Hook("accounts", "hasFeatures", "GET_ACCOUNTS", 10, null, null));
 		mListHook.add(new Hook("accounts", "getAccountsByTypeForPackage", "GET_ACCOUNTS", 18, null, null));
-		mListHook.add(new Hook("accounts", "getTokenGoogle", "GET_ACCOUNTS", 10, null, null));
-		mListHook.add(new Hook("accounts", "getTokenWithNotificationGoogle", "GET_ACCOUNTS", 10, null, null));
+
+		mListHook.add(new Hook("accounts", "getTokenGoogle", "GET_ACCOUNTS", 10, "0.0", null).dangerous());
+		mListHook.add(new Hook("accounts", "getTokenWithNotificationGoogle", "GET_ACCOUNTS", 10, "0.0", null).dangerous());
 
 		mListHook.add(new Hook("accounts", "getAuthenticatorTypes", "GET_ACCOUNTS", 5, "1.99.24", null).dangerous());
 		mListHook.add(new Hook("accounts", "getCurrentSync", "GET_ACCOUNTS", 8, "1.99.24", null).dangerous());
@@ -89,17 +90,18 @@ public class Meta {
 		mListHook.add(new Hook("identification", "%cid", "", 1, null, null));
 		mListHook.add(new Hook("identification", "/proc", "", 1, "1.7", null).dangerous().whitelist(cTypeProc));
 		mListHook.add(new Hook("identification", "/system/build.prop", "", 1, "1.9.9", null).dangerous());
-		mListHook.add(new Hook("identification", "/sys/block/.../cid", "", 1, null, null));
-		mListHook.add(new Hook("identification", "/sys/class/.../cid", "", 1, null, null));
+		mListHook.add(new Hook("identification", "/sys/block/.../cid", "", 1, "0.0", null).dangerous());
+		mListHook.add(new Hook("identification", "/sys/class/.../cid", "", 1, "0.0", null).dangerous());
 		mListHook.add(new Hook("identification", "AdvertisingId", "", 1, null, null));
 		mListHook.add(new Hook("identification", "getString", "", 1, null, null));
 		mListHook.add(new Hook("identification", "getDescriptor", "", 16, null, null));
 		mListHook.add(new Hook("identification", "GservicesProvider", "com.google.android.providers.gsf.permission.READ_GSERVICES,com.google.android.providers.gsf.permission.WRITE_GSERVICES", 1, null, null).dangerous());
 		mListHook.add(new Hook("identification", "SERIAL", "", 1, null, null).restart().noUsageData());
 
-		mListHook.add(new Hook("internet", "getAllByName", "INTERNET", 1, null, null));
-		mListHook.add(new Hook("internet", "getByAddress", "INTERNET", 1, null, null));
-		mListHook.add(new Hook("internet", "getByName", "INTERNET", 1, null, null));
+		mListHook.add(new Hook("internet", "getAllByName", "INTERNET", 1, "0.0", null).dangerous());
+		mListHook.add(new Hook("internet", "getByAddress", "INTERNET", 1, "0.0", null).dangerous());
+		mListHook.add(new Hook("internet", "getByName", "INTERNET", 1, "0.0", null).dangerous());
+
 		mListHook.add(new Hook("internet", "getByInetAddress", "INTERNET", 1, null, null));
 		mListHook.add(new Hook("internet", "getNetworkInterfaces", "INTERNET", 1, null, null));
 		mListHook.add(new Hook("internet", "inet", "INTERNET", 1, null, null).dangerous().restart().noUsageData());
@@ -182,7 +184,7 @@ public class Meta {
 		mListHook.add(new Hook("network", "getConfiguredNetworks", "ACCESS_WIFI_STATE", 10, null, null));
 		mListHook.add(new Hook("network", "getConnectionInfo", "ACCESS_WIFI_STATE", 10, null, null));
 		mListHook.add(new Hook("network", "getDhcpInfo", "ACCESS_WIFI_STATE", 10, null, null));
-		mListHook.add(new Hook("network", "getScanResults", "ACCESS_WIFI_STATE", 10, null, null));
+		mListHook.add(new Hook("network", "getScanResults", "ACCESS_WIFI_STATE", 10, "0.0", null).dangerous());
 		mListHook.add(new Hook("network", "getWifiApConfiguration", "ACCESS_WIFI_STATE", 10, null, null));
 
 		mListHook.add(new Hook("nfc", "getNfcAdapter", "android.permission.NFC", 14, null, null));
@@ -229,12 +231,12 @@ public class Meta {
 		mListHook.add(new Hook("sensors", "getDefaultSensor", "", 3, null, null));
 		mListHook.add(new Hook("sensors", "getSensorList", "", 3, null, null));
 
-		mListHook.add(new Hook("shell", "sh", "", 10, null, null).whitelist(cTypeCommand));
-		mListHook.add(new Hook("shell", "su", "", 10, null, null).whitelist(cTypeCommand));
-		mListHook.add(new Hook("shell", "exec", "", 10, null, null).whitelist(cTypeCommand));
-		mListHook.add(new Hook("shell", "load", "", 10, null, null).dangerous().whitelist(cTypeLibrary));
-		mListHook.add(new Hook("shell", "loadLibrary", "", 10, null, null).dangerous().whitelist(cTypeLibrary));
-		mListHook.add(new Hook("shell", "start", "", 10, null, null).whitelist(cTypeCommand));
+		mListHook.add(new Hook("shell", "sh", "", 10, "0.0", null).dangerous().whitelist(cTypeCommand));
+		mListHook.add(new Hook("shell", "su", "", 10, "0.0", null).dangerous().whitelist(cTypeCommand));
+		mListHook.add(new Hook("shell", "exec", "", 10, "0.0", null).dangerous().whitelist(cTypeCommand));
+		mListHook.add(new Hook("shell", "load", "", 10, "0.0", null).dangerous().whitelist(cTypeLibrary));
+		mListHook.add(new Hook("shell", "loadLibrary", "", 10, "0.0", null).dangerous().whitelist(cTypeLibrary));
+		mListHook.add(new Hook("shell", "start", "", 10, "0.0", null).dangerous().whitelist(cTypeCommand));
 
 		mListHook.add(new Hook("storage", "media", "WRITE_MEDIA_STORAGE", 10, null, null).dangerous().restart().noUsageData());
 		mListHook.add(new Hook("storage", "sdcard", "READ_EXTERNAL_STORAGE,WRITE_EXTERNAL_STORAGE", 10, null, null).dangerous().restart().noUsageData());

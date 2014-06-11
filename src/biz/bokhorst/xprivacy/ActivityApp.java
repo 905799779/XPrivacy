@@ -32,6 +32,7 @@ import android.os.Bundle;
 import android.os.Environment;
 import android.os.Process;
 import android.provider.ContactsContract;
+import android.provider.ContactsContract.CommonDataKinds.GroupMembership;
 import android.provider.ContactsContract.CommonDataKinds.Phone;
 import android.support.v4.app.NavUtils;
 import android.support.v4.app.TaskStackBuilder;
@@ -329,10 +330,51 @@ public class ActivityApp extends ActivityBase {
 	}
 
 	@Override
-	public boolean onCreateOptionsMenu(Menu menu) {
+	public boolean onCreateOptionsMenu(final Menu menu) {
 		MenuInflater inflater = getMenuInflater();
 		if (inflater != null && PrivacyService.checkClient()) {
 			inflater.inflate(R.menu.app, menu);
+
+			// Add all contact groups
+			menu.findItem(R.id.menu_contacts).getSubMenu()
+					.add(-1, R.id.menu_contacts, Menu.NONE, getString(R.string.menu_all));
+
+			// Add other contact groups in the background
+			new AsyncTask<Object, Object, Object>() {
+				@Override
+				protected Object doInBackground(Object... arg0) {
+					try {
+						String where = ContactsContract.Groups.GROUP_VISIBLE + " = 1";
+						where += " AND " + ContactsContract.Groups.SUMMARY_COUNT + " > 0";
+						Cursor cursor = getContentResolver().query(
+								ContactsContract.Groups.CONTENT_SUMMARY_URI,
+								new String[] { ContactsContract.Groups._ID, ContactsContract.Groups.TITLE,
+										ContactsContract.Groups.ACCOUNT_NAME, ContactsContract.Groups.SUMMARY_COUNT },
+								where, null,
+								ContactsContract.Groups.TITLE + ", " + ContactsContract.Groups.ACCOUNT_NAME);
+
+						if (cursor != null)
+							try {
+								while (cursor.moveToNext()) {
+									int id = cursor.getInt(cursor.getColumnIndex(ContactsContract.Groups._ID));
+									String title = cursor.getString(cursor
+											.getColumnIndex(ContactsContract.Groups.TITLE));
+									String account = cursor.getString(cursor
+											.getColumnIndex(ContactsContract.Groups.ACCOUNT_NAME));
+									menu.findItem(R.id.menu_contacts).getSubMenu()
+											.add(id, R.id.menu_contacts, Menu.NONE, title + "/" + account);
+								}
+							} finally {
+								cursor.close();
+							}
+					} catch (Throwable ex) {
+						Util.bug(null, ex);
+					}
+
+					return null;
+				}
+			}.executeOnExecutor(mExecutor);
+
 			return true;
 		} else
 			return false;
@@ -437,8 +479,11 @@ public class ActivityApp extends ActivityBase {
 			optionApplications();
 			return true;
 		case R.id.menu_contacts:
-			optionContacts();
-			return true;
+			if (item.getGroupId() != 0) {
+				optionContacts(item.getGroupId());
+				return true;
+			} else
+				return false;
 		case R.id.menu_whitelists:
 			optionWhitelists(null);
 			return true;
@@ -567,13 +612,13 @@ public class ActivityApp extends ActivityBase {
 		}
 	}
 
-	private void optionContacts() {
+	private void optionContacts(int groupId) {
 		if (Util.hasProLicense(this) == null) {
 			// Redirect to pro page
 			Util.viewUri(this, ActivityMain.cProUri);
 		} else {
 			ContactsTask contactsTask = new ContactsTask();
-			contactsTask.executeOnExecutor(mExecutor, (Object) null);
+			contactsTask.executeOnExecutor(mExecutor, groupId);
 		}
 	}
 
@@ -765,17 +810,26 @@ public class ActivityApp extends ActivityBase {
 		}
 	}
 
-	private class ContactsTask extends AsyncTask<Object, Object, Object> {
+	private class ContactsTask extends AsyncTask<Integer, Object, Object> {
 		private List<CharSequence> mListContact;
 		private long[] mIds;
 		private boolean[] mSelection;
 
 		@Override
-		protected Object doInBackground(Object... params) {
+		protected Object doInBackground(Integer... params) {
 			// Map contacts
 			Map<Long, String> mapContact = new LinkedHashMap<Long, String>();
-			Cursor cursor = getContentResolver().query(ContactsContract.Contacts.CONTENT_URI,
-					new String[] { ContactsContract.Contacts._ID, Phone.DISPLAY_NAME }, null, null, Phone.DISPLAY_NAME);
+			Cursor cursor;
+			if (params[0] < 0)
+				cursor = getContentResolver().query(ContactsContract.Contacts.CONTENT_URI,
+						new String[] { ContactsContract.Contacts._ID, Phone.DISPLAY_NAME }, null, null,
+						Phone.DISPLAY_NAME);
+			else
+				cursor = getContentResolver()
+						.query(ContactsContract.Data.CONTENT_URI,
+								new String[] { ContactsContract.Contacts._ID, Phone.DISPLAY_NAME,
+										GroupMembership.GROUP_ROW_ID }, GroupMembership.GROUP_ROW_ID + "= ?",
+								new String[] { Integer.toString(params[0]) }, Phone.DISPLAY_NAME);
 			if (cursor != null)
 				try {
 					while (cursor.moveToNext()) {
@@ -790,13 +844,18 @@ public class ActivityApp extends ActivityBase {
 
 			// Build dialog data
 			mListContact = new ArrayList<CharSequence>();
-			mIds = new long[mapContact.size()];
-			mSelection = new boolean[mapContact.size()];
+			mIds = new long[mapContact.size() + 1];
+			mSelection = new boolean[mapContact.size() + 1];
+
+			mListContact.add("[" + getString(R.string.menu_all) + "]");
+			mIds[0] = -1;
+			mSelection[0] = false;
+
 			int i = 0;
 			for (Long id : mapContact.keySet()) {
 				mListContact.add(mapContact.get(id));
-				mIds[i] = id;
-				mSelection[i++] = PrivacyManager.getSettingBool(-mAppInfo.getUid(), Meta.cTypeContact,
+				mIds[i + 1] = id;
+				mSelection[i++ + 1] = PrivacyManager.getSettingBool(-mAppInfo.getUid(), Meta.cTypeContact,
 						Long.toString(id), false);
 			}
 			return null;
@@ -811,10 +870,39 @@ public class ActivityApp extends ActivityBase {
 				alertDialogBuilder.setIcon(getThemed(R.attr.icon_launcher));
 				alertDialogBuilder.setMultiChoiceItems(mListContact.toArray(new CharSequence[0]), mSelection,
 						new DialogInterface.OnMultiChoiceClickListener() {
-							public void onClick(DialogInterface dialog, int whichButton, boolean isChecked) {
+							public void onClick(final DialogInterface dialog, int whichButton, final boolean isChecked) {
 								// Contact
-								PrivacyManager.setSetting(mAppInfo.getUid(), Meta.cTypeContact,
-										Long.toString(mIds[whichButton]), Boolean.toString(isChecked));
+								if (whichButton == 0) {
+									((AlertDialog) dialog).getListView().setEnabled(false);
+									((AlertDialog) dialog).getButton(AlertDialog.BUTTON_POSITIVE).setEnabled(false);
+									((AlertDialog) dialog).setCancelable(false);
+
+									new AsyncTask<Object, Object, Object>() {
+										@Override
+										protected Object doInBackground(Object... arg0) {
+											for (int i = 1; i < mSelection.length; i++) {
+												mSelection[i] = isChecked;
+												PrivacyManager.setSetting(mAppInfo.getUid(), Meta.cTypeContact,
+														Long.toString(mIds[i]), Boolean.toString(mSelection[i]));
+											}
+											return null;
+										}
+
+										@Override
+										protected void onPostExecute(Object result) {
+											for (int i = 1; i < mSelection.length; i++)
+												((AlertDialog) dialog).getListView().setItemChecked(i, mSelection[i]);
+
+											((AlertDialog) dialog).getListView().setEnabled(true);
+											((AlertDialog) dialog).getButton(AlertDialog.BUTTON_POSITIVE).setEnabled(
+													true);
+											((AlertDialog) dialog).setCancelable(true);
+										}
+									}.executeOnExecutor(mExecutor);
+
+								} else
+									PrivacyManager.setSetting(mAppInfo.getUid(), Meta.cTypeContact,
+											Long.toString(mIds[whichButton]), Boolean.toString(isChecked));
 							}
 						});
 				alertDialogBuilder.setPositiveButton(getString(R.string.msg_done),

@@ -241,7 +241,7 @@ For easy usage, data is restricted by category:
 	* prevent receiving TECH discovered
 <a name="notifications"></a>
 * Notifications
-	* prevent receiving statusbar notifications (Android 4.3+)
+	* prevent applications from receiving [statusbar notifications](https://developer.android.com/reference/android/service/notification/NotificationListenerService.html) (Android 4.3+)
 	* prevent [C2DM](https://developers.google.com/android/c2dm/) messages
 <a name="overlay"></a>
 * Overlay
@@ -477,6 +477,8 @@ XPrivacy asks for the following Android permissions:
 If desired, you can even restrict XPrivacy from accessing any of the above,
 but there are some [limitations](https://github.com/M66B/XPrivacy#limitations).
 
+Please note that any Xposed module has basically root permissions and can therefore circumvent any Android permission.
+
 Frequently asked questions
 --------------------------
 
@@ -696,6 +698,7 @@ No, because it's too difficult to implement something like XPrivacy on these OS'
 * lockscreen
 * time(zone)
 * nag-screens, popups
+* statusbar notifications
 
 No, because I don't consider this information to be privacy-sensitive data, i.e., able to identify you and collect data about you. I am happy to add new restrictions for data that is really privacy-sensitive.
 

@@ -15,7 +15,42 @@ Changelog
 
 **Next release**
 
+* Removed delay when opening application details
+* Made *network/getScanResults* dangerous
+	* Because *location/getScanResults* is dangerous too
+* Made *accounts/getTokenGoogle* and *accounts/getTokenWithNotification* dangerous
+* Made *accounts/getAuthToken* and *accounts/getAuthTokenByFeatures* dangerous
+* Made *identification//sys/block/.../cid* and *identification//sys/class/.../cid* dangerous
+* Made *internet/getAllByName*, *internet/getByAddress* and *internet/getByName* dangerous
+* Made all *shell* functions dangerous
+
+All above functions throw an exception when restricted.
+Although the exception is part of the standard API, a lot of applications are not prepared to handle an exception.
+
 [Open issues](https://github.com/M66B/XPrivacy/issues?state=open)
+
+**Version 2.0.33 BETA**
+
+* Fixed applying template / dangerous functions
+* Fixed default on demand restricting / dangerous functions
+
+**Version 2.0.32 BETA**
+
+* Fetch user applications only by default
+* Added option to allow/disallow all contacts
+* Fixed dangerous restrictions being asked after update
+* Enable on demand restricting on application update ([reason](http://www.xda-developers.com/android/play-store-permissions-change-opens-door-to-rogue-apps/))
+
+**Version 2.0.31 TEST**
+
+* Update notifications only if XPrivacy is enabled in Xposed
+* Directly open Xposed pages, thanks @[liudongmiao](https://github.com/liudongmiao)
+* Added multiple template definitions
+	* The first template will always be applied to new applications
+* Added allow contacts by group
+* Fixed caching of not set settings
+* Updated simplified Chinese translation
+* Updated traditional Chinese translation
 
 **Version 2.0.30 TEST**
 

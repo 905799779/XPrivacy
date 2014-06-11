@@ -4,9 +4,9 @@
     <issue id="EasterEgg" severity="warning" />
     <issue id="FieldGetter" severity="warning" />
     <issue id="IconExpectedSize" severity="warning" />
-    <issue id="MissingTranslation" severity="error" />
+    <issue id="MissingTranslation" severity="warning" />
     <issue id="StopShip" severity="warning" />
-    <issue id="StringFormatCount" severity="error" />
+    <issue id="StringFormatCount" severity="warning" />
     <issue id="StringFormatInvalid" severity="warning" />
     <issue id="TypographyQuotes" severity="warning" />
     <issue id="UnusedIds" severity="warning" />
