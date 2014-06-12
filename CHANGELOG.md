@@ -15,7 +15,18 @@ Changelog
 
 **Next release**
 
+* Fixed toggling dangerous functions not immediately displaying correct template restriction
+* Removed exception for disabling on demand restricting when changing category restriction on demand
+* Enable kill application menu only if application is running
+
+**This version will erase the existing main template** (if not done by an earlier version)
+
+[Open issues](https://github.com/M66B/XPrivacy/issues?state=open)
+
+**Version 2.0.34 BETA**
+
 * Removed delay when opening application details
+* Setting on demand restriction to enabled for functions with a white list when on demand restricting a category
 * Made *network/getScanResults* dangerous
 	* Because *location/getScanResults* is dangerous too
 * Made *accounts/getTokenGoogle* and *accounts/getTokenWithNotification* dangerous
@@ -28,8 +39,6 @@ All above functions throw an exception when restricted.
 Although the exception is part of the standard API, a lot of applications are not prepared to handle an exception.
 
 **This version will erase the existing main template**
-
-[Open issues](https://github.com/M66B/XPrivacy/issues?state=open)
 
 **Version 2.0.33 BETA**
 

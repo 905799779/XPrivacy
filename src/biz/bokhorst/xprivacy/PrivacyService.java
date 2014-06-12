@@ -71,7 +71,7 @@ public class PrivacyService {
 	private static final String cTableUsage = "usage";
 	private static final String cTableSetting = "setting";
 
-	private static final int cCurrentVersion = 340;
+	private static final int cCurrentVersion = 341;
 	private static final String cServiceName = "xprivacy336";
 
 	// TODO: define column names
@@ -1707,12 +1707,19 @@ public class PrivacyService {
 					setRestrictionInternal(result);
 
 					// Clear category on change
-					for (Hook md : PrivacyManager.getHooks(restriction.restrictionName)) {
-						result.methodName = md.getName();
-						result.restricted = !md.isDangerous() && restrict;
-						result.asked = category;
-						setRestrictionInternal(result);
-					}
+					for (Hook md : PrivacyManager.getHooks(restriction.restrictionName))
+						if (!PrivacyManager.canRestrict(restriction.uid, getXUid(), restriction.restrictionName,
+								md.getName())) {
+							result.methodName = md.getName();
+							result.restricted = false;
+							result.asked = true;
+							setRestrictionInternal(result);
+						} else {
+							result.methodName = md.getName();
+							result.restricted = !md.isDangerous() && restrict;
+							result.asked = category;
+							setRestrictionInternal(result);
+						}
 				}
 
 				if (!category) {
